@@ -1,0 +1,15 @@
+# Personal Claude Code memory (local only, never committed)
+CLAUDE.local.md
+
+# Site data (accounts, sessions, posts) and secrets
+data/
+.env
+
+# The upload zip (npm run package), dependencies, test scratch space and npm's cache
+dist/
+node_modules/
+.test-data/
+.npm-cache/
+
+# Local copy of the published artifact, kept only to compare against
+artifact-original/

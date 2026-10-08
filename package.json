@@ -1,0 +1,21 @@
+{
+  "name": "d3mon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "D3MON.CO: the community site for crypto callers, trading bots and chart scripts",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/start.js",
+    "dev": "node --watch server/start.js",
+    "test": "node --test test/*.test.js",
+    "package": "node scripts/package.js",
+    "users": "node server/cli.js users",
+    "role": "node server/cli.js role"
+  },
+  "devDependencies": {
+    "jsdom": "25.0.1"
+  }
+}

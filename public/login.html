@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sign in · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="acct">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+
+  <section class="panel acct-panel" id="guest" hidden>
+    <div class="acct-tabs" role="tablist" aria-label="Sign in or create an account">
+      <button type="button" role="tab" id="tabIn" aria-selected="true" aria-controls="inForm">Sign in</button>
+      <button type="button" role="tab" id="tabUp" aria-selected="false" aria-controls="upForm">Create account</button>
+    </div>
+    <form class="compose" id="inForm" role="tabpanel" aria-labelledby="tabIn">
+      <div class="field"><label for="inUser">Username</label><input type="text" id="inUser" autocomplete="username" required maxlength="24"></div>
+      <div class="field"><label for="inPass">Password</label><input type="password" id="inPass" autocomplete="current-password" required maxlength="200"></div>
+      <div class="actions"><button class="btn" type="submit">Sign in</button></div>
+    </form>
+    <form class="compose" id="upForm" role="tabpanel" aria-labelledby="tabUp" hidden>
+      <div class="field"><label for="upUser">Username</label><input type="text" id="upUser" autocomplete="username" required minlength="3" maxlength="24"><span class="hint">3 to 24 letters, numbers, dots, dashes or underscores. You sign in with this.</span></div>
+      <div class="field"><label for="upName">Display name</label><input type="text" id="upName" autocomplete="nickname" maxlength="40"><span class="hint">What other members see. You can change it later.</span></div>
+      <div class="field"><label for="upPass">Password</label><input type="password" id="upPass" autocomplete="new-password" required minlength="8" maxlength="200"><span class="hint">At least 8 characters.</span></div>
+      <div class="actions"><button class="btn" type="submit">Create account</button></div>
+    </form>
+  </section>
+
+  <section class="panel acct-panel" id="member" hidden>
+    <div class="acct-who"><img id="meAv" alt=""><div><b id="meName"></b><span id="meUser"></span></div></div>
+    <form class="compose" id="nameForm">
+      <h3>Display name</h3>
+      <div class="field"><label for="nmIn">Name other members see</label><input type="text" id="nmIn" required maxlength="40"></div>
+      <div class="actions"><button class="btn" type="submit">Save name</button></div>
+    </form>
+    <form class="compose" id="passForm">
+      <h3>Password</h3>
+      <div class="field"><label for="pwCur">Current password</label><input type="password" id="pwCur" autocomplete="current-password" required maxlength="200"></div>
+      <div class="field"><label for="pwNew">New password</label><input type="password" id="pwNew" autocomplete="new-password" required minlength="8" maxlength="200"></div>
+      <div class="actions"><button class="btn" type="submit">Change password</button></div>
+    </form>
+    <div class="actions acct-foot"><a class="btn ghost" href="./">Back to D3MON.CO</a><button class="btn" type="button" id="outBtn">Sign out</button></div>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/account.js"></script>
+</body>
+</html>

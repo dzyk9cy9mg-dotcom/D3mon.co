@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<div class="intro" id="intro" aria-label="Intro">
+  <canvas id="introCv" aria-hidden="true"></canvas>
+  <div class="itext" id="itext" aria-live="polite">
+    <span class="l" id="il1"></span><span class="s"></span>
+  </div>
+  <div class="iwm" id="iwm" aria-hidden="true"></div>
+  <button class="iskip" id="iskip" type="button">Skip intro</button>
+</div>
+<script>
+(function(){ var seen = false; try { seen = localStorage.getItem("chartside_intro_v1") === "1"; } catch(e) {}
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(!seen && !reduce) document.getElementById("intro").classList.add("on"); })();
+</script>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="36" height="36" viewBox="-50 -50 100 100" aria-hidden="true"><defs><linearGradient id="hdrAB" gradientUnits="userSpaceOnUse" x1="0.00" y1="-31.80" x2="-31.00" y2="21.90"><stop offset="0" stop-color="#FFB547"/><stop offset="1" stop-color="#4DA3FF"/></linearGradient><linearGradient id="hdrBC" gradientUnits="userSpaceOnUse" x1="-31.00" y1="21.90" x2="31.00" y2="21.90"><stop offset="0" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient><linearGradient id="hdrCA" gradientUnits="userSpaceOnUse" x1="31.00" y1="21.90" x2="0.00" y2="-31.80"><stop offset="0" stop-color="#B98CFF"/><stop offset="1" stop-color="#FFB547"/></linearGradient><filter id="hdrF" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g fill="none" stroke-linecap="round" filter="url(#hdrF)"><path d="M0.00 -31.80 A62 62 0 0 0 -31.00 21.90" stroke="url(#hdrAB)" stroke-width="3.6"/><path d="M0.00 -31.80 A62 62 0 0 1 -31.00 21.90" stroke="url(#hdrAB)" stroke-width="2.6" stroke-opacity=".7"/><path d="M-31.00 21.90 A62 62 0 0 0 31.00 21.90" stroke="url(#hdrBC)" stroke-width="3.6"/><path d="M-31.00 21.90 A62 62 0 0 1 31.00 21.90" stroke="url(#hdrBC)" stroke-width="2.6" stroke-opacity=".7"/><path d="M31.00 21.90 A62 62 0 0 0 0.00 -31.80" stroke="url(#hdrCA)" stroke-width="3.6"/><path d="M31.00 21.90 A62 62 0 0 1 0.00 -31.80" stroke="url(#hdrCA)" stroke-width="2.6" stroke-opacity=".7"/></g><circle cx="0.00" cy="-31.80" r="6" fill="#FFB547"/><circle cx="-31.00" cy="21.90" r="6" fill="#4DA3FF"/><circle cx="31.00" cy="21.90" r="6" fill="#B98CFF"/></svg>
+      <span class="wm dm" aria-label="D3MON.CO"><span class="m">D<span class="t">3</span>MON<span class="co">.<span class="ce">C<svg class="eye" viewBox="0 0 20 10" aria-hidden="true"><path d="M1 1 L19 6 Q14 10 7 9 Q2 7 1 1 Z"/></svg></span><span class="ce">O<svg class="eye" viewBox="0 0 20 10" aria-hidden="true"><path d="M19 1 L1 6 Q6 10 13 9 Q18 7 19 1 Z"/></svg></span><span class="gh a" aria-hidden="true">.CO</span><span class="gh b" aria-hidden="true">.CO</span><svg class="horns" viewBox="0 0 60 16" aria-hidden="true"><path d="M9 16 C2 13 0 7 3 0 C4.5 6 8 10 14.5 13 Z"/><path d="M51 16 C58 13 60 7 57 0 C55.5 6 52 10 45.5 13 Z"/></svg><svg class="smile" viewBox="0 0 60 18" aria-hidden="true"><path d="M3 3 Q30 26 57 3 Q30 14 3 3 Z"/><path d="M17 8.6 L19.5 14 L22 9.8 Z M43 8.6 L40.5 14 L38 9.8 Z" class="fang"/></svg></span></span></span> <small>// live trade network</small>
+    </div>
+    <button class="hbtn" type="button" id="introBtn" title="Replay the intro" aria-label="Replay the intro">▶</button>
+    <button class="hbtn dockbtn" type="button" id="dockBtn" aria-controls="dock" aria-expanded="false"><span class="dot"></span>Community · <b id="onlineN">0</b> online</button>
+    <button class="hbtn" type="button" id="ccBtn" title="Command center"><span class="lbl-cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="5"/><rect x="13" y="10" width="8" height="11"/><rect x="3" y="13" width="8" height="8"/></svg><span class="t">Command center</span></span><span class="lbl-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>Home</span></button>
+    <button class="hbtn battlebtn" type="button" id="battleBtn" aria-pressed="false"><svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="vxgC" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB547"/><stop offset=".5" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient></defs><path d="M32 7 L57 51 H7 Z" stroke="url(#vxgC)" stroke-width="5"/><path d="M32 7 V36 M57 51 L32 36 M7 51 L32 36" stroke="url(#vxgC)" stroke-width="2.5" opacity=".75"/><circle cx="32" cy="7" r="5" fill="#FFB547"/><circle cx="7" cy="51" r="5" fill="#4DA3FF"/><circle cx="57" cy="51" r="5" fill="#B98CFF"/><circle cx="32" cy="36" r="4.5" fill="#E8F0FF"/></svg>Battle of the Bots</button>
+    <button class="hbtn coinbtn" type="button" id="coinBtn" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9.5h4.5a2 2 0 0 1 0 4H9V7.5M9 13.5h5a2 2 0 0 1 0 4H9v-4M11 6v2M11 17.5V19"/></svg><span class="cl">Coin</span></button>
+    <button class="hbtn dmbtn" type="button" id="dmBtn" aria-pressed="false" title="Messages" aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 7 8.5-7"/></svg><span class="hl">Messages</span><span class="dmbadge" id="dmBadge" hidden>0</span></button>
+    <button class="hbtn mebtn" type="button" id="meBtn" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4 4.2-6 8-6s6.8 2 8 6"/></svg>My D3MON</button>
+    <button class="hbtn adminbtn" type="button" id="adminBtn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20 6v6c0 4.8-3.4 8.4-8 9.5-4.6-1.1-8-4.7-8-9.5V6z"/><path d="m8.5 12 2.4 2.4 4.6-4.8"/></svg><span class="hl">Admin</span></button>
+    <div class="me" id="me"></div>
+  </header>
+  <div class="annbar" id="annBar" hidden></div>
+  <section class="cortex" id="cortex" hidden aria-label="Live Trade Cortex">
+    <div class="cxlive" id="cxLiveForm" hidden>
+      <div class="rtitle">Go live in the Cortex <span>your stream shows on everyone's Cortex wall</span></div>
+      <div class="fr"><div class="field"><span class="flabel">Type</span><div class="seg"><button type="button" data-cxm="video" aria-pressed="true">VIDEO</button><button type="button" data-cxm="audio" aria-pressed="false">AUDIO</button><button type="button" data-cxm="screen" aria-pressed="false">🖥 SCREEN</button></div></div>
+        <div class="field"><label for="cxTitle">Title</label><input type="text" id="cxTitle" maxlength="100" placeholder="What you're trading"></div></div>
+      <div class="field"><label for="cxUrl">Stream link</label><input type="url" id="cxUrl" placeholder="https:// Twitch, YouTube, Kick, X Space…"></div>
+      <p class="fine cxsh" id="cxShareHelp" hidden>To share your screen: start a screen share in Google Meet, Zoom, Twitch or YouTube, copy its link and paste it above. It shows as a live SCREEN window on everyone's Cortex wall until you end it.</p>
+      <div class="actions"><button class="btn ghost sm" type="button" id="cxCancel">Cancel</button><button class="btn sm" type="button" id="cxGo">Go live</button></div>
+    </div>
+    <div class="dcf" id="dcf">
+      <nav class="dsrv" aria-label="Hubs">
+        <button class="dsv home" type="button" data-ftab="main" title="Live Trade Cortex"><span>D3</span></button>
+        <span class="dsep" aria-hidden="true"></span>
+        <button class="dsv" type="button" data-ftab="streams" data-dhub="callers" title="Caller streams" style="--c:var(--callers)"><span>C</span></button>
+        <button class="dsv" type="button" data-ftab="streams" data-dhub="bots" title="Bot streams" style="--c:var(--bots)"><span>B</span></button>
+        <button class="dsv" type="button" data-ftab="streams" data-dhub="scripts" title="Script streams" style="--c:var(--scripts)"><span>S</span></button>
+        <span class="dsep" aria-hidden="true"></span>
+        <button class="dsv out" type="button" id="cxExitBtn" title="Exit the Cortex"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
+      </nav>
+      <aside class="dch" id="dch" aria-label="Channels">
+        <header class="dchh"><div><b>D3MON.CO</b><small>Live Trade Cortex</small></div><span class="rchip" id="cxRound"></span></header>
+        <div class="dchl">
+          <p class="dcat" data-cxcat="text">Text channels</p>
+          <div id="ftabs" role="tablist" aria-label="Text channels"></div>
+          <div class="cxaddf" id="cxAdd_text" hidden></div>
+          <div id="dDisc"></div>
+          <p class="dcat" data-cxcat="dir">Directory</p>
+          <div id="dDirCh"></div>
+          <div class="cxaddf" id="cxAdd_dir" hidden></div>
+          <div hidden aria-hidden="true"><b id="cxOnAir">0</b><div id="dStreamCh"></div></div>
+          <p class="dcat" data-cxml>Live member streams · cam & screen <span class="dlivec"><b id="cxMemAir">0</b> live</span></p>
+          <div id="dMLiveCh"></div>
+          <div id="cxVoice" hidden></div>
+        </div>
+        <div class="dvc" id="dVoiceBar" hidden></div>
+        <div class="duser" id="duser">
+          <div class="dme" id="dMe"></div>
+          <div class="dub">
+            <button type="button" id="cxGoBtn" hidden title="Go live in the Cortex"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/></svg></button>
+            <button type="button" id="cxShareBtn" data-spshare title="Share your screen" aria-label="Share your screen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="1.5"/><path d="M8 21h8M12 17v4M12 13V8M9.5 10.5 12 8l2.5 2.5"/></svg></button>
+            <button type="button" id="cxFullBtn" title="Full screen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+          </div>
+        </div>
+      </aside>
+      <main class="dmain">
+        <header class="dmh">
+          <button class="dico dnav-ch" type="button" data-dnav="ch" title="Channels"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+          <span class="dhash" id="dHash"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 3 7 21M17 3l-2 18M4 8.5h17M3 15.5h17"/></svg></span><b id="dChName">main-floor</b>
+          <small id="floorSub">Everyone trades together here</small>
+          <span class="dmr"><span class="rchip" id="floorRound"></span><span class="donl"><i></i><b id="cxOnline">0</b> online</span>
+          <button class="dico" type="button" data-dnav="mem" id="dMemBtn" title="Member list" aria-pressed="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 19.5c.8-3.4 3.2-5.2 6.2-5.2s5.4 1.8 6.2 5.2"/><path d="M15.5 4.9a3.3 3.3 0 0 1 0 6.3M17.7 14.6c1.8.6 3 2.2 3.5 4.9"/></svg></button></span>
+        </header>
+        <div class="dbody">
+          <div class="dcallers" id="dCallers" hidden></div>
+          <div class="dmlive" id="dMLive" hidden></div>
+          <div class="dstreams" id="dStreams" hidden>
+            <div class="cxstreams">
+              <div class="cxwin" id="cxWinCal" style="--c:var(--callers)"><p class="label"><span>Caller streams</span><span id="cxNCal"></span></p><div class="cxwall" id="cxWallCal"></div></div>
+              <div class="cxwin" id="cxWinScr" style="--c:var(--scripts)"><p class="label"><span>Script streams</span><span id="cxNScr"></span></p><div class="cxwall" id="cxWallScr"></div></div>
+              <div class="cxwin" id="cxWinBot" style="--c:var(--bots)"><p class="label"><span>Bot streams</span><span id="cxNBot"></span></p><div class="cxwall" id="cxWallBot"></div></div>
+              <div class="cxwin" id="cxWinMem" style="--c:#5BE3C8"><p class="label"><span>Website member streams</span><span id="cxNMem"></span></p><div class="cxwall" id="cxWallMem"></div></div>
+            </div>
+          </div>
+          <div class="floor" id="floor">
+            <div class="cxtop" id="cxTop"></div>
+            <div class="cxlivep" id="cxLiveP" hidden></div>
+            <div class="fmsgs" id="fmsgs" role="log" aria-live="polite"></div>
+            <div class="dcomp">
+              <div class="drep" id="dReply" hidden></div>
+              <form class="fform" id="fform">
+                <select id="fAs" aria-label="Post as"></select>
+                <input type="text" id="fin" maxlength="400" placeholder="Message #main-floor" autocomplete="off" aria-label="Message">
+                <div class="fdir" role="group" aria-label="Tag a trade direction"><button type="button" data-fdir="up" aria-pressed="false" title="Tag UP">▲</button><button type="button" data-fdir="down" aria-pressed="false" title="Tag DOWN">▼</button></div>
+                <button class="dsend" title="Send" aria-label="Send"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg></button>
+              </form>
+              <div class="dtyp" id="dTyping"></div>
+              <div class="fnote" id="fnote"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <aside class="dmem" id="dmem" aria-label="Members">
+        <p class="dcat">Members <span id="cxRosterN"></span></p>
+        <div class="roster" id="cxRoster"></div>
+      </aside>
+      <div class="dscrim" data-dnav="close" aria-hidden="true"></div>
+    </div>
+  </section>
+  <section class="cpage" id="callersPage" hidden aria-label="Callers">
+    <div class="cphead">
+      <div class="cpt"><span class="cpic" id="cpIcon">ICON</span><div><h2 id="cpTitle">Callers</h2><p id="cpBlurb">Every verified caller on D3MON.CO, A to Z. See who's live, their record and their next call.</p></div></div>
+      <div class="ccbtns">
+        <button class="hbtn" type="button" data-s="callers" id="cpForum">Callers forum →</button>
+        <button class="hbtn" type="button" id="cpExitBtn">Back to map</button>
+      </div>
+    </div>
+    <div class="cpsplit" id="cpSplit"><div class="cplist" id="cpList"></div><aside class="cpside" id="cpSide" aria-label="Profile"></aside></div>
+  </section>
+  <section class="apage cpg" id="coinPage" hidden aria-label="Coin ledger and governance">
+    <div class="aphead cphd">
+      <div class="cpt"><span class="cpic" style="--callers:#FFD166"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9.5h4.5a2 2 0 0 1 0 4H9V7.5M9 13.5h5a2 2 0 0 1 0 4H9v-4M11 6v2M11 17.5V19"/></svg></span><div><h2 id="cnTitle">D3MON Coin</h2><p id="cnSub">The community ledger: every coin, every holder, every vote.</p></div></div>
+      <div class="ccbtns"><span class="apwho" id="cnWho"></span><button class="hbtn" type="button" id="cnExitBtn">Back to site</button></div>
+    </div>
+    <div class="apgrid">
+      <nav class="apnav" id="cnNav" aria-label="Coin sections"></nav>
+      <div class="apbody" id="cnBody"></div>
+    </div>
+  </section>
+  <section class="dmpage" id="dmPage" hidden aria-label="Messages">
+    <div class="dmwrap" id="dmWrap">
+      <aside class="dmside">
+        <header class="dmsh"><b>Messages</b><button class="xbtn2" type="button" id="dmExitBtn">Back to site</button></header>
+        <div class="dmsearch"><input id="dmQ" type="search" placeholder="Find or start a conversation" autocomplete="off" aria-label="Find a member"></div>
+        <div class="dmlist" id="dmList"></div>
+      </aside>
+      <main class="dmthread" id="dmThread"></main>
+    </div>
+  </section>
+  <section class="apage mpage" id="mePage" hidden aria-label="My D3MON">
+    <div class="aphead mphead">
+      <div class="mpwho" id="mpWho"></div>
+      <div class="ccbtns"><button class="hbtn" type="button" id="mpViewBtn">View my profile</button><button class="hbtn" type="button" id="mpExitBtn">Back to site</button></div>
+    </div>
+    <div class="apgrid">
+      <nav class="apnav" id="mpNav" aria-label="My account sections"></nav>
+      <div class="apbody" id="mpBody"></div>
+    </div>
+  </section>
+  <section class="apage" id="adminPage" hidden aria-label="Admin control center">
+    <div class="aphead">
+      <div><h2>Admin Control Center</h2><p>Every setting, input and moderation tool for D3MON.CO in one place. Changes save for everyone right away.</p></div>
+      <div class="ccbtns"><span class="apwho" id="apWho"></span><button class="hbtn" type="button" id="apExitBtn">Back to site</button></div>
+    </div>
+    <div class="apgrid">
+      <nav class="apnav" id="apNav" aria-label="Admin sections"></nav>
+      <div class="apbody" id="apBody"></div>
+    </div>
+  </section>
+  <section class="cc" id="cc" hidden aria-label="Command center">
+    <div class="cchead">
+      <div><h2>Command center</h2><div class="meta">Market <b id="ccMk">BTC 15M</b> · next round locks in <b id="ccClock">--:--</b></div></div>
+      <div class="ccbtns">
+        <button class="hbtn ccpri" type="button" id="ccAddBtn">+ Add window</button>
+        <button class="hbtn" type="button" id="ccPullBtn" title="Click any window on the site to pin it here">⊕ Pull from site</button>
+        <button class="hbtn" type="button" id="ccEditBtn" aria-pressed="true">✎ Editing layout</button>
+        <button class="hbtn" type="button" id="ccLiveBtn" hidden>Add all live streams</button>
+        <button class="hbtn" type="button" id="ccVoiceBtn" aria-pressed="false">Voice alerts off</button>
+        <button class="hbtn" type="button" id="ccFullBtn">Full screen</button>
+        <button class="hbtn" type="button" id="ccResetBtn" hidden>Reset layout</button>
+        <button class="hbtn" type="button" id="ccExitBtn">Exit</button>
+      </div>
+    </div>
+    <div class="ccws" id="ccWs"></div>
+    <div class="ccpick" id="ccPick" hidden></div>
+    <div class="ccgrid" id="ccGrid"></div>
+  </section>
+
+  <section class="map" id="map" aria-label="Section map">
+    <svg class="tri" viewBox="0 0 1000 780" aria-hidden="true">
+      <defs>
+        <linearGradient id="gA" gradientUnits="userSpaceOnUse" x1="500" y1="70" x2="190" y2="607"><stop offset="0" stop-color="var(--callers)"/><stop offset="1" stop-color="var(--bots)"/></linearGradient>
+        <linearGradient id="gB" gradientUnits="userSpaceOnUse" x1="190" y1="607" x2="810" y2="607"><stop offset="0" stop-color="var(--bots)"/><stop offset="1" stop-color="var(--scripts)"/></linearGradient>
+        <linearGradient id="gC" gradientUnits="userSpaceOnUse" x1="810" y1="607" x2="500" y2="70"><stop offset="0" stop-color="var(--scripts)"/><stop offset="1" stop-color="var(--callers)"/></linearGradient>
+        <radialGradient id="gCore" cx="500" cy="428" r="190" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".16"/><stop offset="1" stop-color="#4DA3FF" stop-opacity="0"/></radialGradient>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+        <linearGradient id="spA" gradientUnits="userSpaceOnUse" x1="500" y1="70" x2="500" y2="428"><stop offset="0" stop-color="#FFB547" stop-opacity=".95"/><stop offset=".75" stop-color="#FFB547" stop-opacity=".45"/><stop offset="1" stop-color="#DCE7EE" stop-opacity=".8"/></linearGradient><linearGradient id="spB" gradientUnits="userSpaceOnUse" x1="190" y1="607" x2="500" y2="428"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".95"/><stop offset=".75" stop-color="#4DA3FF" stop-opacity=".45"/><stop offset="1" stop-color="#DCE7EE" stop-opacity=".8"/></linearGradient><linearGradient id="spC" gradientUnits="userSpaceOnUse" x1="810" y1="607" x2="500" y2="428"><stop offset="0" stop-color="#B98CFF" stop-opacity=".95"/><stop offset=".75" stop-color="#B98CFF" stop-opacity=".45"/><stop offset="1" stop-color="#DCE7EE" stop-opacity=".8"/></linearGradient>
+      </defs>
+      <g filter="url(#glow)" opacity=".55">
+        <line x1="500" y1="70" x2="190" y2="607" stroke="url(#gA)" stroke-width="8"/>
+        <line x1="190" y1="607" x2="810" y2="607" stroke="url(#gB)" stroke-width="8"/>
+        <line x1="810" y1="607" x2="500" y2="70" stroke="url(#gC)" stroke-width="8"/>
+      </g>
+      <line class="edge" x1="500" y1="70" x2="190" y2="607" stroke="url(#gA)"/>
+      <line class="edge" x1="190" y1="607" x2="810" y2="607" stroke="url(#gB)"/>
+      <line class="edge" x1="810" y1="607" x2="500" y2="70" stroke="url(#gC)"/>
+      <line class="flow" x1="500" y1="70" x2="190" y2="607" stroke="url(#gA)" stroke-width="3"/>
+      <line class="flow" x1="190" y1="607" x2="810" y2="607" stroke="url(#gB)" stroke-width="3"/>
+      <line class="flow" x1="810" y1="607" x2="500" y2="70" stroke="url(#gC)" stroke-width="3"/>
+      <g class="spokes">
+        <line x1="500" y1="70" x2="500" y2="428" stroke="url(#spA)" stroke-width="6" opacity=".45" filter="url(#glow)"/><line x1="190" y1="607" x2="500" y2="428" stroke="url(#spB)" stroke-width="6" opacity=".45" filter="url(#glow)"/><line x1="810" y1="607" x2="500" y2="428" stroke="url(#spC)" stroke-width="6" opacity=".45" filter="url(#glow)"/>
+        <line x1="500" y1="70" x2="500" y2="428" stroke="url(#spA)" stroke-width="1.8"/><line x1="190" y1="607" x2="500" y2="428" stroke="url(#spB)" stroke-width="1.8"/><line x1="810" y1="607" x2="500" y2="428" stroke="url(#spC)" stroke-width="1.8"/>
+      </g>
+      <text class="hudtxt" x="0" y="18">HUMAN INSIGHT · BOT TECHNOLOGY · DATA INTELLIGENCE · LIVE TRADE COMMUNITY</text>
+      <text class="hudtxt" x="1000" y="18" text-anchor="end" id="clock">SYNC --:--</text>
+    </svg>
+    <div id="spokes" hidden></div>
+    <button class="corex" id="corex" type="button" aria-label="Enter the Live Trade Cortex chat">
+<div class="sigil gim" aria-hidden="true">
+  <svg width="0" height="0" style="position:absolute"><defs><linearGradient id="gsT" x1="0" y1="-70" x2="0" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB547"/><stop offset=".55" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient><radialGradient id="gsC"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".45"/><stop offset="1" stop-color="#4DA3FF" stop-opacity="0"/></radialGradient></defs></svg>
+  <svg class="ghalo" viewBox="-100 -100 200 200"><circle r="98" fill="url(#gsC)"/></svg>
+  <svg class="gback" viewBox="-100 -100 200 200"><circle r="74" fill="#05080C" fill-opacity=".9" stroke="#1A2A36"/></svg>
+  <div class="gt g1"><svg class="gs3" viewBox="-100 -100 200 200"><circle r="94" fill="none" stroke="#8FA3B2" stroke-opacity=".45" stroke-width=".9" stroke-dasharray="1 5"/></svg></div>
+  <div class="gt g2"><svg class="gs1" viewBox="-100 -100 200 200"><circle r="84" fill="none" stroke="url(#gsT)" stroke-width="1.6" stroke-dasharray="36 10 4 10"/></svg></div>
+  <div class="gt g3"><svg class="gs2" viewBox="-100 -100 200 200"><polygon points="0,-66 57.2,-33 57.2,33 0,66 -57.2,33 -57.2,-33" fill="none" stroke="#4DA3FF" stroke-opacity=".55" stroke-width="1"/></svg></div>
+  <svg class="gfront gs4" viewBox="-100 -100 200 200"><circle r="44" fill="none" stroke="#8FA3B2" stroke-opacity=".35" stroke-width=".8" stroke-dasharray="2 4"/></svg>
+  <svg class="gfront gtr" viewBox="-100 -100 200 200"><polygon points="0,-62 53.7,31 -53.7,31" fill="rgba(77,163,255,.06)" stroke="url(#gsT)" stroke-width="2.2"/><line x1="0" y1="-62" x2="0" y2="0" stroke="#FFB547" stroke-opacity=".35"/><line x1="53.7" y1="31" x2="0" y2="0" stroke="#B98CFF" stroke-opacity=".35"/><line x1="-53.7" y1="31" x2="0" y2="0" stroke="#4DA3FF" stroke-opacity=".35"/><circle cx="0" cy="-62" r="5" fill="#FFB547"/><circle cx="-53.7" cy="31" r="5" fill="#4DA3FF"/><circle cx="53.7" cy="31" r="5" fill="#B98CFF"/></svg>
+  <svg class="gfront" viewBox="-100 -100 200 200"><circle r="20" fill="#05080C" stroke="#4DA3FF" stroke-width="1.4"/><circle class="gpl" r="8" fill="#4DA3FF"/><circle r="4" fill="#DCE7EE"/></svg>
+</div>
+      <span class="symlab"><b>LIVE TRADE CORTEX</b><span class="cxst"><span class="cxgate open" id="cxGate">● OPEN</span><span class="cxsep"></span><small><span id="cxOn"></span></small></span></span>
+      <span id="cxMsgs" hidden></span><span id="core" hidden></span>
+    </button>
+    <div id="nodes"></div>
+    <div class="menu" id="triMenu" hidden></div>
+  </section>
+
+  <section class="vortex" id="vortex" aria-label="The Vortex: live battle display">
+    <div class="vxhead">
+      <div class="vxt"><div class="hsbrand"><span class="smk"><i></i><i></i><i></i></span><span class="hswrap"><svg class="hsorbit" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="hsof0" color-interpolation-filters="sRGB" x="-10%" y="-60%" width="120%" height="220%"><feTurbulence type="fractalNoise" baseFrequency="0.08 0.3" numOctaves="2" seed="4" result="n"><animate attributeName="baseFrequency" dur="6s" values="0.08 0.3;0.11 0.38;0.08 0.3" keyTimes="0;.5;1" calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="1.5" xChannelSelector="R" yChannelSelector="G" result="d"/><feGaussianBlur in="d" stdDeviation="0.5"/></filter><filter id="hsoh0" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.8"/></filter></defs><path id="hsop0" d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" fill="none" stroke="none"/><g filter="url(#hsof0)"><path d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" pathLength="100" fill="none" stroke="rgba(220,220,232,.5)" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="40 200" stroke-dashoffset="40"><animate attributeName="stroke-dashoffset" dur="7.5s" repeatCount="indefinite" values="40;-60;-60" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"/><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;.55;.55;0;0" keyTimes="0;.04;.41;.48;1"/></path><path d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" pathLength="100" fill="none" stroke="rgba(230,230,240,.7)" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="26 200" stroke-dashoffset="26"><animate attributeName="stroke-dashoffset" dur="7.5s" repeatCount="indefinite" values="26;-74;-74" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"/><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;.7;.7;0;0" keyTimes="0;.04;.41;.48;1"/></path></g><path d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" pathLength="100" fill="none" stroke="#FFD9A0" stroke-width="1.8" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="16 200" stroke-dashoffset="16"><animate attributeName="stroke-dashoffset" dur="7.5s" repeatCount="indefinite" values="16;-84;-84" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"/><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;.95;.95;0;0" keyTimes="0;.04;.41;.48;1"/></path><path d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" pathLength="100" fill="none" stroke="#FFF8EC" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="6 200" stroke-dashoffset="6"><animate attributeName="stroke-dashoffset" dur="7.5s" repeatCount="indefinite" values="6;-94;-94" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"/><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;.04;.41;.48;1"/></path><circle r="1.6" fill="#FFF4DC" filter="url(#hsoh0)"><animateMotion dur="7.5s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"><mpath href="#hsop0"/></animateMotion><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;.04;.41;.45;1"/></circle></svg><span class="hsw">HardSmoke</span><span class="hsz" aria-hidden="true"><i class="zs s1"></i><i class="zs s2"></i><i class="zs s3"></i><svg viewBox="4.2 4.7 16.1 14.6" preserveAspectRatio="none"><defs><linearGradient id="hszg0" x1="4" y1="5" x2="20" y2="19" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFF4DC"/><stop offset=".55" stop-color="#FFB547"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="hszc0" x1="0" y1="5.5" x2="0" y2="18.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#FFE2B0"/><stop offset=".75" stop-color="#FFB547"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><filter id="hszf0" color-interpolation-filters="sRGB" x="-60%" y="-60%" width="220%" height="220%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3" result="n"><animate attributeName="baseFrequency" dur="5s" values="0.55;1.05;0.55" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G" result="d"/><feGaussianBlur in="d" stdDeviation="0.3"/></filter><filter id="hszs0" color-interpolation-filters="sRGB" x="-80%" y="-120%" width="260%" height="300%"><feTurbulence type="fractalNoise" baseFrequency="0.35" numOctaves="3" seed="9" result="n"><animate attributeName="seed" dur="3s" values="1;2;3;4;5;6;7;8" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G" result="d"/><feGaussianBlur in="d" stdDeviation="1.1"/></filter></defs><g class="zg" style="animation:zDrift 7.5s ease-in-out infinite,zGhost 7.5s ease-in-out infinite" filter="url(#hszs0)"><path class="zghost" d="M6 6.5 H18 L6 17.5 H18.5"/></g><g class="zsm" filter="url(#hszf0)"><path class="zp" d="M6 6.5 H18 L6 17.5 H18.5" stroke="url(#hszg0)"/></g><path class="zc" d="M6 6.5 H18 L6 17.5 H18.5" stroke="url(#hszc0)"/></svg><i class="zw w1"></i><i class="zw w2"></i><i class="zw w3"></i><i class="tw"></i></span></span><span class="hsx">presents</span><span class="hsd" id="vxKindT">Battle of the Bots</span></div><h2>The Vortex</h2><div class="vxwhen" id="vxWhen"></div></div>
+      <div class="vxclock" id="vxClock"></div>
+      <div class="vxbtns"><button class="hbtn vxfsbtn" type="button" id="vxFullBtn">⛶ Full screen streams</button><button class="hbtn" type="button" id="vxTile">⧉ Open all streams</button><button class="hbtn" type="button" id="vxCtl" hidden>⚙ Battle control</button><button class="hbtn" type="button" id="vxExit">← Main page</button></div>
+    </div>
+    <div class="vxgrid">
+      <div class="vxmain">
+        <div class="vxchips" id="vxChips"></div>
+        <div class="vxstage" id="vxStage" hidden></div>
+        <div class="vxwall" id="vxStreams"></div>
+        <div class="vxboards"><div class="vxcard" id="vxWar"></div><div class="vxcard" id="vxFo"></div><div class="vxcard vxfeed" id="vxFeed"></div></div>
+      </div>
+      <aside class="vxside">
+        <div class="vxcard vxvoice" id="vxVoice" hidden style="display:none"></div>
+        <div class="vxcard vxwho" id="vxWho"></div><div class="vxcard vxchat"><h4>Audience chat <span id="vxHere"></span></h4><div class="vxmsgs" id="vxMsgs"></div>
+          <form class="vxform" id="vxForm" autocomplete="off"><input type="text" id="vxIn" maxlength="300" placeholder="Say something to the room…" aria-label="Chat message"><button class="btn sm" type="submit">Send</button></form></div>
+      </aside>
+    </div>
+  </section>
+  <div id="arenaFx" hidden aria-hidden="true"><canvas id="arenaCv"></canvas><div class="afx-ring"></div><div class="afx-core"><div class="afx-em"><svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="vxgA" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB547"/><stop offset=".5" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient></defs><path d="M32 7 L57 51 H7 Z" stroke="url(#vxgA)" stroke-width="4"/><path d="M32 7 V36 M57 51 L32 36 M7 51 L32 36" stroke="url(#vxgA)" stroke-width="2.0" opacity=".75"/><circle cx="32" cy="7" r="5" fill="#FFB547"/><circle cx="7" cy="51" r="5" fill="#4DA3FF"/><circle cx="57" cy="51" r="5" fill="#B98CFF"/><circle cx="32" cy="36" r="4.5" fill="#E8F0FF"/></svg></div><div class="afx-t">Entering the Vortex</div><div class="afx-s">HardSmoke · Battle of the Bots</div><div class="afx-bar"><i></i></div></div><div class="afx-sweep"></div></div>
+  <section class="panel hsp" id="hsPromo" role="link" tabindex="0" aria-label="HardSmoke's Battle of the Bots: enter the Vortex"></section>
+  <section class="panel ddwin" id="demonDisc" aria-label="Demon Discord" hidden></section>
+
+  <section class="ledger panel battle" id="battle" aria-label="HardSmoke's Battle of the Bots">
+    <div class="lhead">
+      <div><div class="hsbrand"><span class="smk"><i></i><i></i><i></i></span><span class="hswrap"><svg class="hsorbit" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="hsof1" color-interpolation-filters="sRGB" x="-10%" y="-60%" width="120%" height="220%"><feTurbulence type="fractalNoise" baseFrequency="0.08 0.3" numOctaves="2" seed="5" result="n"><animate attributeName="baseFrequency" dur="6s" values="0.08 0.3;0.11 0.38;0.08 0.3" keyTimes="0;.5;1" calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="1.5" xChannelSelector="R" yChannelSelector="G" result="d"/><feGaussianBlur in="d" stdDeviation="0.5"/></filter><filter id="hsoh1" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.8"/></filter></defs><path id="hsop1" d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" fill="none" stroke="none"/><g filter="url(#hsof1)"><path d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" pathLength="100" fill="none" stroke="rgba(220,220,232,.5)" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="40 200" stroke-dashoffset="40"><animate attributeName="stroke-dashoffset" dur="7.5s" repeatCount="indefinite" values="40;-60;-60" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"/><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;.55;.55;0;0" keyTimes="0;.04;.41;.48;1"/></path><path d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" pathLength="100" fill="none" stroke="rgba(230,230,240,.7)" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="26 200" stroke-dashoffset="26"><animate attributeName="stroke-dashoffset" dur="7.5s" repeatCount="indefinite" values="26;-74;-74" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"/><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;.7;.7;0;0" keyTimes="0;.04;.41;.48;1"/></path></g><path d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" pathLength="100" fill="none" stroke="#FFD9A0" stroke-width="1.8" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="16 200" stroke-dashoffset="16"><animate attributeName="stroke-dashoffset" dur="7.5s" repeatCount="indefinite" values="16;-84;-84" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"/><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;.95;.95;0;0" keyTimes="0;.04;.41;.48;1"/></path><path d="M-2 20 C4 6, 10 34, 17 20 C24 6, 30 34, 37 20 C44 6, 50 34, 57 20 C64 6, 70 34, 77 20 C83 9, 88 11, 93.6 13" pathLength="100" fill="none" stroke="#FFF8EC" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="6 200" stroke-dashoffset="6"><animate attributeName="stroke-dashoffset" dur="7.5s" repeatCount="indefinite" values="6;-94;-94" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"/><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;.04;.41;.48;1"/></path><circle r="1.6" fill="#FFF4DC" filter="url(#hsoh1)"><animateMotion dur="7.5s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.42;1" calcMode="spline" keySplines=".4 .05 .3 1;0 0 1 1"><mpath href="#hsop1"/></animateMotion><animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;.04;.41;.45;1"/></circle></svg><span class="hsw">HardSmoke</span><span class="hsz" aria-hidden="true"><i class="zs s1"></i><i class="zs s2"></i><i class="zs s3"></i><svg viewBox="4.2 4.7 16.1 14.6" preserveAspectRatio="none"><defs><linearGradient id="hszg1" x1="4" y1="5" x2="20" y2="19" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFF4DC"/><stop offset=".55" stop-color="#FFB547"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="hszc1" x1="0" y1="5.5" x2="0" y2="18.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#FFE2B0"/><stop offset=".75" stop-color="#FFB547"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><filter id="hszf1" color-interpolation-filters="sRGB" x="-60%" y="-60%" width="220%" height="220%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="4" result="n"><animate attributeName="baseFrequency" dur="5s" values="0.55;1.05;0.55" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G" result="d"/><feGaussianBlur in="d" stdDeviation="0.3"/></filter><filter id="hszs1" color-interpolation-filters="sRGB" x="-80%" y="-120%" width="260%" height="300%"><feTurbulence type="fractalNoise" baseFrequency="0.35" numOctaves="3" seed="10" result="n"><animate attributeName="seed" dur="3s" values="1;2;3;4;5;6;7;8" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G" result="d"/><feGaussianBlur in="d" stdDeviation="1.1"/></filter></defs><g class="zg" style="animation:zDrift 7.5s ease-in-out infinite,zGhost 7.5s ease-in-out infinite" filter="url(#hszs1)"><path class="zghost" d="M6 6.5 H18 L6 17.5 H18.5"/></g><g class="zsm" filter="url(#hszf1)"><path class="zp" d="M6 6.5 H18 L6 17.5 H18.5" stroke="url(#hszg1)"/></g><path class="zc" d="M6 6.5 H18 L6 17.5 H18.5" stroke="url(#hszc1)"/></svg><i class="zw w1"></i><i class="zw w2"></i><i class="zw w3"></i><i class="tw"></i></span></span><span class="hsx">presents</span><span class="hsd">Control panel</span></div><h2>Battle Control</h2>
+</div>
+      <div class="bctl"><span id="bDemo"></span><button class="hbtn" type="button" id="battleDispBtn">◉ Open live display</button><button class="hbtn" type="button" id="battleExitBtn">← Main page</button></div>
+    </div>
+    <div class="vxsctl" id="bScreens"></div>
+    <div class="broster" id="bRoster"></div>
+    <div class="bblog" id="bbLog"></div>
+    <div class="lstats" id="bStats"></div>
+    <div class="lcol">
+      <div class="rtitle">Standings <span id="bStandN" hidden></span></div>
+      <div class="bhead"><span>#</span><span>Bot</span><span>W–L</span><span>Win</span><span>Streak</span><span>Next</span></div>
+      <div id="bStand"></div>
+    </div>
+    <div class="h2hbox">
+      <div class="h2htop"><div><div class="label">Face-off</div><h3>Head to head</h3><p>Two entities can face off here.</p></div></div>
+      <div class="broster foroster">
+        <div class="rh"><span class="k">Contenders</span><span class="v">2</span><span class="s">type a name in each line, then press Enter</span></div>
+        <form class="bchips" id="foForm" autocomplete="off">
+          <label class="bchip fo-a"><span class="i">A</span><span class="fof"><input type="text" id="bA" maxlength="40" list="foKnown" placeholder="Entity A name" aria-label="First entity name"><input type="url" id="bAu" maxlength="300" placeholder="Stream link (optional)" aria-label="Entity A stream link"></span></label>
+          <label class="bchip fo-b"><span class="i">B</span><span class="fof"><input type="text" id="bB" maxlength="40" list="foKnown" placeholder="Entity B name" aria-label="Second entity name"><input type="url" id="bBu" maxlength="300" placeholder="Stream link (optional)" aria-label="Entity B stream link"></span></label>
+          <datalist id="foKnown"></datalist><button type="submit" hidden></button>
+        </form>
+      </div>
+      <div class="bblog folog" id="foLog"><div id="foHead"></div><div id="bLive"></div><div id="foTable"></div></div>
+      <div id="foStats"></div>
+      <div class="rtitle" style="margin:4px 0 -6px">Their history <span>all shared rounds in the window</span></div>
+      <div id="bH2H"></div>
+    </div>
+    <p class="lnote">Enter bots by name in the lineup; each one is scored from the final calls its creator posts in the Bot console. With no lineup, every bot with calls is shown. A bot is ranked after 5 scored rounds.</p>
+  </section>
+
+  <section class="wall panel" id="wall" aria-label="My callers">
+    <div class="whead">
+      <div><div class="label">Following</div><h2>My callers</h2>
+        <p>The callers you follow, on one screen: who's streaming, what they called for the next round, and how they're hitting.</p></div>
+      <div class="wctl">
+        <button class="btn ghost sm" id="pickBtn" type="button">Choose callers</button>
+        <button class="tog" id="voiceBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4h3l5 4V6l-5 4H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg><span>Voice alerts off</span></button>
+        <button class="btn ghost sm" id="demoBtn" type="button">Play demo</button>
+      </div>
+    </div>
+    <div class="demobar" id="demoBar" hidden>Demo mode · sample callers and calls, nothing is saved · voice alerts work here too</div>
+    <div class="picker" id="picker" hidden></div>
+    <div class="bkm" id="bkCallers"></div>
+    <div id="fsCallers"></div>
+    <div class="ticker" id="ticker"></div>
+    <div class="wgrid" id="wgrid"></div>
+  </section>
+
+  <section class="wall panel wb" id="wallBots" aria-label="My bots">
+    <div class="whead">
+      <div><div class="label">Following</div><h2>My bots</h2>
+        <p>Each bot's final call for the next round, its status, and the latest market reads its creator posted.</p></div>
+      <div class="wctl"><button class="btn ghost sm" id="pickBotsBtn" type="button">Choose bots</button></div>
+    </div>
+    <div class="picker" id="pickerBots" hidden></div>
+    <div class="bkm" id="bkBots"></div>
+    <div id="fsBots"></div>
+    <div class="ticker" id="tickerBots"></div>
+    <div class="wgrid" id="gridBots"></div>
+  </section>
+
+  <section class="wall panel wc" id="wallCharts" aria-label="My charts">
+    <div class="whead">
+      <div><div class="label">Following</div><h2>My charts</h2>
+        <p>Chart scripts you follow: current signal, key levels drawn to scale, indicator readouts, and the script's call for the next round.</p></div>
+      <div class="wctl"><button class="btn ghost sm" id="pickChartsBtn" type="button">Choose charts</button></div>
+    </div>
+    <div class="picker" id="pickerCharts" hidden></div>
+    <div class="bkm" id="bkCharts"></div>
+    <div id="fsCharts"></div>
+    <div class="ticker" id="tickerCharts"></div>
+    <div class="wgrid" id="gridCharts"></div>
+  </section>
+
+  <section class="desk panel" id="desk" aria-label="Round desk">
+    <div class="dhead">
+      <div><div class="label">Round desk</div><h2>Call the next round</h2>
+        <p>Up/down rounds on the clock, same windows as the Kalshi and Polymarket 15-minute and hourly markets. Calls lock when the round starts and everyone sees who called what.</p></div>
+      <div class="sel" id="deskSel"></div>
+      <button class="xbtn2 dclose" type="button" data-deskclose>Close round desk</button>
+    </div>
+    <div class="dgrid">
+      <div class="dcol">
+        <div class="rtitle">Next round <span id="nextWin"></span></div>
+        <div class="rsub">Locks in</div>
+        <div class="clock" id="deskClock">--:--</div>
+        <div id="callBox" style="display:grid;gap:8px">
+          <div class="callrow">
+            <select id="callSrc" aria-label="Who the call is from"><option value="caller">As a caller</option><option value="bot">From my bot</option><option value="script">From my chart script</option></select>
+            <input type="text" id="callLabel" maxlength="40" placeholder="Bot name" hidden aria-label="Bot or script name">
+          </div>
+          <div class="updown"><button class="up" type="button" data-call="up">▲ UP</button><button class="dn" type="button" data-call="down">▼ DOWN</button></div>
+          <div class="mine" id="myCall"></div>
+        </div>
+        <div class="consensus" id="nextSum"></div>
+        <div class="clist" id="nextList"></div>
+      </div>
+      <div class="dcol">
+        <div class="rtitle">Live round <span id="liveWin"></span></div>
+        <div class="rsub">Ends in <b id="liveClock">--:--</b> · calls locked</div>
+        <div class="consensus" id="liveSum"></div>
+        <div class="clist" id="liveList"></div>
+        <div class="label" style="margin:10px 0 0">Recent rounds</div>
+        <div id="recent"></div>
+      </div>
+      <div class="dcol">
+        <div class="rtitle">Leaderboard <span id="lbScope">last 7 days</span></div>
+        <div class="lbt" role="tablist" id="lbTabs"></div>
+        <div id="lb"></div>
+        <p class="fine">Hit rate on resolved rounds. Only calls placed before a round started count. Ranked once someone has 5 resolved calls.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="shell" id="shell">
+    <aside class="rail">
+      <p class="blurb" id="blurb"></p>
+      <div id="railVoice"></div>
+      <p class="label">Subcategories</p>
+      <ul class="subs" id="subs"></ul>
+      <button class="linkbtn" id="newSubBtn" type="button">+ New subcategory</button>
+      <form class="compose panel" id="subForm" hidden>
+        <div class="field"><label for="subName">Name</label><input type="text" id="subName" maxlength="40" placeholder="e.g. grid-bots" required></div>
+        <div class="field"><label for="subDesc">What's it for?</label><input type="text" id="subDesc" maxlength="140" placeholder="One line"></div>
+        <div class="actions"><button type="button" class="btn ghost sm" data-cancel="subForm">Cancel</button><button class="btn sm">Create</button></div>
+      </form>
+    </aside>
+
+    <main>
+      <div id="notice"></div>
+
+      <!-- list view -->
+      <section id="listView">
+        <section class="console panel bc" id="botConsole" hidden aria-label="Bot console">
+          <div class="conhead"><div><div class="label">Bot creators</div><h2>Bot console</h2></div><span class="badge no" id="bcBadge"></span></div>
+          <p class="fine" style="font-size:14px;margin:0">Register your bots, then post their status, market reads and final call here. Followers see every update instantly on the main page.</p>
+          <div class="mybots" id="bcList"></div>
+          <form class="editor" id="botReg" hidden>
+            <div class="fr"><div class="field"><label for="brName">Bot name</label><input type="text" id="brName" maxlength="40" required placeholder="e.g. DeltaFlow"></div>
+            <div class="field"><label for="brDesc">What it does</label><input type="text" id="brDesc" maxlength="140" placeholder="One line"></div></div>
+            <div class="field"><span class="flabel">Data sources it reads</span><div class="chips" id="brSources"></div></div>
+            <div class="actions"><button type="button" class="btn ghost sm" data-cancel="botReg">Cancel</button><button class="btn sm">Register bot</button></div>
+          </form>
+          <div class="editor" id="bcEdit" hidden></div>
+        </section>
+
+        <section class="console panel sc" id="scConsole" hidden aria-label="Script console">
+          <div class="conhead"><div><div class="label">Script authors</div><h2>Script console</h2></div><span class="badge no" id="scBadge"></span></div>
+          <p class="fine" style="font-size:14px;margin:0">Register your chart scripts, then post the current signal, levels and readouts. They show up on followers' My Charts window as they change.</p>
+          <div class="mybots" id="scList"></div>
+          <form class="editor" id="scReg" hidden>
+            <div class="fr"><div class="field"><label for="srName">Script name</label><input type="text" id="srName" maxlength="40" required placeholder="e.g. Session VWAP Bands"></div>
+            <div class="field"><label for="srUrl">Link to the script (optional)</label><input type="url" id="srUrl" placeholder="https://www.tradingview.com/script/…"></div></div>
+            <div class="fr"><div class="field"><label for="srAsset">Chart</label><select id="srAsset"><option>BTC</option><option>ETH</option><option>SOL</option><option>XRP</option></select></div>
+            <div class="field"><label for="srTf">Timeframe</label><select id="srTf"><option value="15m">15m</option><option value="1h">1h</option></select></div></div>
+            <div class="field"><label for="srDesc">What it shows</label><input type="text" id="srDesc" maxlength="140" placeholder="One line"></div>
+            <div class="actions"><button type="button" class="btn ghost sm" data-cancel="scReg">Cancel</button><button class="btn sm">Register script</button></div>
+          </form>
+          <div class="editor" id="scEdit" hidden></div>
+        </section>
+        <div class="head">
+          <div class="grow"><div class="eyebrow" id="listEyebrow"></div><h1 id="listTitle"></h1><p class="desc" id="listDesc"></p></div>
+          <div class="tabs" role="tablist">
+            <button role="tab" id="tabThreads" data-tab="threads">Discussions <span class="n" id="nThreads">0</span></button>
+            <button role="tab" id="tabStreams" data-tab="streams">Streams <span class="n" id="nStreams">0</span></button>
+          </div>
+        </div>
+        <div class="bar">
+          <span id="subTools"></span><span class="spacer"></span>
+          <button class="btn" id="newThreadBtn" type="button">New discussion</button>
+          <button class="btn" id="newStreamBtn" type="button" hidden>Start a stream</button>
+        </div>
+
+        <form class="compose panel" id="threadForm" hidden>
+          <h3>New discussion</h3>
+          <div class="fr">
+            <div class="field"><label for="tTitle">Title</label><input type="text" id="tTitle" maxlength="140" required></div>
+            <div class="field"><label for="tSub">Subcategory</label><select id="tSub" required></select></div>
+          </div>
+          <div class="field"><label for="tBody">Post</label><textarea id="tBody" rows="5" maxlength="8000" required></textarea></div>
+          <div class="actions"><button type="button" class="btn ghost" data-cancel="threadForm">Cancel</button><button class="btn">Post discussion</button></div>
+        </form>
+
+        <form class="compose panel" id="streamForm" hidden>
+          <h3>Start a stream</h3>
+          <div class="fr">
+            <div class="field"><label for="sTitle">Title</label><input type="text" id="sTitle" maxlength="120" required></div>
+            <div class="field"><label for="sSub">Subcategory</label><select id="sSub"></select></div>
+          </div>
+          <div class="field"><label for="sUrl">Stream link</label><input type="url" id="sUrl" placeholder="https://" required><span class="hint">Twitch, YouTube, Kick, X Spaces, Discord stage, or any page where you're broadcasting.</span></div>
+          <div class="fr"><div class="field"><span class="flabel">Type</span><div class="radio"><label><input type="radio" name="sMedia" id="sMediaV" value="video" checked> Video</label><label><input type="radio" name="sMedia" id="sMediaA" value="audio"> Audio only</label></div></div>
+          <div class="field"><label for="sAs">Stream as</label><select id="sAs"></select></div></div>
+          <div class="field"><label for="sDesc">What you'll cover</label><textarea id="sDesc" rows="3" maxlength="1000"></textarea></div>
+          <div class="field">
+            <span class="label" style="margin:0">When</span>
+            <div class="radio"><label><input type="radio" name="sWhen" id="sNow" value="live" checked> Live now</label><label><input type="radio" name="sWhen" id="sLater" value="scheduled"> Schedule it</label></div>
+            <input type="datetime-local" id="sAt" hidden>
+          </div>
+          <div class="actions"><button type="button" class="btn ghost" data-cancel="streamForm">Cancel</button><button class="btn">Post stream</button></div>
+        </form>
+
+        <div id="listBody"></div>
+      </section>
+
+      <!-- thread view -->
+      <section id="threadView" hidden>
+        <button class="back" data-back type="button">← Back</button>
+        <article class="panel op" id="threadHead"></article>
+        <div class="sublabel" id="replyCount"></div>
+        <div class="replies" id="posts"></div>
+        <form class="compose panel" id="replyForm" style="margin-top:14px">
+          <div class="field"><label for="rBody">Your reply</label><textarea id="rBody" rows="4" maxlength="8000" required></textarea></div>
+          <div class="actions"><button class="btn">Reply</button></div>
+        </form>
+      </section>
+
+      <!-- stream view -->
+      <section id="streamView" hidden>
+        <button class="back" data-back type="button">← Back</button>
+        <div class="stream">
+          <article class="panel op" id="streamHead"></article>
+          <aside class="panel chat">
+            <header>Stream chat <span class="watch" id="watching"></span></header>
+            <div class="msgs" id="msgs"></div>
+            <form id="chatForm"><input type="text" id="cBody" maxlength="500" placeholder="Say something" autocomplete="off"><button class="btn sm">Send</button></form>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<footer class="sfoot" id="siteFoot"></footer>
+<div id="conPark" hidden>
+        <section class="console panel" id="console" hidden aria-label="Call console">
+          <div class="conhead"><div><div class="label">Caller role</div><h2>Call console</h2></div><span class="badge no" id="vBadge">Checking…</span></div>
+          <div class="gate" id="conGate" hidden></div>
+          <div id="conTool" style="display:grid;gap:14px">
+            <div class="conrow"><div class="sel" id="conSel"></div>
+              <div class="conclock"><span class="rsub">Round <b id="conWin" style="font-size:14px">--</b></span><span class="rsub">Locks in <b id="conClock">--:--</b></span></div></div>
+            <div class="fr3">
+              <div class="field"><label for="conVenue">Venue</label><select id="conVenue"><option value="kalshi">Kalshi</option><option value="polymarket">Polymarket</option><option value="both">Kalshi + Polymarket</option></select></div>
+              <div class="field"><span class="flabel">Confidence</span><div class="seg" id="conConf"><button type="button" data-conf="low">LOW</button><button type="button" data-conf="med" aria-pressed="true">MED</button><button type="button" data-conf="high">HIGH</button></div></div>
+              <div class="field"><label for="conNote">Note (optional)</label><input type="text" id="conNote" maxlength="140" placeholder="Entry price, reasoning, or level to watch"></div>
+            </div>
+            <div class="updown big"><button class="up" type="button" data-concall="up">▲ CALL UP</button><button class="dn" type="button" data-concall="down">▼ CALL DOWN</button></div>
+            <div class="mine" id="conMine"></div>
+            <div id="bcast-caller"></div>
+            <div class="conrec"><div class="rtitle">Your record <span id="conRecStat"></span></div><div id="conRec"></div></div>
+          </div>
+          <div class="adminbox" id="conAdmin" hidden>
+            <div class="rtitle">Verification <span>only you and Editors see this</span></div>
+            <div class="label" style="margin:4px 0 0">Requests</div><div id="conReq"></div>
+            <div class="label" style="margin:8px 0 0">Verified callers</div><div id="conVer"></div>
+            <div class="field" style="margin-top:6px"><label for="vSearch">Verify someone directly</label><input type="text" id="vSearch" placeholder="Search people by name" autocomplete="off"><div id="vHits"></div></div>
+          </div>
+        </section>
+</div>
+<div class="ccpullbar" id="ccPullBar" hidden><span><b>PULL MODE</b> · Hover any window on the site and click it to pin it to your Command Center. The top bar still works for moving between pages.</span><button class="btn sm" type="button" id="ccPullDone">Back to Command Center</button><button class="xbtn2" type="button" id="ccPullCancel">Stop</button></div>
+<div class="connov" id="connOv" hidden><div class="connbox" role="dialog" aria-modal="true" aria-labelledby="connTitle"><header><div><h3 id="connTitle">Connect to the triangle</h3><p>Apply to join Callers, Bots or Chart Scripts. Once an admin approves you, you're connected: listed on that section's main page with full access.</p></div><button class="xbtn2" type="button" data-connclose>Close</button></header><div class="conngrid" id="connGrid"></div></div></div>
+<div class="pfpage" id="pfPage" hidden><div class="pfbar"><button class="hbtn" type="button" id="pfBack">← Back</button><span>Public profile</span><span class="pfnote" id="pfNote" hidden>👁 Preview · this is exactly what other members see<button class="xbtn2" type="button" data-pvedit>✎ Edit my profile</button></span></div><div class="pfhost" id="pfHost"></div></div>
+<div class="vxfs" id="vxFs" hidden><header class="vxfsh"><b>⛶ Live streams</b><span id="vxFsN"></span><span style="flex:1"></span><button class="hbtn" type="button" id="vxFsMode" aria-pressed="true">⚔ Battle stage</button><button class="hbtn" type="button" id="vxFsAllMute">🔇 Mute all</button><button class="hbtn" type="button" id="vxFsPick" aria-pressed="false">☰ Choose streams</button><button class="hbtn" type="button" id="vxFsClose">✕ Exit full screen</button></header><div class="vxfsbody"><div class="vxfsgrid" id="vxFsGrid"></div><aside class="vxfspick" id="vxFsPicker" hidden></aside></div></div>
+<div class="profov" id="profOv" hidden><aside class="prof" id="profPanel" role="dialog" aria-modal="true" aria-label="Member profile"></aside></div>
+<div class="lgmodal" id="legalModal" hidden role="dialog" aria-modal="true" aria-labelledby="lgTitle"><div class="lgbox"><header><h3 id="lgTitle"></h3><button class="xbtn2" type="button" id="lgClose">Close</button></header><div class="lgtx" id="lgText"></div></div></div>
+<div class="maint" id="maintOv" hidden><div><h2>Back soon</h2><p id="maintMsg"></p></div></div>
+<aside class="dock" id="dock" hidden aria-label="Community">
+  <header><div><h3>Community</h3><small id="dockSub">Everyone online, one room</small></div><button class="xbtn2" type="button" id="dockClose">Close</button></header>
+  <div class="dtabs" role="tablist">
+    <button role="tab" type="button" data-dtab="members" aria-selected="true">Members <span id="dockMemN"></span></button>
+    <button role="tab" type="button" data-dtab="chat" aria-selected="false">Chat</button>
+    <button role="tab" type="button" data-dtab="voice" aria-selected="false">Voice rooms</button>
+    <button role="tab" type="button" data-dtab="online" aria-selected="false">Online <span id="onlineN2"></span></button>
+  </div>
+  <div class="dpane" id="paneMembers"></div>
+  <div class="dpane" id="paneChat" hidden>
+    <div class="lmsgs" id="lmsgs"></div>
+    <div class="lform"><button class="btn" type="button" data-opencortex style="flex:1;justify-content:center">Enter the Cortex to chat</button></div>
+  </div>
+  <div class="dpane" id="paneVoice" hidden style="overflow-y:auto"></div>
+  <div class="dpane" id="paneOnline" hidden style="overflow-y:auto"></div>
+</aside>
+<button class="neb" id="nebBtn" type="button" aria-label="Open Cosmic, the AI assistant" aria-controls="nebPanel"><canvas id="nebCv"></canvas><span class="nlab">COSMIC</span></button>
+<aside class="nebp" id="nebPanel" hidden aria-label="Cosmic assistant">
+  <header><canvas id="nebCv2"></canvas><div class="grow"><h3>COSMIC</h3><small>AI assistant · sees what's on D3MON.CO right now</small></div><button class="xbtn2" type="button" id="nebClear" title="Start a new conversation">New</button><button class="xbtn2" type="button" id="nebClose">Close</button></header>
+  <div class="nmsgs" id="nebMsgs"></div>
+  <div class="nchips" id="nebChips"></div>
+  <form class="nform" id="nebForm"><input type="text" id="nebIn" maxlength="600" placeholder="Ask Cosmic anything about D3MON.CO" autocomplete="off" aria-label="Message Cosmic"><button class="btn sm" id="nebSend">Send</button><button class="btn ghost sm" type="button" id="nebStop" hidden>Stop</button></form>
+  <div class="nfoot">Answers use your Claude account. Not financial advice.</div>
+</aside>
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/runtime.js"></script>
+<script src="js/d3mon.js"></script>
+</body>
+</html>

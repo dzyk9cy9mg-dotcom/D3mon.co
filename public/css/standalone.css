@@ -1,0 +1,22 @@
+/* Additions for the standalone site, not part of the original artifact: the sign-in link in the
+   header (claude.ai handled sign-in for the artifact) and the sign-in / account page. */
+.me .d3-auth{color:var(--ink-2);text-decoration:none;border:1px solid var(--line);padding:4px 10px;font:12px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.me .d3-auth:hover,.me .d3-auth:focus-visible{color:var(--ink);border-color:var(--acc)}
+.me .d3-out{padding:2px 7px;letter-spacing:0;font-size:13px}
+
+.acct{max-width:440px;margin:0 auto;padding:48px 0 32px;display:grid;gap:18px}
+.acct-brand{font:800 26px var(--display);letter-spacing:.08em;color:var(--ink);text-decoration:none;text-align:center}
+.acct-brand span{color:var(--acc)}
+.acct-panel{padding-top:6px}
+.acct-tabs{display:flex;border-bottom:1px solid var(--line);margin:0 18px}
+.acct-tabs button{flex:1;background:none;border:0;border-bottom:2px solid transparent;color:var(--ink-2);font:600 12.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:12px 8px;cursor:pointer}
+.acct-tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--acc)}
+.acct input[type=password]{width:100%;background:var(--bg);border:1px solid var(--line);padding:9px 11px}
+.acct form.compose{margin:0}
+.acct-who{display:flex;align-items:center;gap:12px;padding:16px 18px 0}
+.acct-who img{width:44px;height:44px;border-radius:50%}
+.acct-who b{display:block;font:700 15px var(--display);letter-spacing:.06em}
+.acct-who span{color:var(--ink-2);font:13px var(--mono)}
+.acct-foot{padding:0 18px 18px;justify-content:space-between}
+.acct-msg{min-height:1.5em;margin:0;text-align:center;color:var(--dn);font:14px var(--mono)}
+.acct-msg.ok{color:var(--up)}
