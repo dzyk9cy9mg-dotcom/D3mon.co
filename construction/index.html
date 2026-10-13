@@ -7,11 +7,23 @@
 <meta name="description" content="D3MON.co — The Live Trade Network. Callers, bots & chart scripts — coming soon.">
 <style>
   html, body { margin: 0; height: 100%; background: #070b12; overflow: hidden; }
-  video { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover; }
+  video { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover; pointer-events: none; }
   @media (max-aspect-ratio: 1/1) { video { object-fit: contain; } }
 </style>
 </head>
 <body>
-<video src="/construction.mp4" poster="/poster.jpg" autoplay muted loop playsinline preload="auto"></video>
+<video id="v" src="/construction.mp4?v=2" poster="/poster.jpg" autoplay muted loop playsinline preload="auto" disablepictureinpicture disableremoteplayback></video>
+<script>
+  var v = document.getElementById('v');
+  v.muted = true; v.defaultMuted = true; v.loop = true;
+  function go() { if (v.paused && document.visibilityState === 'visible') { var p = v.play(); if (p && p.catch) p.catch(function(){}); } }
+  v.addEventListener('ended', function () { v.currentTime = 0; go(); });
+  v.addEventListener('canplay', go);
+  v.addEventListener('pause', function () { setTimeout(go, 300); });
+  document.addEventListener('visibilitychange', go);
+  ['click', 'touchstart', 'keydown', 'mousemove', 'scroll'].forEach(function (e) { window.addEventListener(e, go, { passive: true }); });
+  setInterval(go, 1500);
+  go();
+</script>
 </body>
 </html>
