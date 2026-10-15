@@ -3,9 +3,10 @@
 // Thin client over /api/v1 (entrants, keys, calls, clock) and the live feed.
 (function () {
   "use strict";
-  const { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, mmss } = window.Arena;
+  const { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, mmss, statValue, verifTag } = window.Arena;
   const $ = id => document.getElementById(id);
-  const S = { entrants: [], keys: {}, calls: {}, token: null, busy: false };
+  const S = { entrants: [], keys: {}, calls: {}, stats: {}, token: null, busy: false };
+  const SHOWS = { hidden: "Hidden", private: "Private (only you)", members: "Members only", public: "Public" };
 
   function msg(text, ok) {
     $("msg").textContent = text || "";
@@ -54,19 +55,43 @@
       </details>`;
   }
 
+  // The owner's stat settings: who sees each stat, and its label, description and order.
+  function statsBox(e) {
+    const st = S.stats[e.id];
+    if (!st) return "";
+    return `<h3 class="sub">Stats card</h3>
+      <p class="tag">Every stat starts hidden. Choose who sees each one. Stats come from your call history and can't be edited: "verified" means Kalshi settled the rounds, "recorded by host" means HardSmoke did. Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>
+      <div class="tablewrap"><table class="mgrid stats"><thead><tr><th>Stat</th><th>Who sees it</th><th>Order</th><th>Now</th></tr></thead><tbody>${st.stats.map(x => `<tr>
+        <td><input data-st="${esc(e.id)}|${esc(x.key)}|label" maxlength="40" value="${esc(x.label === x.defaultLabel ? "" : x.label)}" placeholder="${esc(x.defaultLabel)}" aria-label="Label for ${esc(x.defaultLabel)}">
+          <input data-st="${esc(e.id)}|${esc(x.key)}|description" maxlength="160" value="${esc(x.description === x.defaultDescription ? "" : x.description)}" placeholder="${esc(x.defaultDescription)}" aria-label="Description for ${esc(x.defaultLabel)}" class="desc"></td>
+        <td><select data-st="${esc(e.id)}|${esc(x.key)}|visibility" aria-label="Who sees ${esc(x.defaultLabel)}">${Object.entries(SHOWS).map(([v, t]) => `<option value="${v}" ${v === x.visibility ? "selected" : ""}>${t}</option>`).join("")}</select></td>
+        <td><input type="number" min="0" max="999" data-st="${esc(e.id)}|${esc(x.key)}|order" value="${x.order}" aria-label="Order for ${esc(x.defaultLabel)}" style="width:70px"></td>
+        <td>${statValue(x)} ${verifTag(x)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="actions" style="margin-top:10px"><button class="btn" type="button" data-savestats="${esc(e.id)}">Save stats card</button></div>`;
+  }
+
+  // Background updates (live events, a new round) redraw the page, unless the owner has unsaved stat
+  // edits: then the new data waits, so their typing isn't wiped.
+  function refresh() {
+    if (S.statsDirty) return msg("New activity arrived. Save your stats card to see it.");
+    render();
+  }
+
   function render() {
     $("none").hidden = S.entrants.length > 0;
     $("entrants").innerHTML = S.entrants.map(e => `<section class="panel" data-ent="${esc(e.id)}">
       <h2>${esc(e.name)} <span class="st">${esc(kindName(e.kind))}</span>${e.status !== "active" ? ` <span class="st rejected">${esc(e.status)}</span>` : ""}</h2>
       ${e.kind === "caller" ? callerBox(e) : keysBox(e)}
       <h3 class="sub">Recent calls</h3>${callsTable(e)}
+      ${statsBox(e)}
     </section>`).join("");
   }
 
   async function loadEntrant(e) {
-    const [c, k] = await Promise.all([api("GET", `entrants/${e.id}/calls?limit=12`), e.kind === "caller" ? null : api("GET", `entrants/${e.id}/keys`)]);
+    const [c, k, st] = await Promise.all([api("GET", `entrants/${e.id}/calls?limit=12`), e.kind === "caller" ? null : api("GET", `entrants/${e.id}/keys`), api("GET", `entrants/${e.id}/stat-settings`)]);
     S.calls[e.id] = c.calls;
     if (k) S.keys[e.id] = k.keys;
+    S.stats[e.id] = st;
   }
 
   async function load() {
@@ -100,7 +125,19 @@
       try { await navigator.clipboard.writeText(S.token.token); msg("Key copied.", true); } catch (e) { msg("Select the key and copy it by hand."); }
       return;
     }
-    if ("hidetoken" in d) { S.token = null; render(); }
+    if ("hidetoken" in d) { S.token = null; render(); return; }
+    if (d.savestats) {
+      const id = d.savestats, cur = Object.fromEntries(S.stats[id].stats.map(x => [x.key, x])), changes = {};
+      document.querySelectorAll(`[data-st^="${CSS.escape(id)}|"]`).forEach(el => {
+        const [, key, field] = el.dataset.st.split("|"), x = cur[key];
+        let v = el.value, was = x[field];
+        if (field === "order") { v = Number(v); if (!Number.isInteger(v)) return; }
+        if (field === "label" || field === "description") was = x[field] === x[field === "label" ? "defaultLabel" : "defaultDescription"] ? "" : x[field];
+        if (v !== was) (changes[key] ||= {})[field] = v;
+      });
+      if (!Object.keys(changes).length) { S.statsDirty = false; return msg("Nothing to save."); }
+      try { S.stats[id] = await api("PUT", `entrants/${id}/stat-settings`, { stats: changes }); S.statsDirty = false; msg("Stats card saved.", true); render(); } catch (e) { msg(e.message); }
+    }
   });
 
   document.addEventListener("submit", async ev => {
@@ -121,11 +158,15 @@
   setInterval(() => {
     document.querySelectorAll("[data-lock]").forEach(el => (el.textContent = mmss(+el.dataset.lock - serverNow())));
     const r = nextRound();
-    if (lastRound !== null && r !== lastRound) load().catch(() => {});
+    if (lastRound !== null && r !== lastRound) Promise.all(S.entrants.map(loadEntrant)).then(refresh).catch(() => {});
     lastRound = r;
   }, 1000);
 
-  window.addEventListener("beforeunload", e => { if (S.token) e.preventDefault(); });
+  const markDirty = ev => { if (ev.target.dataset && ev.target.dataset.st) S.statsDirty = true; };
+  document.addEventListener("input", markDirty);
+  document.addEventListener("change", markDirty);
+
+  window.addEventListener("beforeunload", e => { if (S.token || S.statsDirty) e.preventDefault(); });
 
   (async () => {
     const me = await session();
@@ -135,7 +176,7 @@
       await load();
       if (S.entrants.length) {
         let t = null;
-        follow(S.entrants.map(e => `entrant:${e.id}`).slice(0, 20), () => { clearTimeout(t); t = setTimeout(() => Promise.all(S.entrants.map(loadEntrant)).then(render).catch(() => {}), 200); },
+        follow(S.entrants.map(e => `entrant:${e.id}`).slice(0, 20), () => { clearTimeout(t); t = setTimeout(() => Promise.all(S.entrants.map(loadEntrant)).then(refresh).catch(() => {}), 200); },
           on => { $("live").textContent = on ? "● live" : "○ reconnecting"; $("live").classList.toggle("on", on); });
       }
     } catch (e) { msg(e.message); }

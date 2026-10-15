@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Stats card · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="arena">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <section class="panel" id="cardBox" hidden>
+    <h2 id="name"></h2>
+    <p class="meta" id="sub"></p>
+    <div class="statgrid" id="stats"></div>
+    <p class="tag">Stats come from this entrant's calls, stamped by the server. "Verified": the rounds were settled by Kalshi. "Recorded by host": HardSmoke entered the results. The owner chooses which stats are shown. <span class="live-dot" id="live">○ offline</span></p>
+  </section>
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/arena-card.js"></script>
+</body>
+</html>

@@ -139,7 +139,7 @@ export class Calls {
     const battleIds = this.registry.battlesFor(e.id, round).map(b => b.id);
     const line = { t: "call", entrantId: e.id, market: MARKET, round, dir, via, battleIds };
     if (keyId) line.keyId = keyId;
-    const [saved] = this.ledger.append([line], by);
+    const [saved] = this.ledger.append([line], by, this.now()); // stamped by the same clock that checked the lock
     this.#received(saved, e);
     return { line: saved, unchanged: false };
   }

@@ -9,6 +9,7 @@ import { Ledger } from "./ledger.js";
 import { Metrics } from "./metrics.js";
 import { Keys } from "./keys.js";
 import { Calls, MARKET, nextRound } from "./calls.js";
+import { Stats } from "./stats.js";
 import { ROUND_MS } from "./registry.js";
 import path from "node:path";
 
@@ -44,6 +45,7 @@ export function createArena({ store, accounts, cfg }) {
   const keys = new Keys({ store, registry });
   const calls = new Calls({ ledger, registry, metrics, feed });
   calls.start();
+  const stats = new Stats({ store, registry, calls, metrics, ledger, feed });
   const limits = {
     bot: new RateLimiter({ capacity: 30, refillPerSec: 0.5 }), // per key
     apply: new RateLimiter({ capacity: 20, refillPerSec: 20 / 3600 }),
@@ -107,8 +109,11 @@ export function createArena({ store, accounts, cfg }) {
     if ((m = route.match(/^POST \/entrants\/([A-Za-z0-9]+)\/keys$/))) { writer(); return ok(keys.create(ctx, m[1], await body()), 201); }
     if ((m = route.match(/^DELETE \/entrants\/([A-Za-z0-9]+)\/keys\/([A-Za-z0-9]+)$/))) { writer(); return ok({ key: keys.revoke(ctx, m[1], m[2]) }); }
     if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)\/board$/))) return ok(calls.board(ctx, m[1]));
+    if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9-]+)\/card$/))) return ok(stats.card(ctx, m[1]));
+    if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9]+)\/stat-settings$/))) return ok(stats.settings(ctx, m[1]));
+    if ((m = route.match(/^PUT \/entrants\/([A-Za-z0-9]+)\/stat-settings$/))) { writer(); return ok(stats.updateSettings(ctx, m[1], await body())); }
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, close: () => { calls.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, stats, close: () => { calls.stop(); feed.close(); } };
 }

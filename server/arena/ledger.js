@@ -48,8 +48,8 @@ export class Ledger extends EventEmitter {
   }
 
   // Appends lines (all in one write, so a batch lands together) and returns them with id and at filled in.
-  append(entries, by) {
-    const at = Date.now();
+  // `at` is the server time to stamp them with; the calls module passes the clock that decides the lock.
+  append(entries, by, at = Date.now()) {
     const out = entries.map((e, i) => ({ ...e, id: crypto.randomBytes(9).toString("base64url"), at, seq: i, by }));
     const text = out.map(e => {
       const line = JSON.stringify(e);
