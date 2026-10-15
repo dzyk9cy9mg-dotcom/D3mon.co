@@ -53,6 +53,9 @@ export function loadConfig(overrides = {}) {
     sampleMaxTokens: int(env.D3MON_SAMPLE_MAX_TOKENS, 1024),
     maxDocBytes: int(env.D3MON_MAX_DOC_BYTES, 1024 * 1024),
     maxStoreBytes: int(env.D3MON_MAX_STORE_BYTES, 512 * 1024 * 1024),
+    // Step 5: poll Kalshi's public market data for round results. D3MON_KALSHI=off turns it off.
+    kalshi: flag(env.D3MON_KALSHI, true),
+    kalshiUrl: (env.D3MON_KALSHI_URL || "").replace(/\/+$/, ""), // tests point this at a stand-in
     saveDelayMs: 1000,
   };
   return { ...cfg, ...overrides };

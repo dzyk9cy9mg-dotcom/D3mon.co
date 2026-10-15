@@ -159,9 +159,12 @@ The `slug` is unique, and it links to the page's existing `config/battleRoster` 
 ### Score, a ledger line written when the round settles
 
 ```json
-{ "t": "score", "round": 1760925600000, "market": "KXBTC15M", "result": "up | down",
-  "source": "kalshi | admin", "strike": 108123.45, "final": 108200.10, "ticker": "KXBTC15M-25OCT191900-00" }
+{ "t": "score", "round": 1792045800000, "market": "KXBTC15M", "result": "up | down",
+  "source": "kalshi | admin", "strike": 80847.53, "final": 80849.65, "ticker": "KXBTC15M-26OCT150245-45",
+  "settledAt": 1792046704126 }
 ```
+
+`strike`, `final`, `ticker` and `settledAt` come from Kalshi (step 5). A hand-entered line has `source: "admin"` and `battleId` instead.
 
 ### Metric entry, the manual fallback (step 3)
 
@@ -391,11 +394,37 @@ PATCH /api/v1/battles/:id                  admin: also {onMainPage: true|false}
 - The page updates live through its own feed.
 - Every write records the previous roster in the ledger (`{ "t": "roster", battleId, bots, callers, previous }`).
 - Turning it off leaves the roster as it was last written.
-- **Step 5:** `GET /api/v1/rounds?market=KXBTC15M&from&to` and `npm run kalshi:check`.
+Step 5:
 
-## 10. Kalshi (step 5, verify first)
+```
+GET /api/v1/rounds?market=KXBTC15M&from=&to=   public: each round's result, source and verification; Kalshi's ticker,
+                                               target and final price; rounds Kalshi hasn't settled after 30 min
+                                               (missingKalshi). from/to are ISO times or ms; last 24 h by default, 7 days at most
+GET /api/v1/kalshi                             admin: the poller's health (last check, errors) and the rounds to enter by hand
+npm run kalshi:check                           on the server: reads Kalshi's latest rounds and shows how each is scored. Records nothing
+```
+
+## 10. Kalshi (step 5)
 
 - **Docs:** Kalshi's [market data quick start](https://docs.kalshi.com/getting_started/quick_start_market_data) says market data endpoints need no authentication. The base URL is `https://api.elections.kalshi.com/trade-api/v2`.
 - **Series:** `KXBTC15M` is "BTC price up in next 15 mins?". It resolves on the 60-second average of the CF Benchmarks BRTI before close against the one before open, and the ticker suffix is the close time.
-- **Not yet verified:** the build sandbox can't reach Kalshi, because its network policy blocks the host. Before step 5 is built, its first task is to run `curl` against `GET /markets?series_ticker=KXBTC15M&status=settled&limit=5` from the Lightsail server and record the real field names (`open_time`, `close_time`, `result`, `floor_strike`, `expiration_value` and the rest). The scorer is written against what that returns.
-- **Polling:** every 20 s near a round boundary and every 60 s otherwise, with backoff on errors. A round with no Kalshi result after 30 minutes is flagged for HardSmoke to settle by hand (step 3's fallback).
+- **Verified from the Lightsail server on 2026-10-15** (the build sandbox can't reach Kalshi). `GET /markets?series_ticker=KXBTC15M&status=settled` returns the newest markets first, with a `cursor` for older pages. A settled market looks like this (the fields the scorer reads):
+
+  ```json
+  { "ticker": "KXBTC15M-26OCT150245-45", "status": "finalized", "result": "yes",
+    "open_time": "2026-10-15T06:30:00Z", "close_time": "2026-10-15T06:45:00Z",
+    "settlement_ts": "2026-10-15T06:45:04.126246Z", "strike_type": "greater_or_equal",
+    "floor_strike": 80847.53, "expiration_value": "80849.65", "yes_sub_title": "Target Price: $80,847.53" }
+  ```
+
+  A round that has just closed shows `"status": "closed"` and no result until Kalshi settles it, about 4 seconds later.
+- **How it's read** (`server/arena/kalshi.js`, `parseMarket`):
+  - The round is `open_time`, because rounds are named by their start. The market must last exactly 15 minutes and open on a quarter hour.
+  - `result` `"yes"` (BTC finished at or above `floor_strike`) is **up**; `"no"` is **down**. Only `strike_type: "greater_or_equal"` is accepted, and only `finalized` or `settled` markets.
+  - `floor_strike` is recorded as `strike`, `expiration_value` as `final`. Kalshi's `result` is what counts. If the prices ever disagree with it, it's still recorded and the server logs a warning.
+  - Anything else is skipped with a reason, which `npm run kalshi:check` prints.
+- **Recording:** each settled round becomes one `score` line with `source: "kalshi"`, written oldest first and fsync'd. A round already recorded from Kalshi with the same result is never written again. A hand-entered result for the same round doesn't stop Kalshi's line, because Kalshi's is what makes it "verified". From there the existing modules do the rest: Kalshi beats a hand-entered result, calls are scored live (`round.scored`), and stats count the round as verified.
+- **Polling:** 2 s after start, then 8 s after each round closes, every 20 s in the first three minutes of a round and every 60 s otherwise. Errors back off from 30 s up to 10 minutes; the first error and every tenth are logged. Each poll reads one page of 20 (five hours), and older pages of 200 only while a round with calls, or in a battle, is still unscored, going back at most 7 days.
+- **Missing results:** a round with calls or in a battle that Kalshi hasn't settled 30 minutes after it ended is flagged (`missingKalshi` in `/rounds`, and listed on `/metrics`) for HardSmoke to enter by hand, the step 3 fallback.
+- **Turning it off:** `D3MON_KALSHI=off`. Tests run with it off and use a stand-in Kalshi server.
+- **Not yet:** paper profit per $1 contract at Kalshi's price at the lock. It needs the price at each round's start, which the settled markets don't carry.

@@ -10,7 +10,7 @@ export async function startServer(overrides = {}) {
   const dataDir = overrides.dataDir || path.join(ROOT, ".test-data", crypto.randomBytes(6).toString("hex"));
   const cfg = loadConfig({
     skipDotEnv: true, host: "127.0.0.1", port: 0, owner: "", signups: "open", signupsPerHour: 1000,
-    anthropicKey: "", anthropicModel: "claude-haiku-5-5", saveDelayMs: 20, ...overrides, dataDir,
+    anthropicKey: "", anthropicModel: "claude-haiku-5-5", saveDelayMs: 20, kalshi: false, ...overrides, dataDir,
   });
   const app = await createApp(cfg);
   await new Promise(resolve => app.server.listen(0, "127.0.0.1", resolve));

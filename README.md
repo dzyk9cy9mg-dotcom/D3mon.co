@@ -37,6 +37,7 @@ Set these as environment variables, or put `KEY=value` lines in a `.env` file in
 | `D3MON_MAX_DOC_BYTES` | 1 MiB | Largest single document |
 | `D3MON_MAX_STORE_BYTES` | 512 MiB | Most data the site will store |
 | `D3MON_DOTENV` | on | `off` ignores the `.env` file |
+| `D3MON_KALSHI` | on | Reads Kalshi's public round results to score calls. `off` leaves results to HardSmoke on `/metrics` |
 
 Never commit `.env` or `data/`. Both are in `.gitignore`.
 
@@ -79,6 +80,7 @@ Once approved, an entrant is saved. For a later battle its owner picks it from *
 - **The lineup on the main page (step 4c):** in `/applications`, HardSmoke can tick **Show this lineup on the main page** for one battle. Its lineup then replaces the current page's Battle of the Bots roster and follows every approval live. Stream links are kept, and the old roster is kept in the history.
 - **Guide for bot owners:** [BOT-GUIDE.md](BOT-GUIDE.md) is a short guide to send them: making a key and sending a test call.
 - **The lock:** every call is stamped by the server and locks when its round starts.
+- **Kalshi results (step 5):** the server reads each finished BTC 15-minute round from Kalshi's public data (no account or key) and scores every call automatically, marked "verified". `/metrics` shows whether it's working and lists any round Kalshi hasn't settled 30 minutes after it ended, to enter by hand. `npm run kalshi:check` shows what Kalshi is returning. Results are public at `GET /api/v1/rounds`.
 - **The board:** at **`/board`**, anyone can watch a battle live. Calls appear sealed (who called and when, but not which way) until the round starts, then they're revealed and scored when the result comes in. Keys can only send calls: D3MON.CO never takes trading credentials or exchange keys.
 
 Give HardSmoke's account the admin role with `npm run role -- hardsmoke admin`.
@@ -155,7 +157,7 @@ npm install   # only needed for the headless-browser test (jsdom)
 npm test
 ```
 
-There are 138 tests:
+There are 153 tests:
 
 - `server.test.js` covers the API, the access rules, live updates, presence, data on disk and Cosmic (against a mock API).
 - `runtime.test.js` runs `public/js/runtime.js` against a live server, using the page's own `mergeWrite` taken from `d3mon.js`.
@@ -186,6 +188,12 @@ There are 138 tests:
 - `custom.test.js` covers custom stats and the main-page lineup:
   - custom stats: defining them, checking every type, privacy and "self-reported", history, the type lock, removing, the rate limit
   - the lineup: drafts refused, stream links kept, live updates on the current page, one battle at a time
+- `kalshi.test.js` covers Kalshi scoring, against a stand-in Kalshi server that answers like the real one:
+  - reading the real settled markets, and skipping anything else with a reason
+  - the polling schedule and backoff
+  - recording each round once, paging back only as far as needed, Kalshi beating a hand-entered result
+  - calls scored live and labelled verified, `GET /rounds`, the admin status, flagged missing rounds
+  - Kalshi being down or answering nonsense writing nothing, and `npm run kalshi:check`
 - `package.test.js` builds the upload zip, checks every file in it, then unpacks it and starts the site from `app.cjs`.
 
 ## Differences from the artifact

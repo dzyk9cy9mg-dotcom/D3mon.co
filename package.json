@@ -13,7 +13,8 @@
     "test": "node --test test/*.test.js",
     "package": "node scripts/package.js",
     "users": "node server/cli.js users",
-    "role": "node server/cli.js role"
+    "role": "node server/cli.js role",
+    "kalshi:check": "node server/kalshi-check.js"
   },
   "devDependencies": {
     "jsdom": "25.0.1"

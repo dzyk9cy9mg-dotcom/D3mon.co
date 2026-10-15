@@ -257,7 +257,7 @@ describe("battle metrics", () => {
 // is killed with SIGKILL straight after recording, with no chance to save anything on the way out.
 test("recorded rounds survive the server being killed", async () => {
   const dataDir = path.join(ROOT, ".test-data", `crash-${crypto.randomBytes(4).toString("hex")}`);
-  const env = { ...process.env, D3MON_DOTENV: "off", D3MON_DATA_DIR: dataDir, PORT: "0", HOST: "127.0.0.1", D3MON_OWNER: "" };
+  const env = { ...process.env, D3MON_DOTENV: "off", D3MON_DATA_DIR: dataDir, PORT: "0", HOST: "127.0.0.1", D3MON_OWNER: "", D3MON_KALSHI: "off" };
   const children = new Set();
   const boot = () => new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ["server/start.js"], { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });

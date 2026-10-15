@@ -259,7 +259,7 @@ describe("Arena API", () => {
     // one starts on the same data folder. Nothing is saved by hand, so this checks the shutdown path.
     test("everything survives a restart of the server process", async () => {
       const dataDir = path.join(srv.dataDir, "restart");
-      const env = { ...process.env, D3MON_DOTENV: "off", D3MON_DATA_DIR: dataDir, PORT: "0", HOST: "127.0.0.1", D3MON_OWNER: "" };
+      const env = { ...process.env, D3MON_DOTENV: "off", D3MON_DATA_DIR: dataDir, PORT: "0", HOST: "127.0.0.1", D3MON_OWNER: "", D3MON_KALSHI: "off" };
       const boot = () => new Promise((resolve, reject) => {
         const child = spawn(process.execPath, ["server/start.js"], { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
         let out = "";

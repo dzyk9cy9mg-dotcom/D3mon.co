@@ -11,6 +11,7 @@ npm start        # http://127.0.0.1:3000. The first account to sign up becomes o
 npm test         # node --test; the jsdom page test needs `npm install` first
 npm run users    # list accounts and roles
 npm run role -- <username> admin|member|owner|ban|unban
+npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scored. Records nothing
 ```
 
 - Node ≥ 20 and **no runtime dependencies**. Keep it that way, and ask before adding one.
@@ -58,6 +59,9 @@ npm run role -- <username> admin|member|owner|ban|unban
 | Custom stats: up to 20 per bot, the type locked once values exist, and removing one keeps its history (defining the key again restores it). Values must match the declared type, and unchanged values are skipped | Self-reported data stays consistent and its history is never lost |
 | The bot stats rate limit counts only pushes that write. Bad requests fall under the key's general limit | A developer fixing their requests isn't locked out |
 | The main page's roster is fed by **one battle at a time**, chosen by HardSmoke (`onMainPage`), never automatically, and never a draft. Stream links are kept, and every write records the previous roster in the ledger | It overwrites what HardSmoke may have typed on the old page, so it must be deliberate and recoverable |
+| Kalshi round = the market's `open_time`. `result` yes = up, no = down. Only `finalized`/`settled` markets with `strike_type` `greater_or_equal` are read | Checked against what Kalshi returned to the server on 2026-10-15. Anything else is skipped, not guessed |
+| Kalshi writes its own score line even when HardSmoke already entered the same result | Kalshi's line is what makes the round "verified" |
+| Kalshi is polled 8 s after each close, every 20 s early in a round, every 60 s otherwise, and backs off on errors. Rounds with calls or in a battle that are still unsettled 30 minutes after they end are flagged for HardSmoke | Settlement comes about 4 s after close. The manual fallback stays |
 | No leaderboard. Stat cards are per entrant. Every stat starts hidden. Standard stats are "verified", custom ones "self-reported" | Owner's spec |
 
 ## Backlog
@@ -76,14 +80,15 @@ npm run role -- <username> admin|member|owner|ban|unban
 - [x] **Step 4c:**
   - custom stats (`stat-settings` `custom`, `POST /api/v1/bot/stats`, "self-reported", ledger `stat` lines)
   - one battle's lineup copied to the main page's `config/battleRoster` (`server/arena/roster.js`, the battle's `onMainPage`)
-- [ ] **Step 5:** a Kalshi `KXBTC15M` poller and automatic scoring. **Verify first, from the Lightsail server**, because the build sandbox can't reach Kalshi: `curl -s "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXBTC15M&status=settled&limit=2"`. Write the scorer against the real field names it returns
+- [x] **Step 5:** the Kalshi `KXBTC15M` poller and automatic scoring (`server/arena/kalshi.js`), written against the fields Kalshi returned from the Lightsail server. `GET /api/v1/rounds`, `GET /api/v1/kalshi` (admin), `npm run kalshi:check`, and a status line on `/metrics`
+- [ ] **Later:** paper profit per $1 contract at Kalshi's price at the lock. Settled markets don't carry the opening price, so it needs a snapshot of the open market at each round start
 - [ ] **Flagged, not fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags that admins set, so a member could approve their own transfer
 - [ ] **Flagged, not fixed:** `test/app.e2e.test.js` fails during teardown in about 1 of 4 runs, on `main` too. A page request is still in flight after the server stops
 - [ ] **Known limit:** the store saves about 1 s after a change (accounts after 0.3 s) and on SIGTERM. A crash or power loss in that window loses the last changes. A normal `systemctl restart` is safe, as tested
 
 ## Testing notes
 
-- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a), `test/stats.test.js` (step 4b) and `test/custom.test.js` (step 4c). Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
+- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a), `test/stats.test.js` (step 4b), `test/custom.test.js` (step 4c) and `test/kalshi.test.js` (step 5, against a stand-in Kalshi server). Test servers run with `kalshi: false`; spawned ones get `D3MON_KALSHI=off`. Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
 - **To test a restart, restart the real process** (spawn `server/start.js`, send SIGTERM, start again on the same data folder). Two servers sharing one folder with a hand-called `saveNow()` misses the debounced accounts save, and that once made a restart look like data loss.
 - When a test passes the first time, break the thing it guards and check that it fails.
 - Arena pages share `d3mon.css`. Avoid class and id names it already styles (`.grid`, `#battle`, bare `.row` and `.top`), because they'll pick up the main page's layout. That happened once with `/metrics`.

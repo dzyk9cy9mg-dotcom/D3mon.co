@@ -11,6 +11,7 @@ import { Keys } from "./keys.js";
 import { Calls, MARKET, nextRound } from "./calls.js";
 import { Stats } from "./stats.js";
 import { Roster } from "./roster.js";
+import { Kalshi } from "./kalshi.js";
 import { ROUND_MS } from "./registry.js";
 import path from "node:path";
 
@@ -48,6 +49,8 @@ export function createArena({ store, accounts, cfg }) {
   calls.start();
   const stats = new Stats({ store, registry, calls, metrics, ledger, feed });
   const roster = new Roster({ store, registry, ledger });
+  const kalshi = new Kalshi({ ledger, metrics, registry, calls, feed, ...(cfg.kalshiUrl ? { base: cfg.kalshiUrl } : {}) });
+  if (cfg.kalshi !== false) kalshi.start();
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
   const limits = {
     bot: new RateLimiter({ capacity: 30, refillPerSec: 0.5 }), // per key
@@ -66,6 +69,27 @@ export function createArena({ store, accounts, cfg }) {
     const r = feed.open(res, { ctx, ip: clientIp(req, cfg.trustProxy), topics });
     if (r === "too_many") throw new ApiError(429, "resource_exhausted", "Too many open feeds.");
     if (r === "not_granted") throw new ApiError(ctx.uid ? 403 : 401, "not_granted", "You can't follow one of those topics.");
+  }
+
+  // Round results, public: GET /rounds?from=&to= (ISO times or ms; the last 24 hours by default, 7 days at most).
+  function roundsView(url) {
+    const when = (v, dflt) => { if (v == null || v === "") return dflt; const t = /^\d{1,16}$/.test(v) ? Number(v) : Date.parse(v); if (!Number.isFinite(t)) throw new ApiError(400, "invalid_argument", "from and to are ISO times or milliseconds.", "from"); return t; };
+    const market = url.searchParams.get("market") || MARKET;
+    if (market !== MARKET) throw new ApiError(400, "invalid_argument", `Only ${MARKET} is recorded.`, "market");
+    const now = Date.now();
+    const to = when(url.searchParams.get("to"), now), from = when(url.searchParams.get("from"), to - 24 * 3600 * 1000);
+    if (from > to || to - from > 7 * 24 * 3600 * 1000) throw new ApiError(400, "invalid_argument", "Ask for 7 days or less, with from before to.", "from");
+    const missing = new Set(kalshi.missing(now));
+    const rounds = [];
+    for (let r = Math.ceil(from / ROUND_MS) * ROUND_MS; r <= to; r += ROUND_MS) {
+      const s = metrics.result(MARKET, r);
+      if (s) {
+        const out = { round: r, endsAt: r + ROUND_MS, result: s.result, source: s.source === "kalshi" ? "kalshi" : "host", verification: s.source === "kalshi" ? "verified" : "recorded by host" };
+        for (const k of ["ticker", "strike", "final", "settledAt"]) if (s[k] !== undefined) out[k] = s[k];
+        rounds.push(out);
+      } else if (missing.has(r)) rounds.push({ round: r, endsAt: r + ROUND_MS, result: null, missingKalshi: true });
+    }
+    return { market: MARKET, from, to, rounds };
   }
 
   // Returns true when it handled the request.
@@ -93,6 +117,11 @@ export function createArena({ store, accounts, cfg }) {
       throw new ApiError(404, "not_found", "No such endpoint.");
     }
 
+    if (route === "GET /rounds") return ok(roundsView(url));
+    if (route === "GET /kalshi") {
+      if (!isAdmin(ctx)) throw new ApiError(ctx.uid ? 403 : 401, "not_granted", "Only HardSmoke can see the Kalshi status.");
+      return ok({ kalshi: kalshi.status() });
+    }
     if (route === "GET /battles") return ok({ battles: registry.listBattles(ctx) });
     if (route === "POST /battles") { writer(); return ok({ battle: registry.battleView(registry.createBattle(ctx, await body()), ctx) }, 201); }
     if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)$/))) return ok({ battle: registry.battleView(registry.battleFor(ctx, m[1]), ctx) });
@@ -121,5 +150,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, stats, roster, close: () => { calls.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, stats, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); feed.close(); } };
 }
