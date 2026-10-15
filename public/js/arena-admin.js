@@ -1,0 +1,95 @@
+// /applications: HardSmoke's desk. Create battles and change their status, review the application log,
+// and see saved entrants. Everything updates live from /api/v1/feed.
+(function () {
+  "use strict";
+  const { api, follow, esc, when, kindName, session } = window.Arena;
+  const $ = id => document.getElementById(id);
+  const STATUSES = ["draft", "open", "closed", "live", "final"];
+  let battles = [], apps = [], entrants = [];
+
+  function msg(text, ok) {
+    $("msg").textContent = text || "";
+    $("msg").classList.toggle("ok", !!ok);
+  }
+  const battleTitle = id => (battles.find(b => b.id === id) || {}).title || "(unknown battle)";
+
+  function renderBattles() {
+    $("battles").innerHTML = battles.length ? battles.map(b => {
+      const counts = Object.entries(b.applications || {}).map(([k, n]) => `${n} ${k}`).join(" · ") || "no applications";
+      return `<div class="item"><div class="top"><span class="st ${esc(b.status)}">${esc(b.status)}</span><b>${esc(b.title)}</b>
+        <select data-bstatus="${esc(b.id)}" aria-label="Status of ${esc(b.title)}" style="width:auto;margin-left:auto">${STATUSES.map(s => `<option ${s === b.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+        <div class="meta">${esc(when(b.startsAt))} · ${b.rounds} rounds · ${b.kinds.map(kindName).join(", ")} · ${esc(counts)}</div>
+        <div class="meta">Lineup: ${b.entrants.length ? b.entrants.map(e => esc(e.name)).join(", ") : "nobody approved yet"}</div></div>`;
+    }).join("") : `<p class="empty">No battles yet. Create the first one above.</p>`;
+    const cur = $("fBattle").value;
+    $("fBattle").innerHTML = `<option value="">All battles</option>` + battles.map(b => `<option value="${esc(b.id)}">${esc(b.title)}</option>`).join("");
+    $("fBattle").value = battles.some(b => b.id === cur) ? cur : "";
+  }
+
+  function renderLog() {
+    const fb = $("fBattle").value, fs = $("fStatus").value;
+    const list = apps.filter(a => (!fb || a.battleId === fb) && (!fs || a.status === fs));
+    $("log").innerHTML = list.length ? list.map(a => {
+      const acts = a.status === "pending"
+        ? `<button class="btn sm" type="button" data-review="${esc(a.id)}|approve">Approve</button><button class="btn ghost sm" type="button" data-review="${esc(a.id)}|reject">Reject</button>`
+        : a.status === "approved" || a.status === "rejected" ? `<button class="btn ghost sm" type="button" data-review="${esc(a.id)}|reopen">Reopen</button>` : "";
+      const hist = a.history.map(h => `${when(h.at)} ${h.action}${h.note ? ` (“${h.note}”)` : ""}`).join(" → ");
+      return `<div class="item"><div class="top"><span class="st ${esc(a.status)}">${esc(a.status)}</span><b>${esc(a.name)}</b><span class="meta">${esc(kindName(a.kind))}${a.entrantId ? " · saved entrant" : " · new"} · ${esc(battleTitle(a.battleId))}</span></div>
+        <div class="meta">Creator: ${esc(a.creatorName)} · Alt account: ${esc(a.altAccount || "–")} · Discord: ${esc(a.discordServer || "–")} · Site account: ${esc(a.applicantName || a.applicantId)}</div>
+        ${a.notes ? `<div class="notes">${esc(a.notes)}</div>` : ""}
+        <div class="meta">${esc(hist)}</div>
+        ${acts ? `<div class="row"><div class="field"><input data-note="${esc(a.id)}" maxlength="500" placeholder="Note to the applicant (optional)" aria-label="Review note for ${esc(a.name)}"></div>${acts}</div>` : ""}</div>`;
+    }).join("") : `<p class="empty">No applications match.</p>`;
+  }
+
+  function renderEntrants() {
+    $("entrants").innerHTML = entrants.length ? entrants.map(e => `<div class="item"><div class="top"><span class="st">${esc(kindName(e.kind))}</span><b>${esc(e.name)}</b><span class="meta">by ${esc(e.creatorName)} · ${e.battles.length} battle${e.battles.length === 1 ? "" : "s"}${e.status !== "active" ? " · " + esc(e.status) : ""}</span></div></div>`).join("")
+      : `<p class="empty">Approved entrants appear here and can be re-selected for future battles.</p>`;
+  }
+
+  async function load() {
+    const [b, a, e] = await Promise.all([api("GET", "battles"), api("GET", "applications"), api("GET", "entrants")]);
+    battles = b.battles; apps = a.applications; entrants = e.entrants;
+    renderBattles(); renderLog(); renderEntrants();
+  }
+
+  $("newForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const startsAt = new Date($("bStart").value).getTime();
+    if (!Number.isFinite(startsAt)) return msg("Pick a start time.");
+    const kinds = [...document.querySelectorAll("input[name=kinds]:checked")].map(i => i.value);
+    try {
+      await api("POST", "battles", { title: $("bTitle").value, startsAt, rounds: +$("bRounds").value || 8, kinds, status: $("bStatus").value });
+      ev.target.reset();
+      msg("Battle created.", true);
+      await load();
+    } catch (e) { msg(e.message); }
+  });
+
+  document.addEventListener("change", async ev => {
+    if (ev.target === $("fBattle") || ev.target === $("fStatus")) return renderLog();
+    const id = ev.target.dataset.bstatus;
+    if (!id) return;
+    try { await api("PATCH", `battles/${id}`, { status: ev.target.value }); msg(`Status set to ${ev.target.value}.`, true); await load(); } catch (e) { msg(e.message); await load(); }
+  });
+
+  document.addEventListener("click", async ev => {
+    const b = ev.target.closest("[data-review]");
+    if (!b) return;
+    const [id, decision] = b.dataset.review.split("|");
+    const note = (document.querySelector(`[data-note="${CSS.escape(id)}"]`) || {}).value || "";
+    b.disabled = true;
+    try { await api("POST", `applications/${id}/review`, { decision, note }); msg(decision === "approve" ? "Approved and added to the lineup." : decision === "reject" ? "Rejected." : "Reopened.", true); await load(); }
+    catch (e) { msg(e.message); b.disabled = false; }
+  });
+
+  (async () => {
+    const me = await session();
+    if (!me || (me.role !== "admin" && me.role !== "owner")) { $("denied").hidden = false; return; }
+    for (const id of ["newBox", "battleBox", "logBox", "entBox"]) $(id).hidden = false;
+    try { await load(); } catch (e) { msg(e.message); }
+    let t = null;
+    follow(["battles", "admin:applications"], () => { clearTimeout(t); t = setTimeout(() => load().catch(() => {}), 150); },
+      on => { $("live").textContent = on ? "● live" : "○ reconnecting"; $("live").classList.toggle("on", on); });
+  })();
+})();

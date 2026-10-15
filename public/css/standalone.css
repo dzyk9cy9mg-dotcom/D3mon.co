@@ -20,3 +20,32 @@
 .acct-foot{padding:0 18px 18px;justify-content:space-between}
 .acct-msg{min-height:1.5em;margin:0;text-align:center;color:var(--dn);font:14px var(--mono)}
 .acct-msg.ok{color:var(--up)}
+
+/* Battle of the Bots registration (/apply) and HardSmoke's application log (/applications). Thin pages
+   over /api/v1; the 3D site will replace them, so they reuse the existing look and add little. */
+.arena{max-width:980px;margin:0 auto;padding:32px 0;display:grid;gap:18px}
+.arena .panel{padding:16px 18px}
+.arena h2{font:700 15px var(--display);letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px}
+.arena .row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.arena .row .field{flex:1 1 180px;margin:0}
+.arena input,.arena select,.arena textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:8px 10px;font:14px var(--body)}
+.arena textarea{min-height:76px;resize:vertical}
+.arena label{display:block;font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+.arena .checks{display:flex;gap:14px;flex-wrap:wrap}
+.arena .checks label{display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)}
+.arena .checks input{width:auto}
+.arena .list{display:grid;gap:8px}
+.arena .item{border:1px solid var(--line);padding:10px 12px;display:grid;gap:6px}
+.arena .item .top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.arena .item .meta{color:var(--ink-2);font:13px var(--mono);overflow-wrap:anywhere}
+.arena .item .notes{white-space:pre-wrap;font-size:14px;color:var(--ink-2);overflow-wrap:anywhere}
+.arena .st{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line);color:var(--ink-2)}
+.arena .st.pending,.arena .st.open{color:var(--callers);border-color:var(--callers)}
+.arena .st.approved,.arena .st.live{color:var(--up);border-color:var(--up)}
+.arena .st.rejected{color:var(--dn);border-color:var(--dn)}
+.arena .pick{display:flex;gap:10px;align-items:center;border:1px solid var(--line);padding:10px 12px;cursor:pointer;margin:0;text-transform:none;letter-spacing:0;font:15px var(--body);color:var(--ink)}
+.arena .pick input{width:auto}
+.arena .pick:has(input:checked){border-color:var(--acc)}
+.arena .empty{color:var(--ink-3);font-size:14px}
+.arena .live-dot{font:12px var(--mono);color:var(--ink-3)}
+.arena .live-dot.on{color:var(--up)}

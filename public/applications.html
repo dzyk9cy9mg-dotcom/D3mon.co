@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Applications · Battle of the Bots · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="arena">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">HardSmoke's Battle of the Bots desk: create battles, review applications, and see every application ever sent. Nothing in the log is ever deleted. <span class="live-dot" id="live">○ offline</span></p>
+
+  <section class="panel" id="denied" hidden>
+    <h2>Admins only</h2>
+    <p class="empty">Sign in with HardSmoke's account or another admin account. <a href="login">Sign in</a></p>
+  </section>
+
+  <section class="panel" id="newBox" hidden>
+    <h2>New battle</h2>
+    <form id="newForm" autocomplete="off">
+      <div class="row">
+        <div class="field"><label for="bTitle">Title</label><input id="bTitle" maxlength="80" required placeholder="Battle of the Bots S2 · Week 3"></div>
+        <div class="field"><label for="bStart">Starts (your time, on a quarter hour)</label><input id="bStart" type="datetime-local" step="900" required></div>
+        <div class="field" style="flex:0 1 110px"><label for="bRounds">Rounds</label><input id="bRounds" type="number" min="1" max="96" value="8"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label>Open to</label><div class="checks"><label><input type="checkbox" name="kinds" value="bot" checked> Bots</label><label><input type="checkbox" name="kinds" value="caller" checked> Callers</label><label><input type="checkbox" name="kinds" value="script" checked> Scripts</label></div></div>
+        <div class="field"><label for="bStatus">Status</label><select id="bStatus"><option value="draft">Draft (only admins see it)</option><option value="open" selected>Open for applications</option></select></div>
+        <button class="btn" type="submit">Create battle</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" id="battleBox" hidden>
+    <h2>Battles</h2>
+    <div class="list" id="battles"></div>
+  </section>
+
+  <section class="panel" id="logBox" hidden>
+    <h2>Application log</h2>
+    <div class="row" style="margin-bottom:12px">
+      <div class="field"><label for="fBattle">Battle</label><select id="fBattle"><option value="">All battles</option></select></div>
+      <div class="field"><label for="fStatus">Status</label><select id="fStatus"><option value="">Any status</option><option>pending</option><option>approved</option><option>rejected</option><option>withdrawn</option></select></div>
+    </div>
+    <div class="list" id="log"></div>
+  </section>
+
+  <section class="panel" id="entBox" hidden>
+    <h2>Saved entrants</h2>
+    <div class="list" id="entrants"></div>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/arena-admin.js"></script>
+</body>
+</html>

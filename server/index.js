@@ -9,6 +9,7 @@
 //   POST /api/user/profiles      names and avatars;  GET /api/user/search
 //   POST /api/sample             streams an answer from the Anthropic API
 //   POST /api/auth/*             register, login, logout, profile, password
+//   /api/v1/*                    the Arena API and its live feed (server/arena/, ARCHITECTURE.md)
 import http from "node:http";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -18,6 +19,7 @@ import { canRead, canWrite, canWritePath } from "./rules.js";
 import { Accounts } from "./accounts.js";
 import { Rooms, checkRoomName } from "./rooms.js";
 import { normalizeMessages, streamMessage, SampleError } from "./sample.js";
+import { createArena } from "./arena/api.js";
 import { HttpError, sendJson, readJson, parseCookies, sessionCookie, serveFile, RateLimiter, clientIp, isHttps } from "./http.js";
 
 const COOKIE = "d3mon_session";
@@ -35,6 +37,7 @@ export async function createApp(cfg = loadConfig()) {
   store.load();
   const accounts = new Accounts({ dir: cfg.dataDir, owner: cfg.owner, signups: cfg.signups });
   await accounts.load();
+  const arena = createArena({ store, accounts, cfg });
 
   const limits = {
     writes: new RateLimiter({ capacity: 300, refillPerSec: 5 }),
@@ -304,6 +307,7 @@ export async function createApp(cfg = loadConfig()) {
   function logout(req, res, ctx) {
     const key = accounts.endSession(ctx.token);
     if (key) for (const page of pages.values()) if (page.ctx.sessionKey === key) page.res.end();
+    arena.feed.endSession(key);
     sendJson(res, 200, { ok: true }, { "set-cookie": sessionCookie(COOKIE, "", { maxAge: 0, secure: secureFor(req), path: `${cfg.basePath}/` }) });
   }
 
@@ -353,7 +357,8 @@ export async function createApp(cfg = loadConfig()) {
   }
 
   async function api(req, res, pathname, url, ctx) {
-    if (req.method === "POST") checkSameOrigin(req);
+    if (req.method !== "GET" && req.method !== "HEAD") checkSameOrigin(req);
+    if (pathname.startsWith("/api/v1/")) return arena.handle(req, res, pathname, url, ctx);
     switch (`${req.method} ${pathname}`) {
       case "GET /api/session": return sendJson(res, 200, sessionInfo(ctx));
       case "GET /api/events": return openPage(req, res, ctx);
@@ -390,6 +395,7 @@ export async function createApp(cfg = loadConfig()) {
     if (req.method !== "GET" && req.method !== "HEAD") throw new HttpError(405, "invalid_argument", "Method not allowed.");
     if (pathname === "/") return serveFile(req, res, path.join(cfg.publicDir, "index.html"), PAGE_HEADERS);
     if (pathname === "/login" || pathname === "/account") return serveFile(req, res, path.join(cfg.publicDir, "login.html"), PAGE_HEADERS);
+    if (pathname === "/apply" || pathname === "/applications") return serveFile(req, res, path.join(cfg.publicDir, `${pathname.slice(1)}.html`), PAGE_HEADERS);
     let rel;
     try { rel = decodeURIComponent(pathname); } catch { return false; }
     const file = path.resolve(cfg.publicDir, `.${rel}`);
@@ -416,7 +422,7 @@ export async function createApp(cfg = loadConfig()) {
       if (res.headersSent) return void res.destroy();
       const status = e.status || STATUS[e.code] || 500;
       if (status === 500) console.error(e);
-      sendJson(res, status, { error: { code: e.code || "error", message: status === 500 ? "Something went wrong." : e.message } });
+      sendJson(res, status, { error: { code: e.code || "error", message: status === 500 ? "Something went wrong." : e.message, ...(e.field && status !== 500 ? { field: e.field } : {}) } });
     }
   }
 
@@ -425,9 +431,10 @@ export async function createApp(cfg = loadConfig()) {
   function shutdown() {
     store.saveNow();
     accounts.saveNow();
+    arena.close();
     for (const p of pages.values()) p.res.end();
     server.close();
   }
 
-  return { server, store, accounts, cfg, shutdown };
+  return { server, store, accounts, arena, cfg, shutdown };
 }

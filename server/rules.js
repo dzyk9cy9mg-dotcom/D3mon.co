@@ -15,7 +15,11 @@
 //   streams                      the host (hostId) or an admin
 //   lounge, boards, calls, cxcall   any member: shared logs that everyone writes into
 //
-// Anything else is admin-only to write. Everything except private areas and DMs is public to read.
+//   arena_*                      nobody, admins included: the Arena's records (battles, applications,
+//                                entrants, stats) change only through /api/v1, which checks every field
+//                                and applies each reader's privacy (server/arena/)
+//
+// Anything else is admin-only to write. Everything except private areas, DMs and arena_* is public to read.
 
 const ADMIN_ONLY = new Set(["config", "verified", "streamers", "results"]);
 const OWN_DOC = new Set(["bots", "scripts", "requests", "rolereq", "dcreq", "reviewreq"]);
@@ -24,12 +28,14 @@ const SHARED = new Set(["lounge", "boards", "calls", "cxcall"]);
 
 export const isAdmin = ctx => ctx.role === "admin" || ctx.role === "owner";
 
+const isServerOnly = segs => segs[0].startsWith("arena_");
 const isPrivateArea = segs => segs[0] === "data" && segs[1] === "users" && segs.length >= 4;
 const inConversation = (doc, uid) => !!doc && Array.isArray(doc.p) && doc.p.includes(uid);
 const onlyKeys = (obj, keys) => !!obj && Object.keys(obj).length > 0 && Object.keys(obj).every(k => keys.includes(k));
 
 // segs: the document path split on "/"; data: the document (undefined when it doesn't exist).
 export function canRead(ctx, segs, data) {
+  if (isServerOnly(segs)) return false;
   if (isPrivateArea(segs)) return !!ctx.uid && segs[2] === ctx.uid;
   if (segs[0] === "dmx" && segs.length === 2 && data !== undefined) return inConversation(data, ctx.uid);
   return true;
@@ -39,7 +45,7 @@ export function canRead(ctx, segs, data) {
 // Used for leases, which the page takes just before creating a document.
 // Private areas and DMs come before the admin check: admins can't write into those either.
 export function canWritePath(ctx, segs) {
-  if (!ctx.uid || !ctx.canWrite) return false;
+  if (!ctx.uid || !ctx.canWrite || isServerOnly(segs)) return false;
   if (segs[0] === "data") return isPrivateArea(segs) ? segs[2] === ctx.uid : isAdmin(ctx);
   if (segs[0] === "dmx" && segs.length === 2) return true; // checked against the conversation in canWrite
   if (isAdmin(ctx)) return true;
