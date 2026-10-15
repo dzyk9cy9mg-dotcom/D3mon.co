@@ -61,6 +61,12 @@ Bots, callers and scripters apply for each battle at **`/apply`** (also linked f
 
 Once approved, an entrant is saved. For a later battle its owner picks it from **Saved entrant** and sends a new application, because each battle needs its own.
 
+**Round metrics** are the manual fallback for scoring. At **`/metrics`** (linked from `/applications`), HardSmoke picks a battle and a finished round and records the whole lineup at once: each entrant's call, right or wrong, speed and profit.
+- Pick the round result and each call, and right or wrong fills in by itself.
+- Speed is how many seconds before the round locked the call was made. Profit is in US dollars.
+- Corrections and cleared rows are kept in the entry history.
+- The battle record, totals per entrant listed in lineup order and not ranked, is public and updates live. Every figure is labelled "recorded by host".
+
 Give HardSmoke's account the admin role with `npm run role -- hardsmoke admin`.
 
 Both pages are thin clients over the Arena API (`/api/v1`) and its live feed. [ARCHITECTURE.md](ARCHITECTURE.md) has the design, data formats and endpoints for this and for the later steps (metrics entry, the bot stats API and Kalshi scoring). Arena data is server-only: `/api/db` can't read or write it, and anything that looks like a key, password or wallet phrase is refused.
@@ -69,7 +75,7 @@ Both pages are thin clients over the Arena API (`/api/v1`) and its live feed. [A
 
 `npm run package` builds `dist/d3mon-site.zip`, which holds only what the site needs to run. [DEPLOY.md](DEPLOY.md) walks through putting it on a server, a hosting panel, or an app platform, either on its own domain or under a path on another site.
 
-Run a single server process. Data is held in memory and saved to `data/` about a second after each change, and again on `SIGTERM` or `SIGINT`. Back up the `data/` folder: `accounts.json`, `roles.json` and `db.json`.
+Run a single server process. Data is held in memory and saved to `data/` about a second after each change, and again on `SIGTERM` or `SIGINT`. Back up the `data/` folder: `accounts.json`, `roles.json`, `db.json` and the `ledger/` folder. The ledger is the Arena's round history, and each entry is written to disk as soon as it's saved.
 
 ## How it fits together
 
@@ -82,7 +88,7 @@ public/
   js/d3mon.js         the artifact's app code, unchanged
   js/runtime.js       window.claude for this server (new)
   login.html, js/account.js   sign in, sign up, account settings (new)
-  apply.html, applications.html, js/arena*.js   Battle of the Bots registration and review (new)
+  apply.html, applications.html, metrics.html, js/arena*.js   Battle of the Bots registration, review and round metrics (new)
 app.cjs               startup file for hosting panels (starts server/start.js)
 server/
   start.js            starts the server (npm start)
@@ -94,7 +100,8 @@ server/
   sample.js           Cosmic's link to the Anthropic API
   cli.js              npm run users / npm run role
   arena/              the Arena API under /api/v1: validation and credential refusal, live feed,
-                      battles, applications and saved entrants (ARCHITECTURE.md)
+                      battles, applications and saved entrants, round metrics, and the append-only
+                      ledger in data/ledger/ (ARCHITECTURE.md)
 scripts/package.js    npm run package: builds the upload zip
 test/                 npm test
 ```
@@ -133,12 +140,19 @@ npm install   # only needed for the headless-browser test (jsdom)
 npm test
 ```
 
-There are 83 tests:
+There are 99 tests:
 
 - `server.test.js` covers the API, the access rules, live updates, presence, data on disk and Cosmic (against a mock API).
 - `runtime.test.js` runs `public/js/runtime.js` against a live server, using the page's own `mergeWrite` taken from `d3mon.js`.
 - `app.e2e.test.js` boots the whole page in jsdom, once at the root of a domain and once under `/d3mon/`. A member signs in, creates a subcategory and a thread, and the thread appears live on the owner's page. The page saves its DM key pair to the member's private area, and the test checks that no script errors occur.
 - `arena.test.js` covers the Arena API: battles, applying, review decisions and the log, re-selecting saved entrants, privacy of entrant details, refusing credentials, keeping `/api/db` out of arena data, persistence, and the live feed's per-reader permissions.
+- `metrics.test.js` covers round metrics and the ledger:
+  - recording 12 bots in one request
+  - refusing bad rows (each error names its row)
+  - corrections, clears and their history
+  - result mismatches, and Kalshi's result taking precedence
+  - the battle record, privacy and the live feed
+  - recorded rounds surviving the server being killed with SIGKILL
 - `package.test.js` builds the upload zip, checks every file in it, then unpacks it and starts the site from `app.cjs`.
 
 ## Differences from the artifact

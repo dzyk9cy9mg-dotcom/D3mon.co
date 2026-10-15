@@ -5,6 +5,9 @@ import { isAdmin } from "../rules.js";
 import { ApiError } from "./validate.js";
 import { Feed } from "./feed.js";
 import { Registry } from "./registry.js";
+import { Ledger } from "./ledger.js";
+import { Metrics } from "./metrics.js";
+import path from "node:path";
 
 const MAX_BODY = 16 * 1024;
 
@@ -30,7 +33,11 @@ export function createArena({ store, accounts, cfg }) {
   }
 
   const feed = new Feed({ allow, ctxNow });
-  const registry = new Registry({ store, feed, userName: uid => accounts.users.get(uid)?.name ?? null });
+  const userName = uid => accounts.users.get(uid)?.name ?? null;
+  const registry = new Registry({ store, feed, userName });
+  const ledger = new Ledger({ dir: path.join(cfg.dataDir, "ledger") });
+  ledger.load();
+  const metrics = new Metrics({ ledger, registry, feed, userName });
   const limits = {
     apply: new RateLimiter({ capacity: 20, refillPerSec: 20 / 3600 }),
     writes: new RateLimiter({ capacity: 120, refillPerSec: 2 }),
@@ -65,6 +72,8 @@ export function createArena({ store, accounts, cfg }) {
       if (ctx.uid) take(limits.apply, ctx.uid);
       return ok({ application: registry.appView(registry.apply(ctx, m[1], await body()), ctx) }, 201);
     }
+    if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)\/metrics$/))) return ok(metrics.view(ctx, m[1], { history: url.searchParams.get("history") === "1" }));
+    if ((m = route.match(/^PUT \/battles\/([A-Za-z0-9]+)\/rounds\/(\d{1,16})\/metrics$/))) { writer(); return ok({ round: metrics.record(ctx, m[1], m[2], await body()) }); }
     if (route === "GET /applications") return ok({ applications: registry.listApps(ctx, { battleId: url.searchParams.get("battleId"), status: url.searchParams.get("status") }) });
     if ((m = route.match(/^GET \/applications\/([A-Za-z0-9]+)$/))) return ok({ application: registry.getApp(ctx, m[1]) });
     if ((m = route.match(/^POST \/applications\/([A-Za-z0-9]+)\/withdraw$/))) { writer(); return ok({ application: registry.appView(registry.withdraw(ctx, m[1]), ctx) }); }
@@ -74,5 +83,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, close: () => feed.close() };
+  return { handle, feed, registry, ledger, metrics, close: () => feed.close() };
 }

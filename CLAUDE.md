@@ -37,17 +37,20 @@ npm run role -- <username> admin|member|owner|ban|unban
 | Battles start on a quarter hour and default to 8 rounds of 15 minutes on `KXBTC15M` | They follow Kalshi's BTC 15-minute rounds |
 | The live feed (`/api/v1/feed?topics=`) builds each event per reader and re-checks roles on every event. Signing out ends the stream | Privacy is enforced on the server, never just hidden in the page |
 | Calls are locked by the **server clock** at round start (step 4) | The current page trusts browser timestamps, so calls can be backdated |
+| The ledger arrived in step 3, not 4, as the home for metric and score lines. Each append is fsync'd before the request is answered | Round results must survive a crash. The 1 s store delay doesn't guarantee that |
+| Manual metric `speedMs` is lead time before the lock (more means earlier). `profit` is US dollars, signed, to the cent | One meaning for manual and automatic speed. **Owner may want to change the profit unit** |
+| A metric entry's `correct` must agree with its `call` and the round result. A later result correction flags `mismatch` and doesn't rewrite entries | Mistakes stay visible. History is never rewritten |
+| A Kalshi result beats a hand-entered one, and once there is one, a different result can't be entered by hand | Verified data wins |
 | No leaderboard. Stat cards are per entrant. Every stat starts hidden. Standard stats are "verified", custom ones "self-reported" | Owner's spec |
 
 ## Backlog
 
 - [x] **Step 1:** architecture (`ARCHITECTURE.md`)
 - [x] **Step 2:** registration (`/apply`), the application log (`/applications`), saved entrants, `/api/v1` and the live feed
-- [ ] **Step 3:** HardSmoke's manual round metrics for 10+ bots at once (right or wrong, speed, profit), labelled "recorded by host"
+- [x] **Step 3:** HardSmoke's manual round metrics for 10+ bots at once at `/metrics` (`PUT /api/v1/battles/:id/rounds/:round/metrics`), labelled "recorded by host", with the append-only ledger (`server/arena/ledger.js`, `data/ledger/`)
 - [ ] **Step 4:**
   - bot API keys (hashed, one entrant each, revocable) and `POST /api/v1/bot/calls` and `/bot/stats`
   - caller Up/Down buttons with the same lock
-  - an append-only ledger (`data/ledger/*.jsonl`)
   - standard stats, plus custom stat definitions with visibility settings
   - stat cards
   - mirroring lineups into `config/battleRoster`
@@ -58,6 +61,7 @@ npm run role -- <username> admin|member|owner|ban|unban
 
 ## Testing notes
 
-- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js`.
+- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2) and `test/metrics.test.js` (step 3).
 - **To test a restart, restart the real process** (spawn `server/start.js`, send SIGTERM, start again on the same data folder). Two servers sharing one folder with a hand-called `saveNow()` misses the debounced accounts save, and that once made a restart look like data loss.
 - When a test passes the first time, break the thing it guards and check that it fails.
+- Arena pages share `d3mon.css`. Avoid class and id names it already styles (`.grid`, `#battle`, bare `.row` and `.top`), because they'll pick up the main page's layout. That happened once with `/metrics`.

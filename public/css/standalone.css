@@ -49,3 +49,27 @@
 .arena .empty{color:var(--ink-3);font-size:14px}
 .arena .live-dot{font:12px var(--mono);color:var(--ink-3)}
 .arena .live-dot.on{color:var(--up)}
+
+/* Round metrics (/metrics): HardSmoke's grid for recording a whole lineup at once. */
+.arena .rounds{display:flex;flex-wrap:wrap;gap:6px}
+.arena .rounds button{background:var(--bg);border:1px solid var(--line);color:var(--ink-2);padding:6px 10px;font:12px var(--mono);cursor:pointer}
+.arena .rounds button[aria-pressed="true"]{border-color:var(--acc);color:var(--ink)}
+.arena .rounds button.done::after{content:" ✓";color:var(--up)}
+.arena .rounds button:disabled{opacity:.45;cursor:default}
+.arena .seg2{display:inline-flex;gap:0}
+.arena .seg2 button{background:var(--bg);border:1px solid var(--line);color:var(--ink-2);padding:5px 10px;font:600 12px var(--mono);cursor:pointer;min-width:38px}
+.arena .seg2 button+button{border-left:0}
+.arena .seg2 button[aria-pressed="true"].up,.arena .seg2 button[aria-pressed="true"].ok{background:color-mix(in srgb,var(--up) 22%,transparent);color:var(--up);border-color:var(--up)}
+.arena .seg2 button[aria-pressed="true"].down,.arena .seg2 button[aria-pressed="true"].no{background:color-mix(in srgb,var(--dn) 22%,transparent);color:var(--dn);border-color:var(--dn)}
+.arena .mgrid{width:100%;border-collapse:collapse;font-size:14px}
+.arena .mgrid th{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+.arena .mgrid td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.arena .mgrid input{width:96px;padding:5px 7px}
+.arena .mgrid tr.changed td:first-child{box-shadow:inset 3px 0 var(--acc)}
+.arena .mgrid .warn{color:var(--callers);font:12px var(--mono)}
+.arena .tablewrap{overflow-x:auto}
+.arena .tag{font:11px var(--mono);color:var(--ink-3)}
+/* The main page's .row and .top are list rows and the header bar; keep their padding, borders and hover out of the Arena pages. */
+.arena .row{padding:0;border:0;cursor:auto}
+.arena .row:hover{background:none}
+.arena .item .top{padding:0;border:0}

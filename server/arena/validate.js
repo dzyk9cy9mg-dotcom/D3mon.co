@@ -87,22 +87,29 @@ export function cleanText(v, { multiline = false } = {}) {
   return s.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-// schema: { field: { type: "string"|"integer"|"enum"|"array", required, min, max, values, multiline, of } }
-// Returns only the declared fields, cleaned. `partial` allows any subset (for PATCH).
+// schema: { field: { type: "string"|"integer"|"number"|"boolean"|"enum"|"array"|"object", required, min,
+// max, decimals, values, multiline, of, fields } }. "array" takes `of` (the rule for each item); "object"
+// takes `fields` (a nested schema). Returns only the declared fields, cleaned. `partial` allows any subset
+// (for PATCH).
 export function check(body, schema, { partial = false } = {}) {
   if (!isPlainObject(body)) throw new ApiError(400, "invalid_argument", "Send a JSON object.");
   rejectSecrets(body);
-  for (const k of Object.keys(body)) if (!Object.hasOwn(schema, k)) throw new ApiError(400, "invalid_argument", `Unknown field "${k}".`, k);
+  return checkFields(body, schema, partial, "");
+}
+
+function checkFields(body, schema, partial, prefix) {
+  for (const k of Object.keys(body)) if (!Object.hasOwn(schema, k)) throw new ApiError(400, "invalid_argument", `Unknown field "${prefix + k}".`, prefix + k);
   const out = {};
   for (const [k, rule] of Object.entries(schema)) {
+    const at = prefix + k;
     const present = body[k] !== undefined && body[k] !== null && !(rule.type === "string" && cleanText(body[k], rule) === "");
     if (!present) {
-      if (rule.required && !partial) throw new ApiError(400, "invalid_argument", `"${k}" is required.`, k);
+      if (rule.required && !partial) throw new ApiError(400, "invalid_argument", `"${at}" is required.`, at);
       if (k in body && rule.type === "string" && !rule.required) out[k] = "";
       else if (!partial && rule.default !== undefined) out[k] = structuredClone(rule.default);
       continue;
     }
-    out[k] = checkOne(k, body[k], rule);
+    out[k] = checkOne(at, body[k], rule);
   }
   return out;
 }
@@ -124,14 +131,26 @@ function checkOne(k, v, rule) {
       if (rule.max !== undefined && v > rule.max) throw bad(`"${k}" must be at most ${rule.max}.`);
       return v;
     }
+    case "number": {
+      if (typeof v !== "number" || !Number.isFinite(v)) throw bad(`"${k}" must be a number.`);
+      if (rule.min !== undefined && v < rule.min) throw bad(`"${k}" must be at least ${rule.min}.`);
+      if (rule.max !== undefined && v > rule.max) throw bad(`"${k}" must be at most ${rule.max}.`);
+      return rule.decimals === undefined ? v : Math.round(v * 10 ** rule.decimals) / 10 ** rule.decimals;
+    }
+    case "boolean":
+      if (typeof v !== "boolean") throw bad(`"${k}" must be true or false.`);
+      return v;
     case "enum":
       if (!rule.values.includes(v)) throw bad(`"${k}" must be one of: ${rule.values.join(", ")}.`);
       return v;
+    case "object":
+      if (!isPlainObject(v)) throw bad(`"${k}" must be an object.`);
+      return checkFields(v, rule.fields, false, `${k}.`);
     case "array": {
       if (!Array.isArray(v)) throw bad(`"${k}" must be a list.`);
       if (rule.min !== undefined && v.length < rule.min) throw bad(`"${k}" needs at least ${rule.min} item${rule.min === 1 ? "" : "s"}.`);
       if (rule.max !== undefined && v.length > rule.max) throw bad(`"${k}" can have at most ${rule.max} items.`);
-      const items = v.map(x => checkOne(k, x, rule.of));
+      const items = v.map((x, i) => checkOne(`${k}[${i}]`, x, rule.of));
       return rule.unique ? [...new Set(items)] : items;
     }
     default:
