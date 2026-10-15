@@ -55,6 +55,9 @@ npm run role -- <username> admin|member|owner|ban|unban
 | Card readers: guests see public stats, members public and members-only, the owner also private. **Admins read like members**, so private means private. Admins can still see raw calls on the board and history | The owner's privacy choice holds for everyone |
 | Verification is per stat: "verified" (all results from Kalshi), "recorded by host" (all by hand), "mixed" (with `sources` counts). Call counts and lead time are "verified" because they're server-stamped | Honest labelling while results are still entered by hand (before step 5) |
 | A call is stamped with the same clock that checked its lock (`ledger.append(…, at)`) | One clock decides both, and tests can move it |
+| Custom stats: up to 20 per bot, the type locked once values exist, and removing one keeps its history (defining the key again restores it). Values must match the declared type, and unchanged values are skipped | Self-reported data stays consistent and its history is never lost |
+| The bot stats rate limit counts only pushes that write. Bad requests fall under the key's general limit | A developer fixing their requests isn't locked out |
+| The main page's roster is fed by **one battle at a time**, chosen by HardSmoke (`onMainPage`), never automatically, and never a draft. Stream links are kept, and every write records the previous roster in the ledger | It overwrites what HardSmoke may have typed on the old page, so it must be deliberate and recoverable |
 | No leaderboard. Stat cards are per entrant. Every stat starts hidden. Standard stats are "verified", custom ones "self-reported" | Owner's spec |
 
 ## Backlog
@@ -70,7 +73,9 @@ npm run role -- <username> admin|member|owner|ban|unban
   - standard stats from the call history (`server/arena/stats.js`)
   - per-stat visibility, label, description and order (`arena_statsettings`, all hidden by default)
   - the stats card (`GET /api/v1/entrants/:slug/card`, `/card?e=<slug>`), with settings on `/my`
-- [ ] **Step 4c:** custom stat definitions and `POST /api/v1/bot/stats` (self-reported), and mirroring lineups into `config/battleRoster`
+- [x] **Step 4c:**
+  - custom stats (`stat-settings` `custom`, `POST /api/v1/bot/stats`, "self-reported", ledger `stat` lines)
+  - one battle's lineup copied to the main page's `config/battleRoster` (`server/arena/roster.js`, the battle's `onMainPage`)
 - [ ] **Step 5:** a Kalshi `KXBTC15M` poller and automatic scoring. **Verify first, from the Lightsail server**, because the build sandbox can't reach Kalshi: `curl -s "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXBTC15M&status=settled&limit=2"`. Write the scorer against the real field names it returns
 - [ ] **Flagged, not fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags that admins set, so a member could approve their own transfer
 - [ ] **Flagged, not fixed:** `test/app.e2e.test.js` fails during teardown in about 1 of 4 runs, on `main` too. A page request is still in flight after the server stops
@@ -78,7 +83,7 @@ npm run role -- <username> admin|member|owner|ban|unban
 
 ## Testing notes
 
-- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a) and `test/stats.test.js` (step 4b). Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
+- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a), `test/stats.test.js` (step 4b) and `test/custom.test.js` (step 4c). Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
 - **To test a restart, restart the real process** (spawn `server/start.js`, send SIGTERM, start again on the same data folder). Two servers sharing one folder with a hand-called `saveNow()` misses the debounced accounts save, and that once made a restart look like data loss.
 - When a test passes the first time, break the thing it guards and check that it fails.
 - Arena pages share `d3mon.css`. Avoid class and id names it already styles (`.grid`, `#battle`, bare `.row` and `.top`), because they'll pick up the main page's layout. That happened once with `/metrics`.

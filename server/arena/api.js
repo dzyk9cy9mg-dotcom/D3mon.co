@@ -10,6 +10,7 @@ import { Metrics } from "./metrics.js";
 import { Keys } from "./keys.js";
 import { Calls, MARKET, nextRound } from "./calls.js";
 import { Stats } from "./stats.js";
+import { Roster } from "./roster.js";
 import { ROUND_MS } from "./registry.js";
 import path from "node:path";
 
@@ -46,8 +47,11 @@ export function createArena({ store, accounts, cfg }) {
   const calls = new Calls({ ledger, registry, metrics, feed });
   calls.start();
   const stats = new Stats({ store, registry, calls, metrics, ledger, feed });
+  const roster = new Roster({ store, registry, ledger });
+  registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
   const limits = {
     bot: new RateLimiter({ capacity: 30, refillPerSec: 0.5 }), // per key
+    botStats: new RateLimiter({ capacity: 10, refillPerSec: 1 / 30 }), // per bot: stats change slowly
     apply: new RateLimiter({ capacity: 20, refillPerSec: 20 / 3600 }),
     writes: new RateLimiter({ capacity: 120, refillPerSec: 2 }),
   };
@@ -84,6 +88,8 @@ export function createArena({ store, accounts, cfg }) {
       take(limits.bot, auth.key.id);
       if (route === "GET /bot/me") return ok({ entrant: registry.entrantView(auth.entrant, {}), key: keys.view(auth.key), nextRound: new Date(nextRound(Date.now())).toISOString() });
       if (route === "POST /bot/calls") return ok(calls.fromBot(auth, await body()), 201);
+      // Only pushes that would write count against the stats limit, so fixing a bad request costs nothing.
+      if (route === "POST /bot/stats") return ok(stats.fromBot(auth, await readJson(req, 128 * 1024), () => take(limits.botStats, auth.entrant.id)), 201);
       throw new ApiError(404, "not_found", "No such endpoint.");
     }
 
@@ -115,5 +121,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, stats, close: () => { calls.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, stats, roster, close: () => { calls.stop(); feed.close(); } };
 }

@@ -230,7 +230,13 @@ A rejected request gets `400 {"error":{"code":"looks_like_secret","field":"notes
     { "key": "equity_curve", "value": [ { "t": "2025-10-18", "v": 1.02 }, { "t": "2025-10-19", "v": 1.05 } ] } ] }
 ```
 
-Only keys the owner has defined are accepted, and each value must match its declared type.
+**What's accepted (step 4c):**
+- Only keys the owner has defined are accepted, and each value must match its declared type.
+- Up to 50 values per request.
+- `asOf` is optional; when sent, it must be within the last 30 days.
+- A value equal to the latest one is skipped, so the reply lists `accepted` and `unchanged` keys.
+- Each new value is a ledger line `{ "t": "stat", "entrantId", "key", "value", "asOf" }`, and the card shows the latest one.
+- Pushes that write something are limited to 10 at once, then 1 every 30 seconds per bot. Refused requests don't count against that limit, only against the key's general limit.
 
 ### Custom stat definition, set by the owner (step 4)
 
@@ -241,6 +247,12 @@ Only keys the owner has defined are accepted, and each value must match its decl
 
 - **Types:** `number`, `integer`, `percent` (0–1), `duration` (ms), `text` (≤ 80 characters), `series` (≤ 500 `{t, v}` points), `histogram` (≤ 48 named buckets).
 - **Visibility:** `hidden` (the default for every stat, standard or custom), `private` (owner only), `members`, `public`.
+- **Defining them (step 4c):** the owner defines them with `PUT /api/v1/entrants/:id/stat-settings` `{ "custom": { "avg_edge": { "type": "percent", "label": "Average edge", "unit": "%" } } }`, alongside the standard stats' `stats`.
+- **Keys:** 2–32 lowercase letters, digits or `_`, starting with a letter. A key can't reuse a standard stat's name or look like a credential.
+- **Limit:** up to 20 per bot.
+- **Type:** it can't change once values have been sent.
+- **Removing:** `{ "remove": true }` takes a stat off the card and stops the bot sending it, but keeps its history. Defining the same key again brings it back.
+- **Labels:** custom stats are always `source: "custom"`, `verification: "self-reported"`, with the `asOf` of the latest value.
 
 ### Stats card, read by any front end: `GET /api/v1/entrants/<slug>/card` (step 4)
 
@@ -365,9 +377,20 @@ GET  /api/v1/entrants/:idOrSlug/card      anyone: d3mon.statcard/v1, only what t
 ```
 
 The pages are the "Stats card" section of `/my` and the public `/card?e=<slug>`. `stats.updated` on `entrant:<id>` tells a card to refetch, after a settings change, a new locked call or a result.
-- **Step 4c:**
-  - `POST /api/v1/bot/stats`
-  - lineups copied into `config/battleRoster` for the current page
+Step 4c:
+
+```
+PUT   /api/v1/entrants/:id/stat-settings   owner: also {custom: {<key>: {type, label, unit?, description?, visibility?, order?, remove?}}}
+POST  /api/v1/bot/stats                    bot key: d3mon.stats/v1 values for the owner's custom stats (up to 128 KB)
+PATCH /api/v1/battles/:id                  admin: also {onMainPage: true|false}
+```
+
+**The lineup on the current main page.** The page (`public/js/d3mon.js`) reads its Battle of the Bots roster from `config/battleRoster`.
+- HardSmoke switches one battle at a time onto the main page (`onMainPage`, never a draft). Turning it on for one battle turns it off for the others.
+- From then on, every lineup change for that battle is copied there (`server/arena/roster.js`): bots and scripts go into `bots`, callers into `callers`. Stream links already on the roster are kept for names that stay.
+- The page updates live through its own feed.
+- Every write records the previous roster in the ledger (`{ "t": "roster", battleId, bots, callers, previous }`).
+- Turning it off leaves the roster as it was last written.
 - **Step 5:** `GET /api/v1/rounds?market=KXBTC15M&from&to` and `npm run kalshi:check`.
 
 ## 10. Kalshi (step 5, verify first)

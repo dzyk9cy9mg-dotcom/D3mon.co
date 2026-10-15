@@ -23,6 +23,7 @@ const BATTLE_FIELDS = {
   rounds: { type: "integer", min: 1, max: 96, default: 8 },
   kinds: { type: "array", of: { type: "enum", values: KINDS }, min: 1, max: 3, unique: true, default: KINDS },
   status: { type: "enum", values: BATTLE_STATUS, default: "draft" },
+  onMainPage: { type: "boolean" }, // show this battle's lineup on the current main page (one battle at a time)
 };
 
 const APP_FIELDS = {
@@ -67,6 +68,10 @@ export class Registry {
     return b;
   }
 
+  allBattles() {
+    return this.#all(BATTLES);
+  }
+
   // The battles an entrant is in (lineup, not a draft) that include this round.
   battlesFor(entrantId, round) {
     return this.#all(BATTLES).filter(b => b.status !== "draft" && (b.entrants || []).includes(entrantId) && round >= b.startsAt && round < b.startsAt + b.rounds * b.roundMs);
@@ -84,7 +89,7 @@ export class Registry {
   battleView(b, ctx) {
     const entrants = (b.entrants || []).map(id => this.#get(ENTRANTS, id)).filter(Boolean).map(e => this.entrantView(e, ctx));
     const out = { id: b.id, title: b.title, market: b.market, startsAt: b.startsAt, rounds: b.rounds, roundMs: b.roundMs,
-      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, status: b.status, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
+      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, status: b.status, onMainPage: !!b.onMainPage, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
     if (isAdmin(ctx)) {
       out.applications = {};
       for (const a of this.#all(APPS, [["battleId", "==", b.id]])) out.applications[a.status] = (out.applications[a.status] || 0) + 1;
@@ -116,6 +121,7 @@ export class Registry {
     checkStart(f.startsAt);
     const now = Date.now();
     const b = { id: this.store.newId(BATTLES), ...f, market: "KXBTC15M", roundMs: ROUND_MS, entrants: [], createdBy: ctx.uid, createdAt: now, updatedAt: now };
+    this.#mainPage(b, ctx.uid);
     this.#save(BATTLES, b, ctx.uid);
     this.#battleChanged(b);
     return b;
@@ -128,6 +134,7 @@ export class Registry {
     if (f.startsAt !== undefined) checkStart(f.startsAt);
     if (b.status === "final" && f.status === undefined) throw new ApiError(409, "battle_final", "This battle is final. Reopen it (change its status) before editing.");
     const next = { ...b, ...f, updatedAt: Date.now() };
+    this.#mainPage(next, ctx.uid);
     this.#save(BATTLES, next, ctx.uid);
     this.#battleChanged(next);
     return next;
@@ -259,6 +266,18 @@ export class Registry {
   }
 
   // ---------- internals ----------
+  // Only one battle feeds the main page, and never a draft: turning it on for one turns it off for the rest.
+  #mainPage(b, uid) {
+    if (!b.onMainPage) return;
+    if (b.status === "draft") throw new ApiError(409, "battle_draft", "Open the battle before showing it on the main page.", "onMainPage");
+    for (const other of this.#all(BATTLES)) {
+      if (other.id === b.id || !other.onMainPage) continue;
+      const off = { ...other, onMainPage: false, updatedAt: Date.now() };
+      this.#save(BATTLES, off, uid);
+      this.#battleChanged(off);
+    }
+  }
+
   #transition(a, uid, status, action, note) {
     const now = Date.now();
     const next = { ...a, status, history: [...a.history, { at: now, by: uid, action, note }] };
@@ -294,6 +313,7 @@ export class Registry {
   }
 
   #battleChanged(b) {
+    if (this.onBattleChanged) this.onBattleChanged(b);
     const draft = b.status === "draft";
     for (const topic of ["battles", `battle:${b.id}`]) this.feed.publish(topic, "battle.updated", ctx => this.battleView(b, ctx), ctx => !draft || isAdmin(ctx));
   }

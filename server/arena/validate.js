@@ -89,7 +89,8 @@ export function cleanText(v, { multiline = false } = {}) {
 
 // schema: { field: { type: "string"|"integer"|"number"|"boolean"|"enum"|"array"|"object", required, min,
 // max, decimals, values, multiline, of, fields } }. "array" takes `of` (the rule for each item); "object"
-// takes `fields` (a nested schema). Returns only the declared fields, cleaned. `partial` allows any subset
+// takes `fields` (a nested schema); "map" is an object with keys of the sender's choosing, each matching
+// `keyPattern`, at most `max` of them, and each value checked against `of`. Returns only the declared fields, cleaned. `partial` allows any subset
 // (for PATCH).
 export function check(body, schema, { partial = false } = {}) {
   if (!isPlainObject(body)) throw new ApiError(400, "invalid_argument", "Send a JSON object.");
@@ -146,6 +147,17 @@ function checkOne(k, v, rule) {
     case "object":
       if (!isPlainObject(v)) throw bad(`"${k}" must be an object.`);
       return checkFields(v, rule.fields, false, `${k}.`);
+    case "map": {
+      if (!isPlainObject(v)) throw bad(`"${k}" must be an object.`);
+      const keys = Object.keys(v);
+      if (rule.max !== undefined && keys.length > rule.max) throw bad(`"${k}" can have at most ${rule.max} entries.`);
+      const out = {};
+      for (const key of keys) {
+        if (!rule.keyPattern.test(key)) throw new ApiError(400, "invalid_argument", `"${k}.${key}" isn't an allowed name. ${rule.keyHint || ""}`.trim(), `${k}.${key}`);
+        out[key] = v[key] === null && rule.nullable ? null : checkOne(`${k}.${key}`, v[key], rule.of);
+      }
+      return out;
+    }
     case "array": {
       if (!Array.isArray(v)) throw bad(`"${k}" must be a list.`);
       if (rule.min !== undefined && v.length < rule.min) throw bad(`"${k}" needs at least ${rule.min} item${rule.min === 1 ? "" : "s"}.`);
@@ -153,6 +165,8 @@ function checkOne(k, v, rule) {
       const items = v.map((x, i) => checkOne(`${k}[${i}]`, x, rule.of));
       return rule.unique ? [...new Set(items)] : items;
     }
+    case "any": // checked by the caller (credentials were already scanned for)
+      return v;
     default:
       throw new Error(`unknown rule type ${rule.type}`);
   }

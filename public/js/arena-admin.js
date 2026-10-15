@@ -19,7 +19,8 @@
       return `<div class="item"><div class="top"><span class="st ${esc(b.status)}">${esc(b.status)}</span><b>${esc(b.title)}</b>
         <select data-bstatus="${esc(b.id)}" aria-label="Status of ${esc(b.title)}" style="width:auto;margin-left:auto">${STATUSES.map(s => `<option ${s === b.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
         <div class="meta">${esc(when(b.startsAt))} · ${b.rounds} rounds · ${b.kinds.map(kindName).join(", ")} · ${esc(counts)}</div>
-        <div class="meta">Lineup: ${b.entrants.length ? b.entrants.map(e => esc(e.name)).join(", ") : "nobody approved yet"}</div></div>`;
+        <div class="meta">Lineup: ${b.entrants.length ? b.entrants.map(e => esc(e.name)).join(", ") : "nobody approved yet"}</div>
+        ${b.status === "draft" ? "" : `<label class="checks"><input type="checkbox" data-mainpage="${esc(b.id)}" ${b.onMainPage ? "checked" : ""}> Show this lineup on the main page's Battle of the Bots roster${b.onMainPage ? " (on: lineup changes are copied there live)" : ""}</label>`}</div>`;
     }).join("") : `<p class="empty">No battles yet. Create the first one above.</p>`;
     const cur = $("fBattle").value;
     $("fBattle").innerHTML = `<option value="">All battles</option>` + battles.map(b => `<option value="${esc(b.id)}">${esc(b.title)}</option>`).join("");
@@ -68,6 +69,12 @@
 
   document.addEventListener("change", async ev => {
     if (ev.target === $("fBattle") || ev.target === $("fStatus")) return renderLog();
+    const mp = ev.target.dataset.mainpage;
+    if (mp) {
+      if (ev.target.checked && !confirm("Replace the main page's Battle of the Bots roster with this battle's lineup? The current roster is kept in the history.")) { ev.target.checked = false; return; }
+      try { await api("PATCH", `battles/${mp}`, { onMainPage: ev.target.checked }); msg(ev.target.checked ? "This lineup is now on the main page." : "No longer copied to the main page.", true); await load(); } catch (e) { msg(e.message); await load(); }
+      return;
+    }
     const id = ev.target.dataset.bstatus;
     if (!id) return;
     try { await api("PATCH", `battles/${id}`, { status: ev.target.value }); msg(`Status set to ${ev.target.value}.`, true); await load(); } catch (e) { msg(e.message); await load(); }

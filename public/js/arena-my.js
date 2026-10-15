@@ -60,14 +60,37 @@
     const st = S.stats[e.id];
     if (!st) return "";
     return `<h3 class="sub">Stats card</h3>
-      <p class="tag">Every stat starts hidden. Choose who sees each one. Stats come from your call history and can't be edited: "verified" means Kalshi settled the rounds, "recorded by host" means HardSmoke did. Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>
+      <p class="tag">Every stat starts hidden. Choose who sees each one. Standard stats come from your call history and can't be edited: "verified" means Kalshi settled the rounds, "recorded by host" means HardSmoke did. Custom stats are sent by your bot and shown as "self-reported". Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>
       <div class="tablewrap"><table class="mgrid stats"><thead><tr><th>Stat</th><th>Who sees it</th><th>Order</th><th>Now</th></tr></thead><tbody>${st.stats.map(x => `<tr>
         <td><input data-st="${esc(e.id)}|${esc(x.key)}|label" maxlength="40" value="${esc(x.label === x.defaultLabel ? "" : x.label)}" placeholder="${esc(x.defaultLabel)}" aria-label="Label for ${esc(x.defaultLabel)}">
           <input data-st="${esc(e.id)}|${esc(x.key)}|description" maxlength="160" value="${esc(x.description === x.defaultDescription ? "" : x.description)}" placeholder="${esc(x.defaultDescription)}" aria-label="Description for ${esc(x.defaultLabel)}" class="desc"></td>
         <td><select data-st="${esc(e.id)}|${esc(x.key)}|visibility" aria-label="Who sees ${esc(x.defaultLabel)}">${Object.entries(SHOWS).map(([v, t]) => `<option value="${v}" ${v === x.visibility ? "selected" : ""}>${t}</option>`).join("")}</select></td>
         <td><input type="number" min="0" max="999" data-st="${esc(e.id)}|${esc(x.key)}|order" value="${x.order}" aria-label="Order for ${esc(x.defaultLabel)}" style="width:70px"></td>
-        <td>${statValue(x)} ${verifTag(x)}</td></tr>`).join("")}</tbody></table></div>
-      <div class="actions" style="margin-top:10px"><button class="btn" type="button" data-savestats="${esc(e.id)}">Save stats card</button></div>`;
+        <td>${statValue(x)} ${verifTag(x)}${x.source === "custom" ? `<div class="tag">custom · <code>${esc(x.key)}</code> · ${esc(x.type)}${x.unit ? ` (${esc(x.unit)})` : ""} <button class="btn ghost sm" type="button" data-rmstat="${esc(e.id)}|${esc(x.key)}">Remove</button></div>` : ""}</td></tr>`).join("")}</tbody></table></div>
+      <div class="actions" style="margin-top:10px"><button class="btn" type="button" data-savestats="${esc(e.id)}">Save stats card</button></div>
+      ${e.kind === "caller" ? "" : customForm(e, st)}`;
+  }
+
+  // Defining a custom stat the bot will send. Its values are always shown as "self-reported".
+  function customForm(e, st) {
+    const n = st.stats.filter(x => x.source === "custom").length, base = new URL("api/v1/bot/stats", location.href).href;
+    return `<h3 class="sub">Add a custom stat <span class="tag">${n} of ${st.maxCustom}</span></h3>
+      <form class="row" data-newstat="${esc(e.id)}" autocomplete="off">
+        <div class="field"><label>Key (your bot sends this)</label><input name="key" maxlength="32" placeholder="avg_edge" pattern="[a-z][a-z0-9_]{1,31}" required></div>
+        <div class="field"><label>Label</label><input name="label" maxlength="40" placeholder="Average edge" required></div>
+        <div class="field" style="flex:0 1 150px"><label>Type</label><select name="type">${st.customTypes.map(t => `<option>${t}</option>`).join("")}</select></div>
+        <div class="field" style="flex:0 1 100px"><label>Unit</label><input name="unit" maxlength="12" placeholder="%"></div>
+        <div class="field"><label>Description</label><input name="description" maxlength="160" placeholder="optional"></div>
+        <button class="btn" type="submit">Add stat</button>
+      </form>
+      ${st.removedCustom.length ? `<p class="tag">Removed (history kept; add the same key again to bring one back): ${st.removedCustom.map(r => `<code>${esc(r.key)}</code>`).join(", ")}</p>` : ""}
+      <details style="margin-top:8px"><summary class="tag">How your bot sends custom stats</summary>
+        <p class="tag">Types: number, integer, percent (0 to 1), duration (ms), text (up to 80 characters), series (a list of {"t", "v"} points), histogram ({"name": number}). Only keys defined here are accepted. Send whenever values change; unchanged values are skipped.</p>
+        <pre class="code">curl -X POST ${esc(base)} \\
+  -H "Authorization: Bearer d3b_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"schema":"d3mon.stats/v1","values":[{"key":"avg_edge","value":0.034}]}'</pre>
+      </details>`;
   }
 
   // Background updates (live events, a new round) redraw the page, unless the owner has unsaved stat
@@ -127,20 +150,39 @@
     }
     if ("hidetoken" in d) { S.token = null; render(); return; }
     if (d.savestats) {
-      const id = d.savestats, cur = Object.fromEntries(S.stats[id].stats.map(x => [x.key, x])), changes = {};
+      const id = d.savestats, cur = Object.fromEntries(S.stats[id].stats.map(x => [x.key, x])), changes = {}, custom = {};
       document.querySelectorAll(`[data-st^="${CSS.escape(id)}|"]`).forEach(el => {
         const [, key, field] = el.dataset.st.split("|"), x = cur[key];
         let v = el.value, was = x[field];
         if (field === "order") { v = Number(v); if (!Number.isInteger(v)) return; }
         if (field === "label" || field === "description") was = x[field] === x[field === "label" ? "defaultLabel" : "defaultDescription"] ? "" : x[field];
-        if (v !== was) (changes[key] ||= {})[field] = v;
+        if (v === was || (x.source === "custom" && field === "label" && v === "")) return; // a custom stat always keeps a label
+        ((x.source === "custom" ? custom : changes)[key] ||= {})[field] = v;
       });
-      if (!Object.keys(changes).length) { S.statsDirty = false; return msg("Nothing to save."); }
-      try { S.stats[id] = await api("PUT", `entrants/${id}/stat-settings`, { stats: changes }); S.statsDirty = false; msg("Stats card saved.", true); render(); } catch (e) { msg(e.message); }
+      if (!Object.keys(changes).length && !Object.keys(custom).length) { S.statsDirty = false; return msg("Nothing to save."); }
+      const body = {};
+      if (Object.keys(changes).length) body.stats = changes;
+      if (Object.keys(custom).length) body.custom = custom;
+      try { S.stats[id] = await api("PUT", `entrants/${id}/stat-settings`, body); S.statsDirty = false; msg("Stats card saved.", true); render(); } catch (e) { msg(e.message); }
+      return;
+    }
+    if (d.rmstat) {
+      const [id, key] = d.rmstat.split("|");
+      if (!confirm(`Remove "${key}" from your card? Its history is kept, and your bot can no longer send it. Add the same key again to bring it back.`)) return;
+      try { S.stats[id] = await api("PUT", `entrants/${id}/stat-settings`, { custom: { [key]: { remove: true } } }); msg("Stat removed. Its history is kept.", true); render(); } catch (e) { msg(e.message); }
     }
   });
 
   document.addEventListener("submit", async ev => {
+    const ns = ev.target.closest("[data-newstat]");
+    if (ns) {
+      ev.preventDefault();
+      const id = ns.dataset.newstat, v = n => ns.elements[n].value.trim(), def = { type: v("type"), label: v("label") };
+      if (v("unit")) def.unit = v("unit");
+      if (v("description")) def.description = v("description");
+      try { S.stats[id] = await api("PUT", `entrants/${id}/stat-settings`, { custom: { [v("key")]: def } }); msg(`Added "${v("key")}". It starts hidden: choose who sees it, then have your bot send values.`, true); render(); } catch (e) { msg(e.message); }
+      return;
+    }
     const f = ev.target.closest("[data-newkey]");
     if (!f) return;
     ev.preventDefault();

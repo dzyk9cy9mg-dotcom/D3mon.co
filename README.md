@@ -75,6 +75,8 @@ Once approved, an entrant is saved. For a later battle its owner picks it from *
   - Each entrant has a card at **`/card?e=<name>`**, with stats worked out by the server from its calls: hit rate, streaks, best trading times, daily record and more.
   - **Every stat starts hidden.** In the "Stats card" section of `/my`, the owner chooses Public, Members only or Private for each one, and can rename, reorder and describe them.
   - Stats say whether their results were "verified" (settled by Kalshi) or "recorded by host".
+- **Custom stats (step 4c):** owners add up to 20 of their own stats on `/my`, and their bot sends the values with its key (`POST /api/v1/bot/stats`). They're always marked "self-reported", start hidden, and keep their history.
+- **The lineup on the main page (step 4c):** in `/applications`, HardSmoke can tick **Show this lineup on the main page** for one battle. Its lineup then replaces the current page's Battle of the Bots roster and follows every approval live. Stream links are kept, and the old roster is kept in the history.
 - **Guide for bot owners:** [BOT-GUIDE.md](BOT-GUIDE.md) is a short guide to send them: making a key and sending a test call.
 - **The lock:** every call is stamped by the server and locks when its round starts.
 - **The board:** at **`/board`**, anyone can watch a battle live. Calls appear sealed (who called and when, but not which way) until the round starts, then they're revealed and scored when the result comes in. Keys can only send calls: D3MON.CO never takes trading credentials or exchange keys.
@@ -153,7 +155,7 @@ npm install   # only needed for the headless-browser test (jsdom)
 npm test
 ```
 
-There are 126 tests:
+There are 138 tests:
 
 - `server.test.js` covers the API, the access rules, live updates, presence, data on disk and Cosmic (against a mock API).
 - `runtime.test.js` runs `public/js/runtime.js` against a live server, using the page's own `mergeWrite` taken from `d3mon.js`.
@@ -181,6 +183,9 @@ There are 126 tests:
   - hiding never deleting history
   - battle boards ignoring the settings
   - live refresh
+- `custom.test.js` covers custom stats and the main-page lineup:
+  - custom stats: defining them, checking every type, privacy and "self-reported", history, the type lock, removing, the rate limit
+  - the lineup: drafts refused, stream links kept, live updates on the current page, one battle at a time
 - `package.test.js` builds the upload zip, checks every file in it, then unpacks it and starts the site from `app.cjs`.
 
 ## Differences from the artifact
