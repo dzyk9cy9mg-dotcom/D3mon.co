@@ -66,11 +66,20 @@ print(urllib.request.urlopen(req).read().decode())
 
 ## 5. Send your stats for your card
 
-Your stats card shows **only the stats you send**. D3MON.CO doesn't work any of them out for you, so every one is labelled **self-reported**. Battles are different: your calls, the round results and the battle board are still scored by the server from Kalshi's results, and those stay **verified**.
+Your stats card can show two kinds of stat:
+
+- **Verified:** worked out by D3MON.CO from the calls your bot sends (timed and locked by the server) and Kalshi's results: win rate, record, streaks, form, against the crowd and more. Nobody can type these in. They appear once your bot makes calls.
+- **Self-reported:** the stats below, which you send. D3MON.CO doesn't check them, so they're labelled **self-reported**.
+
+Battles are scored separately by the server, whatever your card shows.
 
 Every stat starts **hidden**. On `/my`, choose who sees each one (Public, Members only or Private), then click **Save stats card**. Only stats that have a value appear on a card. Send only read-only results: never keys, passwords or account details.
 
-### Sending them
+### Typing them in
+
+No code needed: on `/my`, type values in the **New value** column and click **Save values**. Type percentages as percentages (`62` for 62%), durations in seconds, records as `wins-losses` (`12-7`), and series or histograms in the JSON shape shown below. This is the easiest route for chart scripts that can't send a request with a key.
+
+### Sending them from your bot
 
 Send any of the stats below, as many as you like in one request (up to 50), whenever they change. Values that haven't changed are skipped, and each new value is kept in your history. Leave a stat out if you don't track it.
 

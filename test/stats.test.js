@@ -54,10 +54,11 @@ describe("stats cards", () => {
   });
   after(() => srv.stop());
 
-  test("the site works out no card stats: there's nothing until the bot sends some", async () => {
-    const s = (await settings(odin)).json;
-    assert.equal(s.stats.length, 30, "the 30 list stats, and no site-computed ones");
-    assert.ok(s.stats.every(x => x.source === "catalog" && x.value === null && x.verification === "self-reported" && x.visibility === "hidden"));
+  test("self-reported stats: there's nothing until the bot sends some", async () => {
+    const s = (await settings(odin)).json, list = s.stats.filter(x => x.source === "catalog");
+    assert.equal(list.length, 30, "the 30 list stats");
+    assert.ok(list.every(x => x.value === null && x.verification === "self-reported" && x.visibility === "hidden"));
+    assert.ok(s.stats.every(x => x.source === "catalog" || x.key.startsWith("v_")), "the rest are the verified ones, kept apart");
     for (const old of ["hit_rate", "calls", "wins", "avg_lead", "daily_record"]) assert.ok(!valueOf(s, old), `${old} is gone`);
     await put(odin, { win_rate: { visibility: "public" } });
     assert.deepEqual((await card(guest)).json.stats, [], "a public stat with no value isn't shown");
@@ -73,7 +74,7 @@ describe("stats cards", () => {
     assert.deepEqual(valueOf(s, "wins_losses").value, { w: 255, l: 157 });
     assert.deepEqual(valueOf(s, "biggest_win_loss").value, { win: 12.4, loss: -8.1 });
     assert.equal(valueOf(s, "launch_date").value, "2026-03-01");
-    assert.ok(s.stats.every(x => x.value !== null && x.asOf));
+    assert.ok(s.stats.filter(x => x.source === "catalog").every(x => x.value !== null && x.asOf));
   });
 
   test("each value must match its stat's type", async () => {

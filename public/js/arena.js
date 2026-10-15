@@ -67,7 +67,9 @@
     const v = st.value, f = st.format;
     if (v === null || v === undefined) return `<span class="sv">–</span>`;
     switch (st.type) {
-      case "percent": return `<span class="sv">${pct(v)}</span>`;
+      case "percent": return `<span class="sv">${pct(v)}</span>${st.n !== undefined ? `<span class="tag"> of ${st.n}</span>` : ""}`;
+      case "form": return `<span class="form">${v.map(x => `<i class="${x === "w" ? "pos" : "neg"}" title="${x === "w" ? "right" : "wrong"}">${x === "w" ? "✓" : "✗"}</i>`).join("")}</span>`;
+      case "battles": return `<div class="tablewrap"><table class="mgrid"><thead><tr><th>Battle</th><th>Record</th><th>Rounds called</th></tr></thead><tbody>${v.map(b => `<tr><td>${esc(b.t)}</td><td><span class="pos">${b.w}</span>–<span class="neg">${b.l}</span></td><td>${b.called} of ${b.rounds}</td></tr>`).join("")}</tbody></table></div>`;
       case "return": return `<span class="sv ${v > 0 ? "pos" : v < 0 ? "neg" : ""}">${pct(v, true)}</span>`;
       case "money": return `<span class="sv ${v < 0 ? "neg" : ""}">${money(v)}</span>`;
       case "duration": return `<span class="sv">${dur(v)}</span>`;
@@ -88,13 +90,13 @@
         if (!keys.length) return `<span class="tag">Nothing yet</span>`;
         const top = Math.max(...keys.map(k => Math.abs(v[k]))) || 1;
         const h = x => Math.max(4, Math.round((f === "percent" ? Math.min(1, Math.abs(x)) : Math.abs(x) / top) * 100));
-        return `<div class="hist">${keys.map(k => `<div class="hb" title="${esc(k)}: ${esc(byFormat(f, v[k]))}"><em>${esc(byFormat(f, v[k]))}</em><i class="${v[k] < 0 ? "neg" : ""}" style="height:${h(v[k])}%"></i><span>${esc(k.replace(":00", ""))}</span></div>`).join("")}</div>`;
+        return `<div class="hist">${keys.map(k => `<div class="hb" title="${esc(k)}: ${esc(byFormat(f, v[k]))}${st.counts ? ` of ${st.counts[k]}` : ""}"><em>${esc(byFormat(f, v[k]))}</em><i class="${v[k] < 0 ? "neg" : ""}" style="height:${h(v[k])}%"></i><span>${esc(k.replace(":00", ""))}</span></div>`).join("")}</div>`;
       }
       case "series": return v.length ? sparkline(v, f) : `<span class="tag">Nothing yet</span>`;
       default: return `<span class="sv">${esc(String(v))}</span>`;
     }
   }
-  const wide = st => ["histogram", "series"].includes(st.type) || st.format === "paragraph";
+  const wide = st => ["histogram", "series", "battles", "form"].includes(st.type) || st.format === "paragraph";
   const verifTag = st => st.verification ? `<span class="vbadge ${esc(st.verification.replace(/\s+/g, "-"))}" title="${st.sources ? esc(`Kalshi: ${st.sources.kalshi}, host: ${st.sources.host}`) : ""}">${esc(st.verification)}</span>` : "";
 
   window.Arena = { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, mmss, ROUND_MS, statValue, verifTag, wide };

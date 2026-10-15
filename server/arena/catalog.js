@@ -69,7 +69,9 @@ export const SEED = [
   [R, "avg_position_size", "Average position size", "money", "$", "Average amount put on each trade"],
   [R, "sharpe_ratio", "Sharpe ratio", "number", "", "Return per unit of risk"],
   [R, "launch_date", "Days active / launch date", "date", "", "When the bot started trading", "since"],
-].map(([category, key, label, type, unit, description, format], i) => ({ key, label, type, unit, category, format: format || defaultFormat(type), description, order: (i + 1) * 10 }));
+].map(([category, key, label, type, unit, description, format], i) => ({ key, label, type, unit, category, format: format || defaultFormat(type), description, order: 100 + (i + 1) * 10 }));
+// Keys starting "v_" belong to the server's verified stats (verified.js), so the list can't use them.
+export const RESERVED_PREFIX = "v_";
 
 const FIELDS = {
   label: { type: "string", max: 40 },
@@ -122,6 +124,7 @@ export class Catalog {
     const changed = [];
     for (const [key, change] of Object.entries(f.stats)) {
       const at = `stats.${key}`, prev = next.get(key);
+      if (!prev && key.startsWith(RESERVED_PREFIX)) throw new ApiError(400, "invalid_argument", `Keys starting "${RESERVED_PREFIX}" are for the server's verified stats. Pick another name.`, at);
       const merged = { ...(prev || { key, unit: "", description: "", order: (Math.max(0, ...[...next.values()].map(s => s.order)) + 10), retired: false }), ...change };
       for (const k of ["label", "category"]) if (!merged[k]) throw new ApiError(400, "invalid_argument", `"${at}.${k}" is required.`, `${at}.${k}`);
       if (!merged.type) throw new ApiError(400, "invalid_argument", `"${at}.type" is required for a new stat.`, `${at}.type`);

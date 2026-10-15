@@ -60,9 +60,12 @@
   function statsBox(e) {
     const st = S.stats[e.id];
     if (!st) return "";
-    if (e.kind === "caller") return "";
+    const caller = e.kind === "caller";
+    // A bot or script with no calls yet has nothing verified to show: one line instead of 18 empty rows.
+    const noCalls = !caller && st.stats.some(x => x.key === "v_calls" && x.value === null);
     const groups = [];
     for (const x of st.stats) {
+      if (noCalls && x.source === "verified") continue;
       let g = groups.find(g => g.name === x.category);
       if (!g) groups.push(g = { name: x.category, list: [] });
       g.list.push(x);
@@ -73,13 +76,35 @@
           <div class="tag"><code>${esc(x.key)}</code> · ${esc(x.type)}${x.source === "custom" ? ` · custom <button class="btn ghost sm" type="button" data-rmstat="${esc(e.id)}|${esc(x.key)}">Remove</button>` : ""}</div></td>
         <td><select data-st="${esc(e.id)}|${esc(x.key)}|visibility" data-group="${esc(x.category)}" aria-label="Who sees ${esc(x.defaultLabel)}">${Object.entries(SHOWS).map(([v, t]) => `<option value="${v}" ${v === x.visibility ? "selected" : ""}>${t}</option>`).join("")}</select></td>
         <td><input type="number" min="0" max="9999" data-st="${esc(e.id)}|${esc(x.key)}|order" value="${x.order}" aria-label="Order for ${esc(x.defaultLabel)}" style="width:80px"></td>
-        <td>${statValue(x)}${x.asOf ? `<div class="tag">sent ${esc(when(Date.parse(x.asOf)))}</div>` : `<div class="tag">not sent yet</div>`}</td></tr>`;
+        <td>${statValue(x)} ${verifTag(x)}${x.source === "verified" ? "" : x.asOf ? `<div class="tag">${x.via === "owner" ? "typed in" : "sent"} ${esc(when(Date.parse(x.asOf)))}</div>` : `<div class="tag">no value yet</div>`}</td>
+        ${caller ? "" : `<td>${x.source === "verified" ? `<span class="tag">from your calls</span>` : valueInput(e, x)}</td>`}</tr>`;
+    const cols = caller ? 4 : 5;
     return `<h3 class="sub">Stats card</h3>
-      <p class="tag">Your card shows only the stats your bot sends, labelled "self-reported". Every stat starts hidden: choose who sees each one, and only stats with a value appear. Your battle calls and results are scored separately by the server and stay on the board. Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>
-      <div class="tablewrap"><table class="mgrid stats"><thead><tr><th>Stat</th><th>Who sees it</th><th>Order</th><th>Latest value</th></tr></thead><tbody>${groups.map(g => `<tr><th colspan="4" class="catgroup">${esc(g.name)}
+      <p class="tag">${caller ? `Your stats are worked out by D3MON.CO from your calls and Kalshi's results, so they're "verified".` : `"Verified" stats are worked out by D3MON.CO from your calls. The rest are self-reported: your bot sends them with its key, or you type them in below and click Save values.`} Every stat starts hidden: choose who sees each one, and only stats with a value appear. Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>${noCalls ? `<p class="tag">Verified stats, worked out from this entrant's own calls, appear here once it makes some.</p>` : ""}
+      <div class="tablewrap"><table class="mgrid stats"><thead><tr><th>Stat</th><th>Who sees it</th><th>Order</th><th>Latest value</th>${caller ? "" : "<th>New value</th>"}</tr></thead><tbody>${groups.map(g => `<tr><th colspan="${cols}" class="catgroup">${esc(g.name)}
           <select data-groupset="${esc(e.id)}|${esc(g.name)}" aria-label="Set everything in ${esc(g.name)}" style="width:auto;margin-left:10px"><option value="">Set all to…</option>${Object.entries(SHOWS).map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></th></tr>${g.list.map(row).join("")}`).join("")}</tbody></table></div>
-      <div class="actions" style="margin-top:10px"><button class="btn" type="button" data-savestats="${esc(e.id)}">Save stats card</button></div>
-      ${customForm(e, st)}`;
+      <div class="actions" style="margin-top:10px"><button class="btn" type="button" data-savestats="${esc(e.id)}">Save stats card</button>${caller ? "" : `<button class="btn" type="button" data-savevals="${esc(e.id)}">Save values</button>`}</div>
+      ${caller ? "" : customForm(e, st)}`;
+  }
+
+  // Typing a self-reported value in. Percent and return are typed as percentages, durations in seconds,
+  // records as "wins-losses"; series and histograms as JSON, the same shape a bot sends.
+  const VAL_HINT = { number: "1.8", integer: "412", percent: "62 (%)", return: "23.7 (%)", money: "184.25 ($)", duration: "95 (seconds)", text: "text", date: "", record: "12-7", series: '[{"t":"…","v":1}]', histogram: '{"up":0.6}' };
+  function valueInput(e, x) {
+    const attrs = `data-val="${esc(e.id)}|${esc(x.key)}|${esc(x.type)}" aria-label="New value for ${esc(x.label)}"`;
+    if (x.type === "date") return `<input type="date" class="newval" ${attrs}>`;
+    return `<input class="newval" ${attrs} placeholder="${esc(VAL_HINT[x.type] || "")}">`;
+  }
+  function parseValue(type, raw) {
+    const n = Number(raw.replace(/[$,%\s]/g, ""));
+    switch (type) {
+      case "percent": case "return": return Math.round(n * 100) / 10000;
+      case "duration": return Math.round(n * 1000);
+      case "integer": case "number": case "money": return n;
+      case "text": case "date": return raw;
+      case "record": { const m = raw.match(/^\s*(\d+)\s*[-–\/]\s*(\d+)\s*$/); if (!m) throw new Error(`Type a record as wins-losses, like 12-7.`); return { w: +m[1], l: +m[2] }; }
+      default: try { return JSON.parse(raw); } catch (x) { throw new Error(`That ${type} needs to be JSON, like ${VAL_HINT[type]}.`); }
+    }
   }
 
   // Defining a custom stat the bot will send. Its values are always shown as "self-reported".
@@ -177,6 +202,25 @@
       try { S.stats[id] = await api("PUT", `entrants/${id}/stat-settings`, body); S.statsDirty = false; msg("Stats card saved.", true); render(); } catch (e) { msg(e.message); }
       return;
     }
+    if (d.savevals) {
+      const id = d.savevals, values = [];
+      try {
+        document.querySelectorAll(`[data-val^="${CSS.escape(id)}|"]`).forEach(el => {
+          const raw = el.value.trim();
+          if (!raw) return;
+          const [, key, type] = el.dataset.val.split("|");
+          values.push({ key, value: parseValue(type, raw) });
+        });
+      } catch (x) { return msg(x.message); }
+      if (!values.length) return msg("Type a value in the New value column first.");
+      try {
+        const r = await api("POST", `entrants/${id}/stats`, { schema: "d3mon.stats/v1", values });
+        S.statsDirty = false;
+        msg(`Saved ${r.accepted.length} value${r.accepted.length === 1 ? "" : "s"}${r.unchanged.length ? `, ${r.unchanged.length} unchanged` : ""}.`, true);
+        await loadEntrant(S.entrants.find(x => x.id === id)); render();
+      } catch (x) { msg(x.message); }
+      return;
+    }
     if (d.rmstat) {
       const [id, key] = d.rmstat.split("|");
       if (!confirm(`Remove "${key}" from your card? Its history is kept, and your bot can no longer send it. Add the same key again to bring it back.`)) return;
@@ -215,7 +259,7 @@
     lastRound = r;
   }, 1000);
 
-  const markDirty = ev => { if (ev.target.dataset && ev.target.dataset.st) S.statsDirty = true; };
+  const markDirty = ev => { if (ev.target.dataset && (ev.target.dataset.st || ev.target.dataset.val)) S.statsDirty = true; };
   // "Set all to…" on a group sets each of its stats (saved with Save stats card, like any other edit).
   document.addEventListener("change", ev => {
     const g = ev.target.dataset && ev.target.dataset.groupset;

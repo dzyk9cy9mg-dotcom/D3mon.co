@@ -63,7 +63,10 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 | Kalshi writes its own score line even when HardSmoke already entered the same result | Kalshi's line is what makes the round "verified" |
 | Kalshi is polled 8 s after each close, every 20 s early in a round, every 60 s otherwise, and backs off on errors. Rounds with calls or in a battle that are still unsettled 30 minutes after they end are flagged for HardSmoke | Settlement comes about 4 s after close. The manual fallback stays |
 | No leaderboard. Stat cards are per entrant. Every stat starts hidden | Owner's spec |
-| **Stats Hub:** cards show only stats the owner's bot sends, all "self-reported". The site computes no card stats. Battles keep server/Kalshi scoring (calls, results, board stay "verified") | Owner's spec. Owner privacy (hidden by default) wins everywhere |
+| **Stats Hub:** cards carry **verified** stats (server-computed from the entrant's own calls, keys `v_…`, every entrant) and **self-reported** ones (the stat list and custom stats, bots and scripts only). Battles keep server/Kalshi scoring | Owner's spec, then the owner agreed verified caller stats, and bots showing claims next to results. Privacy (hidden by default) wins everywhere |
+| Callers make their own calls on `/my` (Up/Down, server-locked) and their card is verified stats only | Owner never enters callers' calls by hand |
+| Script and bot owners can type self-reported values on `/my` (`POST /api/v1/entrants/:id/stats`, ledger `via: "owner"`) as well as send them with the key | Chart scripts often can't send a keyed request. Owner agreed |
+| Main page (`d3mon.js`) gets no new battle features: the 3D site will read `/api/v1` | Work on the old page would be thrown away. Pointing its old call buttons to `/my` is waiting on the owner's yes |
 | The standard stat list lives in `arena_statcatalog`, edited by HardSmoke on `/catalog`. The seed only adds missing stats. Stats are retired, never deleted, and a type locks once values exist | Editable without code changes; history stays readable |
 | Old settings for the removed computed stats (`arena_statsettings.stats`) are kept but never read. New settings are under `catalog` | A choice made for a verified stat must not publish a self-reported one |
 | A list key an owner already uses as a custom stat stays theirs for that bot | Their history and type come first |
@@ -85,7 +88,8 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
   - custom stats (`stat-settings` `custom`, `POST /api/v1/bot/stats`, "self-reported", ledger `stat` lines)
   - one battle's lineup copied to the main page's `config/battleRoster` (`server/arena/roster.js`, the battle's `onMainPage`)
 - [x] **Step 5:** the Kalshi `KXBTC15M` poller and automatic scoring (`server/arena/kalshi.js`), written against the fields Kalshi returned from the Lightsail server. `GET /api/v1/rounds`, `GET /api/v1/kalshi` (admin), `npm run kalshi:check`, and a status line on `/metrics`
-- [x] **Stats Hub phase 1:** the stat list (`server/arena/catalog.js`, `/catalog`, `GET/PUT /api/v1/stat-catalog`) seeded with 30 stats; cards show only owner-sent stats; `BOT-GUIDE.md` lists every key
+- [x] **Stats Hub phase 1:** the stat list (`server/arena/catalog.js`, `/catalog`, `GET/PUT /api/v1/stat-catalog`) seeded with 30 stats; verified stats for every entrant (`server/arena/verified.js`); owners type values on `/my`; `BOT-GUIDE.md` lists every key
+- [ ] **Waiting on the owner:** point the old main page's call buttons to `/my`, so no call goes around the server lock
 - [ ] **Stats Hub phase 2:** admin monitor of every bot × stat (latest, last updated, history), sortable and filterable, with health alerts (quiet bots, stale stats, rejected data). Admin only
 - [ ] **Stats Hub phase 3:** named display slots (bots, stats, layout, order), one widget plus a `/api/v1` endpoint, and an example slot on the Battle page
 - [ ] **Later:** paper profit per $1 contract at Kalshi's price at the lock. Settled markets don't carry the opening price, so it needs a snapshot of the open market at each round start
@@ -95,7 +99,7 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 
 ## Testing notes
 
-- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a), `test/stats.test.js` (step 4b), `test/custom.test.js` (step 4c), `test/kalshi.test.js` (step 5, against a stand-in Kalshi server) and `test/catalog.test.js` (Stats Hub phase 1). `test/stats.test.js` sends the full example from `BOT-GUIDE.md`, so the guide can't drift. Test servers run with `kalshi: false`; spawned ones get `D3MON_KALSHI=off`. Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
+- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a), `test/stats.test.js` (step 4b), `test/custom.test.js` (step 4c), `test/kalshi.test.js` (step 5, against a stand-in Kalshi server) `test/catalog.test.js` and `test/verified.test.js` (Stats Hub phase 1). `test/stats.test.js` sends the full example from `BOT-GUIDE.md`, so the guide can't drift. Test servers run with `kalshi: false`; spawned ones get `D3MON_KALSHI=off`. Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
 - **To test a restart, restart the real process** (spawn `server/start.js`, send SIGTERM, start again on the same data folder). Two servers sharing one folder with a hand-called `saveNow()` misses the debounced accounts save, and that once made a restart look like data loss.
 - When a test passes the first time, break the thing it guards and check that it fails.
 - Arena pages share `d3mon.css`. Avoid class and id names it already styles (`.grid`, `#battle`, bare `.row` and `.top`), because they'll pick up the main page's layout. That happened once with `/metrics`.

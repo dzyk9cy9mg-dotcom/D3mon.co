@@ -123,3 +123,9 @@
 .arena .catgroup{margin:14px 0 4px;font:700 13px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 .arena tr.retired{opacity:.55}
 .arena tr.dirty td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
+.arena .vbadge.mixed{color:var(--callers);border-color:var(--callers)}
+.arena .form{display:flex;gap:3px;flex-wrap:wrap}
+.arena .form i{font-style:normal;font:700 13px var(--mono);width:20px;height:20px;display:grid;place-items:center;border:1px solid currentColor}
+.arena .pos{color:var(--up)}
+.arena .neg{color:var(--dn)}
+.arena input.newval{width:130px}

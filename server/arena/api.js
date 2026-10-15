@@ -11,6 +11,7 @@ import { Keys } from "./keys.js";
 import { Calls, MARKET, nextRound } from "./calls.js";
 import { Stats } from "./stats.js";
 import { Catalog } from "./catalog.js";
+import { Verified } from "./verified.js";
 import { Roster } from "./roster.js";
 import { Kalshi } from "./kalshi.js";
 import { ROUND_MS } from "./registry.js";
@@ -50,7 +51,8 @@ export function createArena({ store, accounts, cfg }) {
   calls.start();
   const catalog = new Catalog({ store, feed, hasValues: key => stats.hasValues(key) });
   catalog.seed();
-  const stats = new Stats({ store, registry, catalog, ledger, feed });
+  const verified = new Verified({ calls, metrics, registry });
+  const stats = new Stats({ store, registry, catalog, verified, calls, ledger, feed });
   const roster = new Roster({ store, registry, ledger });
   const kalshi = new Kalshi({ ledger, metrics, registry, calls, feed, ...(cfg.kalshiUrl ? { base: cfg.kalshiUrl } : {}) });
   if (cfg.kalshi !== false) kalshi.start();
@@ -152,6 +154,7 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "PUT /stat-catalog") { writer(); return ok(catalog.update(ctx, await body())); }
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9]+)\/stat-settings$/))) return ok(stats.settings(ctx, m[1]));
     if ((m = route.match(/^PUT \/entrants\/([A-Za-z0-9]+)\/stat-settings$/))) { writer(); return ok(stats.updateSettings(ctx, m[1], await body())); }
+    if ((m = route.match(/^POST \/entrants\/([A-Za-z0-9]+)\/stats$/))) { writer(); return ok(stats.fromOwner(ctx, m[1], await readJson(req, 128 * 1024), () => take(limits.botStats, m[1])), 201); }
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 

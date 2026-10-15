@@ -224,9 +224,31 @@ A rejected request gets `400 {"error":{"code":"looks_like_secret","field":"notes
 - **Scope:** keys work only on `/api/v1/bot/*`, and session cookies don't work there.
 - **Testing a key:** `GET /api/v1/bot/me` returns the bot's public profile and the next round.
 
-### Stats Hub: cards show only what owners send
+### Stats Hub: verified and self-reported stats
 
-**Changed in Stats Hub phase 1.** Stat cards no longer show stats the site works out from calls. Every stat on a card is sent by the bot's owner and labelled `self-reported`. Battles are unchanged: calls are stamped and locked by the server, results come from Kalshi (or HardSmoke), and the board and call history stay `verified` / `recorded by host`. Card settings never affect them.
+**Changed in Stats Hub phase 1.** A card carries two kinds of stat, always labelled:
+- **Verified** (`server/arena/verified.js`, keys `v_…`): worked out by the server from the entrant's own server-stamped calls and the round results. Every entrant has them, and they're a caller's whole card. Labelled `verified` / `recorded by host` / `mixed` by where the results came from. Stats that need no result (calls made, lead time, participation) are `verified`.
+- **Self-reported:** the stat list below plus custom stats, for bots and scripts only. Sent with the bot's key or typed in by the owner on `/my`. Labelled `self-reported`, with `via: "bot-key" | "owner"`.
+
+Battles are unchanged: calls are stamped and locked by the server, results come from Kalshi (or HardSmoke), and the board stays server-scored. Card settings never affect them.
+
+**Verified stats:**
+
+| Key | Type | What it is |
+| --- | --- | --- |
+| `v_win_rate` | percent | Share of scored calls right, with `n` |
+| `v_chance` | percent | Better than chance: 1 − P(X ≥ wins) for X ~ Binomial(n, ½). Null under 10 scored calls |
+| `v_record`, `v_last_30_days`, `v_last_7_days`, `v_today` | record | Right and wrong calls, by UTC day |
+| `v_form` | form | The last 20 scored calls, `"w"`/`"l"`, oldest first |
+| `v_current_streak`, `v_best_win_streak`, `v_worst_loss_streak` | integer | Runs |
+| `v_participation` | percent | Share of the battle rounds so far (battles whose lineup includes the entrant) that it called, with `n` rounds |
+| `v_battles` | battles | `[{t: title, w, l, called, rounds}]` per battle |
+| `v_up_down`, `v_hours`, `v_days` | histogram | Win rate by direction, UTC hour and weekday, with `counts` |
+| `v_lead` | duration | Average time before the lock |
+| `v_crowd` | percent | Win rate when going against the majority of everyone else who called that round (ties don't count), with `n` |
+| `v_calls` | integer | Rounds called, scored or not |
+
+The `v_` prefix is reserved: the stat list and custom stats can't use it, and nobody can send a `v_` value.
 
 **The stat list (`server/arena/catalog.js`, `arena_statcatalog/<key>`).** The standard stats every bot may send. HardSmoke edits it on `/catalog` with no code change.
 - Each stat: `key`, `label`, `type`, `unit`, `category`, `format`, `description`, `order`, `retired`.
@@ -241,7 +263,7 @@ A rejected request gets `400 {"error":{"code":"looks_like_secret","field":"notes
 - If the list later gains a key an owner already uses, the owner's custom stat keeps it for that bot.
 - The type can't change once values have been sent. `{ "remove": true }` keeps the history, and defining the key again brings it back.
 
-**Bot pushes values: `POST /api/v1/bot/stats`.**
+**Self-reported values: `POST /api/v1/bot/stats` (bot key) or `POST /api/v1/entrants/:id/stats` (the owner, signed in; bots and scripts, not callers).** Both take the same body:
 
 ```json
 { "schema": "d3mon.stats/v1", "asOf": "2026-10-15T19:00:00Z",
@@ -252,7 +274,7 @@ A rejected request gets `400 {"error":{"code":"looks_like_secret","field":"notes
 - Any active list stat, or one of the owner's custom stats (`not_defined` otherwise). Each value must match its stat's type. The whole body is scanned for credentials.
 - Up to 50 values and 128 KB per request. `asOf` is optional and within the last 30 days.
 - A value equal to the latest one is skipped (`accepted` / `unchanged`). Each new value is a ledger line `{ "t": "stat", "entrantId", "key", "value", "asOf" }`.
-- Pushes that write are limited to 10 at once, then 1 every 30 seconds per bot.
+- Pushes that write are limited to 10 at once, then 1 every 30 seconds per entrant (both routes share it).
 
 **Stats card: `GET /api/v1/entrants/<slug>/card`.**
 
@@ -274,8 +296,9 @@ The server drops every stat this viewer may not see **before** the response is b
 - **Admins** read like members, so private means private.
 - **Every stat starts hidden**, list and custom alike, and hidden stats appear on no card.
 - Owners set each stat's visibility, label, description and order with `GET`/`PUT /api/v1/entrants/:id/stat-settings` (`{ "stats": { "win_rate": { "visibility": "public", "label": "Accuracy" } } }`). Only what's sent changes, and an empty label or description restores the list's.
-- Settings are kept in `arena_statsettings/<entrantId>` under `catalog` and `custom`. The older `stats` field (choices for the old computed stats) is kept but never read, so a choice made for a computed stat can't publish a self-reported one.
-- Callers have no bot key, so they have no stat card. Their calls and results stay on the board.
+- Owners set verified stats' settings in the same `stats` map (`{ "stats": { "v_win_rate": { "visibility": "public" } } }`).
+- Settings are kept in `arena_statsettings/<entrantId>` under `verified`, `catalog` and `custom`. The older `stats` field (choices for the old computed stats) is kept but never read, so a choice made for a computed stat can't publish a self-reported one.
+- Callers have verified stats only: no list stats, no custom stats, nothing typed in.
 
 There is no leaderboard endpoint. Cards are per entrant only.
 
@@ -383,6 +406,7 @@ Stats Hub phase 1:
 ```
 GET  /api/v1/stat-catalog    anyone: d3mon.statcatalog/v1, the active stats with types and formats. Admins also see
                              retired stats and which types are locked
+POST /api/v1/entrants/:id/stats   owner (bot or script): d3mon.stats/v1 values typed in on /my
 PUT  /api/v1/stat-catalog    admin: {stats: {<key>: {label?, type?, unit?, category?, format?, description?, order?, retired?}}}
                              creates or changes stats; a new one needs label, type and category
 ```
