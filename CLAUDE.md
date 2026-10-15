@@ -14,7 +14,14 @@ npm run role -- <username> admin|member|owner|ban|unban
 ```
 
 - Node ≥ 20 and **no runtime dependencies**. Keep it that way, and ask before adding one.
-- **Deploy:** the server is AWS Lightsail with the code in `/srv/d3mon`, run by the systemd unit `d3mon`. To update: `cd /srv/d3mon && sudo git pull && sudo systemctl restart d3mon`. Data lives in `/srv/d3mon/data/`, so back it up before each update.
+- **Deploy:**
+  - The server is AWS Lightsail with the code in `/srv/d3mon`, run by the systemd unit `d3mon`.
+  - **The data folder is `/var/lib/private/d3mon`**, set with `D3MON_DATA_DIR`. It's not `/srv/d3mon/data`. Always use this path in server steps.
+  - `/var/lib/private` is readable by root only, so commands that look inside it need `sudo`.
+  - To update:
+    1. Back up: `sudo cp -a /var/lib/private/d3mon /var/lib/private/d3mon.bak-$(date +%F)`
+    2. `cd /srv/d3mon && sudo git pull && sudo systemctl restart d3mon`
+  - The role and user commands must be given the data folder, or they'd read `/srv/d3mon/data` instead: `cd /srv/d3mon && sudo D3MON_DATA_DIR=/var/lib/private/d3mon npm run users` (and the same for `npm run role -- <username> admin`).
 
 ## How the owner wants work done
 
