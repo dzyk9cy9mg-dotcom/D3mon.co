@@ -4,6 +4,8 @@ import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { startServer, Client, readEvents } from "./helpers.js";
 import path from "node:path";
+import { spawn } from "node:child_process";
+import { ROOT } from "../server/config.js";
 import { looksLikeSecret, rejectSecrets } from "../server/arena/validate.js";
 import { readRoles, writeRoles } from "../server/accounts.js";
 
@@ -253,16 +255,53 @@ describe("Arena API", () => {
       assert.equal(r.status, 403);
     });
 
-    test("everything survives a restart", async () => {
-      const before = (await hs.get("/api/v1/applications")).json.applications;
-      srv.app.store.saveNow();
-      const again = await startServer({ dataDir: srv.dataDir });
+    // A real restart, as `systemctl restart d3mon` does it: the server process gets SIGTERM and a new
+    // one starts on the same data folder. Nothing is saved by hand, so this checks the shutdown path.
+    test("everything survives a restart of the server process", async () => {
+      const dataDir = path.join(srv.dataDir, "restart");
+      const env = { ...process.env, D3MON_DOTENV: "off", D3MON_DATA_DIR: dataDir, PORT: "0", HOST: "127.0.0.1", D3MON_OWNER: "" };
+      const boot = () => new Promise((resolve, reject) => {
+        const child = spawn(process.execPath, ["server/start.js"], { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
+        let out = "";
+        const fail = setTimeout(() => reject(new Error(`didn't start: ${out}`)), 10000);
+        child.stdout.on("data", c => {
+          out += c;
+          const m = out.match(/running at (http:\/\/127\.0\.0\.1:\d+)\//);
+          if (m) { clearTimeout(fail); resolve({ child, base: m[1] }); }
+        });
+        child.stderr.on("data", c => (out += c));
+      });
+      const stop = child => new Promise(resolve => { child.on("exit", (code, signal) => resolve({ code, signal })); child.kill("SIGTERM"); });
+
+      const one = await boot();
+      const admin = new Client(one.base), member = new Client(one.base);
+      await admin.register("hardsmoke", "smoke-pass-1", "HardSmoke");
+      await member.register("odin", "odin-pass-12", "Odin");
+      const b = (await admin.post("/api/v1/battles", { title: "Restart night", startsAt: nextQuarter(), status: "open" })).json.battle;
+      const a = (await apply(member, VALHALLA, b)).json.application;
+      await admin.post(`/api/v1/applications/${a.id}/review`, { decision: "approve", note: "In" });
+      await apply(member, { kind: "script", name: "Rune Script", creatorName: "Odin" }, b); // left pending
+      const before = {
+        apps: (await admin.get("/api/v1/applications")).json.applications,
+        battle: (await admin.get(`/api/v1/battles/${b.id}`)).json.battle,
+        mine: (await member.get("/api/v1/entrants?mine=1")).json.entrants,
+      };
+      assert.equal(before.apps.length, 2);
+      // Restart straight away, well inside the server's save delays.
+      assert.deepEqual(await stop(one.child), { code: 0, signal: null }, "a clean shutdown on SIGTERM");
+
+      const two = await boot();
       try {
-        const c = new Client(again.base);
-        await c.post("/api/auth/login", { username: "hardsmoke", password: "smoke-pass-1" });
-        assert.deepEqual((await c.get("/api/v1/applications")).json.applications, before);
+        const admin2 = new Client(two.base), member2 = new Client(two.base);
+        assert.equal((await admin2.post("/api/auth/login", { username: "hardsmoke", password: "smoke-pass-1" })).status, 200);
+        assert.equal((await member2.post("/api/auth/login", { username: "odin", password: "odin-pass-12" })).status, 200);
+        const apps = (await admin2.get("/api/v1/applications")).json.applications;
+        assert.deepEqual(apps, before.apps, "the whole application log, history included");
+        assert.deepEqual(apps.map(x => x.status).sort(), ["approved", "pending"]);
+        assert.deepEqual((await admin2.get(`/api/v1/battles/${b.id}`)).json.battle, before.battle, "the battle and its lineup");
+        assert.deepEqual((await member2.get("/api/v1/entrants?mine=1")).json.entrants, before.mine, "the saved entrant, ready to re-select");
       } finally {
-        await again.stop({ keepData: true });
+        await stop(two.child);
       }
     });
   });
