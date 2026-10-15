@@ -91,3 +91,29 @@
 .arena .mgrid.board .ok{color:var(--up)}
 .arena .mgrid.board .no{color:var(--dn)}
 .arena .mgrid.board th.now{color:var(--acc);box-shadow:inset 0 -2px var(--acc)}
+
+/* Stats cards (/card, and the settings on /my). */
+.arena .statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:12px 0}
+.arena .stat{border:1px solid var(--line);padding:12px;display:grid;gap:6px;align-content:start}
+.arena .stat.wide{grid-column:1/-1}
+.arena .stat .sl{font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.arena .sv{font:700 26px var(--display);color:var(--ink)}
+.arena .mgrid .sv{font-size:15px}
+.arena .sv.pos{color:var(--up)}
+.arena .sv.neg{color:var(--dn)}
+.arena .vbadge{font:11px var(--mono);padding:1px 6px;border:1px solid var(--line);color:var(--ink-3);text-transform:none;letter-spacing:0}
+.arena .vbadge.verified{color:var(--up);border-color:var(--up)}
+.arena .vbadge.recorded-by-host{color:var(--callers);border-color:var(--callers)}
+.arena .hist{display:flex;align-items:flex-end;gap:3px;height:90px}
+.arena .hist .hb{flex:1;min-width:14px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.arena .hist .hb i{display:block;width:100%;background:color-mix(in srgb,var(--acc) 70%,transparent)}
+.arena .hist .hb span{font:10px var(--mono);color:var(--ink-3)}
+.arena .days{display:flex;flex-wrap:wrap;gap:6px}
+.arena .days div{border:1px solid var(--line);padding:4px 8px;display:grid;font:12px var(--mono);text-align:center}
+.arena .days b{color:var(--ink-3);font-weight:400}
+.arena .mgrid.stats input{width:100%;max-width:240px}
+.arena .mgrid.stats input.desc{margin-top:4px;font-size:12px}
+.arena .mgrid.stats .hist{height:50px}
+.arena .hist .hb em{font:10px var(--mono);font-style:normal;color:var(--ink-2);white-space:nowrap}
+.arena .hist{height:110px}
+.arena .mgrid.stats .hist{height:64px}

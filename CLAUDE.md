@@ -19,7 +19,7 @@ npm run role -- <username> admin|member|owner|ban|unban
   - **The data folder is `/var/lib/private/d3mon`**, set with `D3MON_DATA_DIR`. It's not `/srv/d3mon/data`. Always use this path in server steps.
   - `/var/lib/private` is readable by root only, so commands that look inside it need `sudo`.
   - To update:
-    1. Back up: `sudo cp -a /var/lib/private/d3mon /var/lib/private/d3mon.bak-$(date +%F)`
+    1. Back up: `sudo cp -a /var/lib/private/d3mon /var/lib/private/d3mon.bak-$(date +%F-%H%M)`. The time is in the name because a second backup with an existing name would be copied *inside* the first one.
     2. `cd /srv/d3mon && sudo git pull && sudo systemctl restart d3mon`
   - The role and user commands must be given the data folder, or they'd read `/srv/d3mon/data` instead: `cd /srv/d3mon && sudo D3MON_DATA_DIR=/var/lib/private/d3mon npm run users` (and the same for `npm run role -- <username> admin`).
 
@@ -52,6 +52,9 @@ npm run role -- <username> admin|member|owner|ban|unban
 | Calls are **sealed until the lock**: anyone can see that a call arrived and when. The direction goes only to the owner and admins until the round starts, then everyone sees it | Nobody can copy a rival's call. The owner asked for calls to be "shown live", so arrivals are live and directions are revealed at the lock. Changing it is one condition in `Calls.view` |
 | Only an entrant's owner can make its keys (admins can revoke). At most 3 active keys per bot or script. Callers get none. Tokens are `d3b_<keyId>_<secret>`, shown once, and only `sha256(secret)` is stored | Whoever makes a key sees it, and rotating needs a spare |
 | A call records the battles its entrant was in for that round (`battleIds`), and a board shows only those calls | Calls belong to the battle record even if the lineup changes later |
+| Card readers: guests see public stats, members public and members-only, the owner also private. **Admins read like members**, so private means private. Admins can still see raw calls on the board and history | The owner's privacy choice holds for everyone |
+| Verification is per stat: "verified" (all results from Kalshi), "recorded by host" (all by hand), "mixed" (with `sources` counts). Call counts and lead time are "verified" because they're server-stamped | Honest labelling while results are still entered by hand (before step 5) |
+| A call is stamped with the same clock that checked its lock (`ledger.append(…, at)`) | One clock decides both, and tests can move it |
 | No leaderboard. Stat cards are per entrant. Every stat starts hidden. Standard stats are "verified", custom ones "self-reported" | Owner's spec |
 
 ## Backlog
@@ -63,7 +66,10 @@ npm run role -- <username> admin|member|owner|ban|unban
   - bot keys (`server/arena/keys.js`), `POST /api/v1/bot/calls`
   - caller Up/Down at `/my` with the same lock, calls sealed until the lock (`server/arena/calls.js`)
   - the live board (`/board`) and scoring when a result arrives
-- [ ] **Step 4b:** standard stats from call history, visibility settings (hidden, private, members, public; all start hidden), and stat cards (`GET /api/v1/entrants/:slug/card`)
+- [x] **Step 4b:**
+  - standard stats from the call history (`server/arena/stats.js`)
+  - per-stat visibility, label, description and order (`arena_statsettings`, all hidden by default)
+  - the stats card (`GET /api/v1/entrants/:slug/card`, `/card?e=<slug>`), with settings on `/my`
 - [ ] **Step 4c:** custom stat definitions and `POST /api/v1/bot/stats` (self-reported), and mirroring lineups into `config/battleRoster`
 - [ ] **Step 5:** a Kalshi `KXBTC15M` poller and automatic scoring. **Verify first, from the Lightsail server**, because the build sandbox can't reach Kalshi: `curl -s "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXBTC15M&status=settled&limit=2"`. Write the scorer against the real field names it returns
 - [ ] **Flagged, not fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags that admins set, so a member could approve their own transfer
@@ -72,7 +78,7 @@ npm run role -- <username> admin|member|owner|ban|unban
 
 ## Testing notes
 
-- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3) and `test/calls.test.js` (step 4a). Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
+- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a) and `test/stats.test.js` (step 4b). Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
 - **To test a restart, restart the real process** (spawn `server/start.js`, send SIGTERM, start again on the same data folder). Two servers sharing one folder with a hand-called `saveNow()` misses the debounced accounts save, and that once made a restart look like data loss.
 - When a test passes the first time, break the thing it guards and check that it fails.
 - Arena pages share `d3mon.css`. Avoid class and id names it already styles (`.grid`, `#battle`, bare `.row` and `.top`), because they'll pick up the main page's layout. That happened once with `/metrics`.

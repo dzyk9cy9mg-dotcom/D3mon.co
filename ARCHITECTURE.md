@@ -259,7 +259,35 @@ Only keys the owner has defined are accepted, and each value must match its decl
 
 The server drops every stat this viewer may not see **before** the response is built, so hidden data never reaches the browser.
 
-**Standard stats** are computed from the ledger, and they're "verified" when Kalshi settled the round: calls, wins, losses, hit rate, current streak, longest win and loss streaks, daily records, best and worst hours and weekdays, average lead time before the lock, and paper profit per $1 contract at Kalshi's price at lock (once step 5 records prices).
+**Who sees what (step 4b):**
+- **Guests** see `public` stats.
+- **Members** see `public` and `members` stats.
+- **The owner** also sees `private` ones.
+- **Admins** read like members, so private means private.
+- **Hidden stats** appear on no card.
+- Owners set each stat's visibility, label, description and order with `GET`/`PUT /api/v1/entrants/:id/stat-settings` (`{ "stats": { "hit_rate": { "visibility": "public", "label": "Accuracy" } } }`). Only what's sent changes, and an empty label or description restores the default.
+- Settings are kept in `arena_statsettings/<entrantId>`, apart from the history, so hiding a stat never deletes anything.
+- Battle calls and results stay on the battle board whatever these settings say.
+
+**Standard stats** are computed from the ledger: from each entrant's latest call per locked round, scored against the round's result. The keys are:
+
+| Key | Type | What it is |
+| --- | --- | --- |
+| `calls` | integer | Rounds called |
+| `wins`, `losses` | integer | Scored calls that were right or wrong |
+| `hit_rate` | percent | Share right, with `n` scored |
+| `current_streak` | streak | +n right or −n wrong in a row |
+| `longest_win_streak`, `longest_loss_streak` | integer | Longest runs |
+| `avg_lead` | duration | Average time before the lock |
+| `best_hours`, `weekdays` | histogram | Hit rate by UTC hour and weekday, with `counts` |
+| `daily_record` | series | `{t, v, w, l}` per UTC day, last 90 days |
+
+**Verification** comes from where the results came from:
+- `verified`: Kalshi settled every round counted.
+- `recorded by host`: every result was entered by hand.
+- `mixed`: some of each, with `sources: {kalshi, host}`.
+- `calls` and `avg_lead` need no result. They come from server-stamped calls, so they're `verified`.
+- Paper profit per $1 contract at Kalshi's price at the lock comes once step 5 records prices.
 
 There is no leaderboard endpoint. Cards are per entrant only.
 
@@ -328,9 +356,15 @@ GET    /api/v1/battles/:id/board              the live board: each round's calls
 
 The pages are `/my` (owners: keys and the caller buttons) and `/board` (public).
 
-- **Step 4b:**
-  - `GET/PUT /api/v1/entrants/:id/stat-settings`
-  - `GET /api/v1/entrants/:slug/card`
+Step 4b:
+
+```
+GET  /api/v1/entrants/:id/stat-settings   owner: every stat with its value and settings, hidden ones included
+PUT  /api/v1/entrants/:id/stat-settings   owner: {stats: {<key>: {visibility?, label?, description?, order?}}}
+GET  /api/v1/entrants/:idOrSlug/card      anyone: d3mon.statcard/v1, only what this reader may see
+```
+
+The pages are the "Stats card" section of `/my` and the public `/card?e=<slug>`. `stats.updated` on `entrant:<id>` tells a card to refetch, after a settings change, a new locked call or a result.
 - **Step 4c:**
   - `POST /api/v1/bot/stats`
   - lineups copied into `config/battleRoster` for the current page

@@ -71,6 +71,11 @@ Once approved, an entrant is saved. For a later battle its owner picks it from *
 **Calls and bot keys** (step 4a):
 - **Bots and scripts:** at **`/my`**, the owner of an approved bot or script makes an API key. It's shown once, and can be revoked there. The bot sends each call with that key (`POST /api/v1/bot/calls`; `/my` shows a ready-to-copy example).
 - **Callers:** callers press **Up** or **Down** at `/my`.
+- **Stats cards (step 4b):**
+  - Each entrant has a card at **`/card?e=<name>`**, with stats worked out by the server from its calls: hit rate, streaks, best trading times, daily record and more.
+  - **Every stat starts hidden.** In the "Stats card" section of `/my`, the owner chooses Public, Members only or Private for each one, and can rename, reorder and describe them.
+  - Stats say whether their results were "verified" (settled by Kalshi) or "recorded by host".
+- **Guide for bot owners:** [BOT-GUIDE.md](BOT-GUIDE.md) is a short guide to send them: making a key and sending a test call.
 - **The lock:** every call is stamped by the server and locks when its round starts.
 - **The board:** at **`/board`**, anyone can watch a battle live. Calls appear sealed (who called and when, but not which way) until the round starts, then they're revealed and scored when the result comes in. Keys can only send calls: D3MON.CO never takes trading credentials or exchange keys.
 
@@ -95,7 +100,7 @@ public/
   js/d3mon.js         the artifact's app code, unchanged
   js/runtime.js       window.claude for this server (new)
   login.html, js/account.js   sign in, sign up, account settings (new)
-  apply.html, applications.html, metrics.html, my.html, board.html, js/arena*.js
+  apply.html, applications.html, metrics.html, my.html, board.html, card.html, js/arena*.js
                       Battle of the Bots: registration, review, round metrics, keys and calls, the live board (new)
 app.cjs               startup file for hosting panels (starts server/start.js)
 server/
@@ -148,7 +153,7 @@ npm install   # only needed for the headless-browser test (jsdom)
 npm test
 ```
 
-There are 115 tests:
+There are 126 tests:
 
 - `server.test.js` covers the API, the access rules, live updates, presence, data on disk and Cosmic (against a mock API).
 - `runtime.test.js` runs `public/js/runtime.js` against a live server, using the page's own `mergeWrite` taken from `d3mon.js`.
@@ -167,6 +172,15 @@ There are 115 tests:
   - calls going to the next round, the server-clock lock, retries and changes, and refusing bad calls
   - sealed calls, the caller buttons, which calls appear on which battle's board
   - the live reveal at the lock, live scoring, and the round timer firing at the boundary
+- `stats.test.js` covers stats cards:
+  - the numbers, checked by hand
+  - the verified / recorded by host / mixed labels
+  - every stat starting hidden, and what each kind of reader sees
+  - hidden data never reaching the browser
+  - owner-only settings, and their validation
+  - hiding never deleting history
+  - battle boards ignoring the settings
+  - live refresh
 - `package.test.js` builds the upload zip, checks every file in it, then unpacks it and starts the site from `app.cjs`.
 
 ## Differences from the artifact
