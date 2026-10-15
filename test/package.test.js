@@ -61,7 +61,7 @@ test("the upload zip holds the site and nothing private, and the site runs from 
       fs.mkdirSync(path.dirname(path.join(site, name)), { recursive: true });
       fs.writeFileSync(path.join(site, name), data);
     }
-    const env = { ...process.env, PORT: "0", HOST: "127.0.0.1", D3MON_DOTENV: "off", D3MON_DATA_DIR: path.join(dir, "data"), D3MON_BASE_PATH: "/d3mon", ANTHROPIC_API_KEY: "" };
+    const env = { ...process.env, PORT: "0", HOST: "127.0.0.1", D3MON_DOTENV: "off", D3MON_DATA_DIR: path.join(dir, "data"), D3MON_BASE_PATH: "/d3mon", ANTHROPIC_API_KEY: "", D3MON_KALSHI: "off" };
     const child = spawn(process.execPath, ["app.cjs"], { cwd: path.join(site, "d3mon"), env, stdio: ["ignore", "pipe", "pipe"] });
     const exited = new Promise(resolve => child.on("exit", (code, signal) => resolve({ code, signal })));
     try {

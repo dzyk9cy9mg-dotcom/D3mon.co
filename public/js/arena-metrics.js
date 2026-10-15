@@ -245,10 +245,23 @@
 
   window.addEventListener("beforeunload", e => { if (S.dirty) e.preventDefault(); });
 
+  // Kalshi settles rounds automatically (step 5). Say whether it's working, and which rounds still need a result by hand.
+  async function kalshiState() {
+    try {
+      const k = (await api("GET", "kalshi")).kalshi;
+      const last = k.lastOkAt ? `last checked ${fmtTime(k.lastOkAt)}` : "not checked yet";
+      const trouble = k.consecutiveErrors ? ` · can't reach Kalshi (${k.lastError})` : "";
+      const missing = k.missing.length ? ` · ${k.missing.length} round${k.missing.length > 1 ? "s" : ""} Kalshi hasn't settled, enter by hand: ${k.missing.slice(-5).map(r => fmtTime(Date.parse(r))).join(", ")}` : "";
+      $("kalshiState").textContent = (k.polling ? `Kalshi results: automatic, ${last}` : "Kalshi results: off") + trouble + missing;
+    } catch (e) { $("kalshiState").textContent = ""; }
+  }
+
   (async () => {
     const me = await session();
     if (!me || (me.role !== "admin" && me.role !== "owner")) { $("denied").hidden = false; return; }
     $("pickBox").hidden = false;
+    kalshiState();
+    setInterval(kalshiState, 60000);
     try {
       S.battles = (await api("GET", "battles")).battles.filter(b => b.status !== "draft");
       if (!S.battles.length) { $("battleSel").innerHTML = `<option value="">No battles yet</option>`; return; }
