@@ -76,7 +76,7 @@ describe("battle metrics", () => {
   after(() => srv.stop());
 
   test("HardSmoke records a whole round for 12 bots in one request", async () => {
-    const entries = B.ids.map((id, i) => ({ entrantId: id, call: i % 3 ? "up" : "down", speedMs: 1000 * (i + 5), profit: i % 3 ? 0.42 : -0.581 }));
+    const entries = B.ids.map((id, i) => ({ entrantId: id, call: i % 3 ? "up" : "down", speedMs: 1000 * (i + 5), profitUsd: i % 3 ? 0.42 : -0.581 }));
     const r = await put(hs, 0, { result: "up", entries });
     assert.equal(r.status, 200);
     const round = r.json.round;
@@ -84,7 +84,7 @@ describe("battle metrics", () => {
     assert.equal(round.resultSource, "host");
     assert.equal(round.entries.length, 12);
     assert.deepEqual(round.entries.map(e => e.correct), B.ids.map((_, i) => i % 3 !== 0), "right or wrong follows the call and result");
-    assert.equal(round.entries[0].profit, -0.58, "rounded to the cent");
+    assert.equal(round.entries[0].profitUsd, -0.58, "rounded to the cent");
     assert.ok(round.entries.every(e => e.verification === "recorded by host" && e.source === "host"));
   });
 
@@ -116,7 +116,10 @@ describe("battle metrics", () => {
       [{ entries: [{ entrantId: B.ids[0], correct: true, stake: 5 }] }, "entries[0].stake", "an unknown field"],
       [{ entries: [{ entrantId: B.ids[0], correct: "yes" }] }, "entries[0].correct", "not a boolean"],
       [{ entries: [{ entrantId: B.ids[0], correct: true, speedMs: -1 }] }, "entries[0].speedMs", "negative speed"],
-      [{ entries: [{ entrantId: B.ids[0], correct: true, profit: "1.00" }] }, "entries[0].profit", "profit as text"],
+      [{ entries: [{ entrantId: B.ids[0], correct: true, profitUsd: "1.00" }] }, "entries[0].profitUsd", "profit as text"],
+      [{ entries: [{ entrantId: B.ids[0], correct: true, profitPerContract: 1.5 }] }, "entries[0].profitPerContract", "more than a $1 contract can pay"],
+      [{ entries: [{ entrantId: B.ids[0], correct: true, profitPct: -101 }] }, "entries[0].profitPct", "losing more than everything"],
+      [{ entries: [{ entrantId: B.ids[0], correct: true, profit: 1 }] }, "entries[0].profit", "profit without a unit"],
       [{ entries: [{ entrantId: B.ids[0], correct: true, apiKey: "x" }] }, "entries[0].apiKey", "a credential field"],
       [{}, undefined, "nothing to record"],
     ];
@@ -131,13 +134,13 @@ describe("battle metrics", () => {
 
   test("corrections add to the history; the latest entry counts; saving the same thing adds nothing", async () => {
     const h0 = (await view(hs, B, "?history=1")).json.history.length;
-    await put(hs, 1, { entries: [{ entrantId: B.ids[1], correct: true, profit: 1 }] });
-    await put(hs, 1, { entries: [{ entrantId: B.ids[1], correct: false, profit: -1 }] });
-    await put(hs, 1, { entries: [{ entrantId: B.ids[1], correct: false, profit: -1 }] });
+    await put(hs, 1, { entries: [{ entrantId: B.ids[1], correct: true, profitUsd: 1 }] });
+    await put(hs, 1, { entries: [{ entrantId: B.ids[1], correct: false, profitUsd: -1 }] });
+    await put(hs, 1, { entries: [{ entrantId: B.ids[1], correct: false, profitUsd: -1 }] });
     const v = (await view(hs, B, "?history=1")).json;
     assert.equal(v.history.length, h0 + 2);
     const e = v.rounds[1].entries.find(x => x.entrantId === B.ids[1]);
-    assert.deepEqual([e.correct, e.profit], [false, -1]);
+    assert.deepEqual([e.correct, e.profitUsd], [false, -1]);
     assert.deepEqual(v.history.slice(-2).map(l => [l.correct, l.byName]), [[true, "HardSmoke"], [false, "HardSmoke"]]);
   });
 
@@ -159,11 +162,39 @@ describe("battle metrics", () => {
   });
 
   test("the battle record adds up each entrant's rounds, in lineup order", async () => {
-    await put(hs, 2, { result: "up", entries: [{ entrantId: B.ids[1], call: "up", speedMs: 9000, profit: 0.5 }, { entrantId: B.ids[0], call: "up" }] });
+    await put(hs, 2, { result: "up", entries: [{ entrantId: B.ids[1], call: "up", speedMs: 9000, profitUsd: 0.5 }, { entrantId: B.ids[0], call: "up" }] });
     const t = (await view(guest)).json.totals;
     assert.deepEqual(t.map(x => x.entrantId), B.ids, "lineup order, not ranked");
-    assert.deepEqual(t[1], { entrantId: B.ids[1], name: "m bot 1", slug: "m-bot-1", inLineup: true, recorded: 2, right: 2, wrong: 0, avgSpeedMs: 7500, profit: 0.92, source: "host", verification: "recorded by host" });
-    assert.deepEqual([t[0].right, t[0].wrong, t[0].profit], [1, 1, -0.58]);
+    assert.deepEqual(t[1], { entrantId: B.ids[1], name: "m bot 1", slug: "m-bot-1", inLineup: true, recorded: 2, right: 2, wrong: 0, avgSpeedMs: 7500, profitUsd: 0.92, profitPerContract: null, avgProfitPct: null, source: "host", verification: "recorded by host" });
+    assert.deepEqual([t[0].right, t[0].wrong, t[0].profitUsd], [1, 1, -0.58]);
+  });
+
+  test("profit can be recorded in dollars, per $1 contract, as a percent, or all three", async () => {
+    // Round 3 for three bots: one unit alone each, and one bot with all three.
+    const r = await put(hs, 2, { entries: [
+      { entrantId: B.ids[6], call: "up", profitPerContract: 0.42 },
+      { entrantId: B.ids[7], call: "down", profitPct: -100 },
+      { entrantId: B.ids[8], call: "up", profitUsd: 4.2, profitPerContract: 0.123456, profitPct: 72.4137 },
+    ] });
+    assert.equal(r.status, 200);
+    const all = r.json.round.entries.find(e => e.entrantId === B.ids[8]);
+    assert.deepEqual([all.profitUsd, all.profitPerContract, all.profitPct], [4.2, 0.1235, 72.41], "cents, 4 places, 2 places");
+    const only = r.json.round.entries.find(e => e.entrantId === B.ids[6]);
+    assert.deepEqual([only.profitPerContract, only.profitUsd, only.profitPct], [0.42, undefined, undefined], "units not given stay empty");
+    // Round 2 for the all-three bot too, so the totals have two rounds to combine.
+    await put(hs, 1, { result: "up", entries: [{ entrantId: B.ids[8], call: "up", profitUsd: -1.2, profitPerContract: -0.0235, profitPct: -27.41 }] });
+    const t = (await view(guest)).json.totals.find(x => x.entrantId === B.ids[8]);
+    // Dollars include its $0.42 from round 1 (first test): 0.42 + 4.20 - 1.20. Percent averages only the
+    // rounds that have one.
+    assert.deepEqual([t.profitUsd, t.profitPerContract, t.avgProfitPct], [3.42, 0.1, 22.5], "dollars and per-contract add up; percent is averaged");
+    const t7 = (await view(guest)).json.totals.find(x => x.entrantId === B.ids[7]);
+    assert.deepEqual([t7.profitUsd, t7.profitPerContract, t7.avgProfitPct], [0.42, null, -100], "its $0.42 is from round 1; no per-contract figures at all");
+    // Changing only one unit is a correction; re-saving the same values is not.
+    const h = (await view(hs, B, "?history=1")).json.history.length;
+    await put(hs, 2, { entries: [{ entrantId: B.ids[8], call: "up", profitUsd: 4.2, profitPerContract: 0.1235, profitPct: 72.41 }] });
+    assert.equal((await view(hs, B, "?history=1")).json.history.length, h, "same values: nothing written");
+    await put(hs, 2, { entries: [{ entrantId: B.ids[8], call: "up", profitUsd: 4.2, profitPerContract: 0.1235, profitPct: 70 }] });
+    assert.equal((await view(hs, B, "?history=1")).json.history.length, h + 1);
   });
 
   test("anyone can see the battle record; only admins see who entered it and the history", async () => {
@@ -253,7 +284,7 @@ test("recorded rounds survive the server being killed", async () => {
     s = await boot();
     const hs2 = new Client(s.base);
     await hs2.post("/api/auth/login", { username: "hardsmoke", password: "smoke-pass-1" });
-    const r = await hs2.req("PUT", `/api/v1/battles/${B.b.id}/rounds/${B.round(0)}/metrics`, { result: "up", entries: B.ids.map(id => ({ entrantId: id, call: "up", speedMs: 4000, profit: 0.3 })) });
+    const r = await hs2.req("PUT", `/api/v1/battles/${B.b.id}/rounds/${B.round(0)}/metrics`, { result: "up", entries: B.ids.map(id => ({ entrantId: id, call: "up", speedMs: 4000, profitUsd: 0.3 })) });
     assert.equal(r.status, 200);
     assert.deepEqual(await stop(s.child, "SIGKILL"), { code: null, signal: "SIGKILL" });
 
@@ -262,7 +293,7 @@ test("recorded rounds survive the server being killed", async () => {
       const v = (await new Client(s.base).get(`/api/v1/battles/${B.b.id}/metrics`)).json;
       assert.equal(v.rounds[0].result, "up");
       assert.equal(v.rounds[0].entries.length, 3);
-      assert.deepEqual(v.totals.map(t => [t.right, t.profit]), [[1, 0.3], [1, 0.3], [1, 0.3]]);
+      assert.deepEqual(v.totals.map(t => [t.right, t.profitUsd]), [[1, 0.3], [1, 0.3], [1, 0.3]]);
     } finally {
       await stop(s.child, "SIGTERM");
     }

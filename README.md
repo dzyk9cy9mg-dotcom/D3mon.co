@@ -63,7 +63,8 @@ Once approved, an entrant is saved. For a later battle its owner picks it from *
 
 **Round metrics** are the manual fallback for scoring. At **`/metrics`** (linked from `/applications`), HardSmoke picks a battle and a finished round and records the whole lineup at once: each entrant's call, right or wrong, speed and profit.
 - Pick the round result and each call, and right or wrong fills in by itself.
-- Speed is how many seconds before the round locked the call was made. Profit is in US dollars.
+- Speed is how many seconds before the round locked the call was made.
+- Profit can be entered in dollars, per $1 contract, as a percent return, or any mix of the three, negative for a loss. Tick the **Profit columns** you use; the page remembers the choice in that browser. A unit that already has figures in the battle is always shown.
 - Corrections and cleared rows are kept in the entry history.
 - The battle record, totals per entrant listed in lineup order and not ranked, is public and updates live. Every figure is labelled "recorded by host".
 
@@ -140,7 +141,7 @@ npm install   # only needed for the headless-browser test (jsdom)
 npm test
 ```
 
-There are 99 tests:
+There are 100 tests:
 
 - `server.test.js` covers the API, the access rules, live updates, presence, data on disk and Cosmic (against a mock API).
 - `runtime.test.js` runs `public/js/runtime.js` against a live server, using the page's own `mergeWrite` taken from `d3mon.js`.

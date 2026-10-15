@@ -164,14 +164,19 @@ The `slug` is unique, and it links to the page's existing `config/battleRoster` 
 
 ```json
 { "t": "metric", "battleId": "b_…", "round": 1760925600000, "entrantId": "e_…",
-  "call": "up", "correct": true, "speedMs": 41000, "profit": 0.37, "by": "<admin uid>", "at": 0 }
+  "call": "up", "correct": true, "speedMs": 41000,
+  "profitUsd": 4.2, "profitPerContract": 0.42, "profitPct": 72.41, "by": "<admin uid>", "at": 0 }
 ```
 
 - **Fields:**
   - `call` is optional.
   - `correct` is required. It can be left out when `call` and the round's result are both known, because the server works it out.
   - `speedMs` is the lead time: how long before the round locked the call was made, so more means earlier. It's the same measure step 4 computes automatically.
-  - `profit` is in US dollars, signed and rounded to the cent.
+  - Profit can be recorded in any or all of three units, each optional and negative for a loss:
+    - `profitUsd`: US dollars, rounded to the cent.
+    - `profitPerContract`: dollars per $1 Kalshi contract, from −1 to 1, to 4 places. For example, a contract bought at 58¢ that wins is 0.42.
+    - `profitPct`: percent return on the money at risk, −100 or more, to 2 places. 72.41 means +72.41%.
+  - In the battle totals, `profitUsd` and `profitPerContract` add up across rounds. `avgProfitPct` is the average over the rounds that have a percent figure. A total is `null` when no round has that unit.
 - **Consistency:** an entry whose `correct` contradicts its `call` and the round's result is refused. If the result is corrected later, the entries already saved are kept as they were and flagged `mismatch` in the view.
 - **Corrections:** `{"void": true}` clears an entry. Corrections and clears are new lines, and the latest line for each round and entrant counts. A re-save that changes nothing writes nothing.
 - **Rounds:** only rounds of the battle that have finished can be recorded, and not for a draft battle.
@@ -287,7 +292,8 @@ GET   /api/v1/feed?topics=…                    live feed
 Step 3:
 
 ```
-PUT   /api/v1/battles/:id/rounds/:round/metrics   admin: {result?, entries: [{entrantId, call?, correct?, speedMs?, profit?, void?}]}
+PUT   /api/v1/battles/:id/rounds/:round/metrics   admin: {result?, entries: [{entrantId, call?, correct?, speedMs?,
+                                                  profitUsd?, profitPerContract?, profitPct?, void?}]}
                                                   up to 50 entrants in one request; :round is the round's start in ms
 GET   /api/v1/battles/:id/metrics                 the battle record: every round (result, entries) and totals per
                                                   entrant in lineup order (not ranked). ?history=1 (admin) adds every

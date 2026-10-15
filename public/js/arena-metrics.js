@@ -11,8 +11,27 @@
     $("msg").classList.toggle("ok", !!ok);
   }
   const fmtTime = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  const money = v => v === null || v === undefined ? "–" : `${v < 0 ? "−" : ""}$${Math.abs(v).toFixed(2)}`;
-  const secs = ms => ms === null || ms === undefined ? "–" : `${(ms / 1000).toFixed(ms % 1000 ? 1 : 0)} s`;
+  const none = v => v === null || v === undefined;
+  const money = v => none(v) ? "–" : `${v < 0 ? "−" : ""}$${Math.abs(v).toFixed(2)}`;
+  // Up to 4 decimal places, dropping trailing zeros down to cents: 0.58, 0.123, 0.1235.
+  const perContract = v => none(v) ? "–" : `${v < 0 ? "−" : "+"}$${Math.abs(v).toFixed(4).replace(/0{1,2}$/, "")}/contract`;
+  const percent = v => none(v) ? "–" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)}%`;
+  const secs = ms => none(ms) ? "–" : `${(ms / 1000).toFixed(ms % 1000 ? 1 : 0)} s`;
+
+  // The three ways to record profit. Any, all or none can be used for an entry. `total` is the field in
+  // the battle record: dollars and per-contract profit add up, a percent return is averaged per round.
+  const PROFITS = [
+    { k: "profitUsd", label: "Profit ($)", total: "profitUsd", totalLabel: "Profit ($)", step: "0.01", fmt: money, hint: "a dollar amount, like 0.42 or -1.50" },
+    { k: "profitPerContract", label: "Per $1 contract", total: "profitPerContract", totalLabel: "Per $1 contract", step: "0.01", fmt: perContract, hint: "dollars per $1 contract, from -1 to 1, like 0.42" },
+    { k: "profitPct", label: "Return (%)", total: "avgProfitPct", totalLabel: "Avg return", step: "0.1", fmt: percent, hint: "a percent return, like 72.4 or -100" },
+  ];
+  const UNITS_KEY = "d3mon.metrics.units";
+  let chosen;
+  try { chosen = new Set(JSON.parse(localStorage.getItem(UNITS_KEY)).filter(k => PROFITS.some(u => u.k === k))); } catch (e) { chosen = new Set(["profitUsd"]); }
+  // A unit with entries anywhere in this battle is always shown, so no recorded figure is ever hidden.
+  const usedUnits = () => new Set(PROFITS.filter(u => S.view.rounds.some(r => r.entries.some(e => e[u.k] !== undefined))).map(u => u.k));
+  const shown = () => { const used = usedUnits(); return PROFITS.filter(u => chosen.has(u.k) || used.has(u.k)); };
+  const fromSaved = (s, k) => s && s[k] !== undefined ? String(s[k]) : "";
 
   // Everyone who belongs on this round's grid: the lineup, plus anyone with a recorded entry.
   function people() {
@@ -26,18 +45,19 @@
     const r = S.view.rounds[S.idx], rows = {};
     for (const p of people()) {
       const s = saved(p.id);
-      rows[p.id] = s ? { call: s.call || null, correct: s.correct ?? null, speed: s.speedMs !== undefined ? String(s.speedMs / 1000) : "", profit: s.profit !== undefined ? String(s.profit) : "" }
-        : { call: null, correct: null, speed: "", profit: "" };
+      rows[p.id] = { call: s?.call || null, correct: s?.correct ?? null, speed: s && s.speedMs !== undefined ? String(s.speedMs / 1000) : "" };
+      for (const u of PROFITS) rows[p.id][u.k] = fromSaved(s, u.k);
     }
     S.draft = { result: r.result, rows };
     S.dirty = false;
   }
 
-  const isEmpty = d => !d.call && d.correct === null && d.speed.trim() === "" && d.profit.trim() === "";
+  const isEmpty = d => !d.call && d.correct === null && d.speed.trim() === "" && PROFITS.every(u => d[u.k].trim() === "");
   function rowChanged(id) {
     const d = S.draft.rows[id], s = saved(id);
     if (!s) return !isEmpty(d);
-    return d.call !== (s.call || null) || d.correct !== (s.correct ?? null) || d.speed.trim() !== (s.speedMs !== undefined ? String(s.speedMs / 1000) : "") || d.profit.trim() !== (s.profit !== undefined ? String(s.profit) : "");
+    return d.call !== (s.call || null) || d.correct !== (s.correct ?? null) || d.speed.trim() !== (s.speedMs !== undefined ? String(s.speedMs / 1000) : "")
+      || PROFITS.some(u => d[u.k].trim() !== fromSaved(s, u.k));
   }
 
   // With a result and a call, right or wrong follows.
@@ -60,6 +80,9 @@
     document.querySelectorAll("[data-result]").forEach(btn => btn.setAttribute("aria-pressed", String(btn.dataset.result === S.draft.result)));
     $("resultSrc").textContent = r.resultSource === "kalshi" ? "Settled by Kalshi" : r.result ? "Recorded by host" : "Not recorded yet";
     document.querySelectorAll("[data-result]").forEach(btn => (btn.disabled = r.resultSource === "kalshi"));
+    const units = shown(), used = usedUnits();
+    $("units").innerHTML = PROFITS.map(u => `<label title="${used.has(u.k) ? "This battle has entries in this unit, so it's always shown" : ""}"><input type="checkbox" data-unit="${u.k}" ${units.includes(u) ? "checked" : ""} ${used.has(u.k) ? "disabled" : ""}> ${esc(u.label)}</label>`).join("");
+    $("rowsHead").innerHTML = `<tr><th>Entrant</th><th>Call</th><th>Right?</th><th>Speed (s before lock)</th>${units.map(u => `<th>${esc(u.label)}</th>`).join("")}<th></th></tr>`;
     $("rows").innerHTML = people().map(p => {
       const d = S.draft.rows[p.id], s = saved(p.id);
       const seg = (attr, opts) => `<span class="seg2" role="group">${opts.map(([v, cls, label]) => `<button type="button" class="${cls}" data-${attr}="${esc(p.id)}|${v}" aria-pressed="${String(d[attr === "call" ? "call" : "correct"] === (attr === "ok" ? v === "true" : v))}">${label}</button>`).join("")}</span>`;
@@ -68,21 +91,23 @@
         <td>${seg("call", [["up", "up", "▲"], ["down", "down", "▼"]])}</td>
         <td>${seg("ok", [["true", "ok", "✓"], ["false", "no", "✗"]])}</td>
         <td><input type="number" min="0" step="0.1" inputmode="decimal" data-speed="${esc(p.id)}" value="${esc(d.speed)}" aria-label="Speed for ${esc(p.name)}"></td>
-        <td><input type="number" step="0.01" inputmode="decimal" data-profit="${esc(p.id)}" value="${esc(d.profit)}" aria-label="Profit for ${esc(p.name)}"></td>
+        ${units.map(u => `<td><input type="number" step="${u.step}" inputmode="decimal" data-profit="${esc(p.id)}|${u.k}" value="${esc(d[u.k])}" aria-label="${esc(u.label)} for ${esc(p.name)}"></td>`).join("")}
         <td>${note}</td></tr>`;
-    }).join("") || `<tr><td colspan="6" class="empty">Nobody is in this battle's lineup yet. Approve applications first.</td></tr>`;
+    }).join("") || `<tr><td colspan="${5 + units.length}" class="empty">Nobody is in this battle's lineup yet. Approve applications first.</td></tr>`;
     const n = people().filter(p => rowChanged(p.id)).length + (S.draft.result !== r.result ? 1 : 0);
     $("dirty").textContent = n ? `${n} unsaved change${n === 1 ? "" : "s"}` : "Everything is saved.";
   }
 
   function renderTotals() {
-    $("totals").innerHTML = S.view.totals.map(t => `<tr><td><b>${esc(t.name)}</b>${t.inLineup ? "" : ' <span class="tag">left the lineup</span>'}</td><td>${t.right}</td><td>${t.wrong}</td><td>${t.recorded}</td><td>${esc(secs(t.avgSpeedMs))}</td><td>${esc(money(t.profit))}</td></tr>`).join("")
-      || `<tr><td colspan="6" class="empty">No entrants yet.</td></tr>`;
+    const units = shown();
+    $("totalsHead").innerHTML = `<tr><th>Entrant</th><th>Right</th><th>Wrong</th><th>Rounds recorded</th><th>Avg speed</th>${units.map(u => `<th>${esc(u.totalLabel)}</th>`).join("")}</tr>`;
+    $("totals").innerHTML = S.view.totals.map(t => `<tr><td><b>${esc(t.name)}</b>${t.inLineup ? "" : ' <span class="tag">left the lineup</span>'}</td><td>${t.right}</td><td>${t.wrong}</td><td>${t.recorded}</td><td>${esc(secs(t.avgSpeedMs))}</td>${units.map(u => `<td>${esc(u.fmt(t[u.total]))}</td>`).join("")}</tr>`).join("")
+      || `<tr><td colspan="${5 + units.length}" class="empty">No entrants yet.</td></tr>`;
     const names = Object.fromEntries(S.view.totals.map(t => [t.entrantId, t.name]));
     $("history").innerHTML = (S.view.history || []).slice().reverse().map(l => {
       const what = l.t === "score" ? `Round ${fmtTime(l.round)} result: ${l.result === "up" ? "▲ up" : "▼ down"}`
-        : `${esc(names[l.entrantId] || l.entrantId)}, round ${fmtTime(l.round)}: ${l.void ? "cleared" : [l.call && (l.call === "up" ? "▲ up" : "▼ down"), l.correct === true ? "right" : l.correct === false ? "wrong" : "", l.speedMs !== undefined ? secs(l.speedMs) : "", l.profit !== undefined ? money(l.profit) : ""].filter(Boolean).join(", ")}`;
-      return `<div class="item"><div class="meta">${esc(when(l.at))} · ${esc(l.byName || "?")} · ${l.t === "score" ? what : what}</div></div>`;
+        : `${esc(names[l.entrantId] || l.entrantId)}, round ${fmtTime(l.round)}: ${l.void ? "cleared" : [l.call && (l.call === "up" ? "▲ up" : "▼ down"), l.correct === true ? "right" : l.correct === false ? "wrong" : "", l.speedMs !== undefined ? secs(l.speedMs) : "", ...PROFITS.map(u => l[u.k] !== undefined ? u.fmt(l[u.k]) : "")].filter(Boolean).join(", ")}`;
+      return `<div class="item"><div class="meta">${esc(when(l.at))} · ${esc(l.byName || "?")} · ${what}</div></div>`;
     }).join("") || `<p class="empty">Nothing recorded yet.</p>`;
   }
 
@@ -154,12 +179,23 @@
 
   document.addEventListener("input", ev => {
     const d = ev.target.dataset;
-    if (d.speed) S.draft.rows[d.speed].speed = ev.target.value;
-    else if (d.profit) S.draft.rows[d.profit].profit = ev.target.value;
+    let id;
+    if (d.speed) S.draft.rows[(id = d.speed)].speed = ev.target.value;
+    else if (d.profit) { const [pid, k] = d.profit.split("|"); S.draft.rows[(id = pid)][k] = ev.target.value; }
     else return;
     S.dirty = true;
     const tr = ev.target.closest("tr");
-    if (tr) tr.classList.toggle("changed", rowChanged(d.speed || d.profit));
+    if (tr) tr.classList.toggle("changed", rowChanged(id));
+  });
+
+  // Which profit columns to show is a per-viewer preference, remembered in this browser only.
+  document.addEventListener("change", ev => {
+    const k = ev.target.dataset && ev.target.dataset.unit;
+    if (!k) return;
+    if (ev.target.checked) chosen.add(k); else chosen.delete(k);
+    try { localStorage.setItem(UNITS_KEY, JSON.stringify([...chosen])); } catch (e) {}
+    renderRound();
+    renderTotals();
   });
 
   $("battleSel").addEventListener("change", () => {
@@ -182,10 +218,11 @@
         if (!Number.isFinite(s) || s < 0) return msg(`${p.name}: speed is a number of seconds, 0 or more.`);
         e.speedMs = Math.round(s * 1000);
       }
-      if (d.profit.trim() !== "") {
-        const v = Number(d.profit);
-        if (!Number.isFinite(v)) return msg(`${p.name}: profit is a dollar amount, like 0.42 or -1.50.`);
-        e.profit = v;
+      for (const u of PROFITS) {
+        if (d[u.k].trim() === "") continue;
+        const v = Number(d[u.k]);
+        if (!Number.isFinite(v)) return msg(`${p.name}: ${u.label} is ${u.hint}.`);
+        e[u.k] = v;
       }
       if (e.correct === undefined) return msg(`${p.name}: mark the call right or wrong, or pick the round result.`);
       entries.push(e);

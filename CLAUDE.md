@@ -38,7 +38,8 @@ npm run role -- <username> admin|member|owner|ban|unban
 | The live feed (`/api/v1/feed?topics=`) builds each event per reader and re-checks roles on every event. Signing out ends the stream | Privacy is enforced on the server, never just hidden in the page |
 | Calls are locked by the **server clock** at round start (step 4) | The current page trusts browser timestamps, so calls can be backdated |
 | The ledger arrived in step 3, not 4, as the home for metric and score lines. Each append is fsync'd before the request is answered | Round results must survive a crash. The 1 s store delay doesn't guarantee that |
-| Manual metric `speedMs` is lead time before the lock (more means earlier). `profit` is US dollars, signed, to the cent | One meaning for manual and automatic speed. **Owner may want to change the profit unit** |
+| Manual metric `speedMs` is lead time before the lock (more means earlier) | One meaning for manual and automatic speed |
+| Profit is recorded in any or all of three units, each optional and signed: `profitUsd` (cents), `profitPerContract` (per $1 Kalshi contract, −1 to 1, 4 places) and `profitPct` (percent return, −100 or more). Totals: dollars and per-contract add up, percent is averaged per round | Owner confirmed dollars and asked for the option to use all three |
 | A metric entry's `correct` must agree with its `call` and the round result. A later result correction flags `mismatch` and doesn't rewrite entries | Mistakes stay visible. History is never rewritten |
 | A Kalshi result beats a hand-entered one, and once there is one, a different result can't be entered by hand | Verified data wins |
 | No leaderboard. Stat cards are per entrant. Every stat starts hidden. Standard stats are "verified", custom ones "self-reported" | Owner's spec |

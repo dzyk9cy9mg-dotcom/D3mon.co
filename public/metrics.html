@@ -35,9 +35,10 @@
       <span class="seg2" role="group" aria-label="Round result"><button type="button" class="up" data-result="up">▲ Up</button><button type="button" class="down" data-result="down">▼ Down</button></span>
       <span class="tag" id="resultSrc"></span>
     </div>
-    <p class="tag" style="margin:0 0 10px">Pick the round result and each entrant's call, and right or wrong fills in by itself. Speed is how many seconds before the round locked the call was made. Profit is in US dollars (negative for a loss). Empty a recorded row to clear it.</p>
+    <p class="tag" style="margin:0 0 10px">Pick the round result and each entrant's call, and right or wrong fills in by itself. Speed is how many seconds before the round locked the call was made. Profit can be entered in dollars, per $1 contract, as a percent return, or any mix of them (negative for a loss). Empty a recorded row to clear it.</p>
+    <div class="row" style="margin-bottom:10px;align-items:center"><span class="tag">Profit columns</span><div class="checks" id="units"></div></div>
     <div class="tablewrap"><table class="mgrid">
-      <thead><tr><th>Entrant</th><th>Call</th><th>Right?</th><th>Speed (s before lock)</th><th>Profit ($)</th><th></th></tr></thead>
+      <thead id="rowsHead"></thead>
       <tbody id="rows"></tbody>
     </table></div>
     <div class="actions" style="margin-top:12px;justify-content:space-between"><span class="tag" id="dirty"></span><button class="btn" type="button" id="save">Save round</button></div>
@@ -46,7 +47,7 @@
   <section class="panel" id="totalsBox" hidden>
     <h2>Battle record</h2>
     <div class="tablewrap"><table class="mgrid">
-      <thead><tr><th>Entrant</th><th>Right</th><th>Wrong</th><th>Rounds recorded</th><th>Avg speed</th><th>Profit</th></tr></thead>
+      <thead id="totalsHead"></thead>
       <tbody id="totals"></tbody>
     </table></div>
     <p class="tag">Recorded by host. Listed in lineup order, not ranked.</p>

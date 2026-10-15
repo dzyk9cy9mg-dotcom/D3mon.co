@@ -5,8 +5,11 @@
 // was there before; readers take the latest line. Entries are labelled "recorded by host". From step 5,
 // a Kalshi result for a round takes precedence over one entered by hand.
 //
-//   speedMs  how long before the round locked the call was made (lead time; more is earlier)
-//   profit   US dollars, signed, to the cent
+//   speedMs            how long before the round locked the call was made (lead time; more is earlier)
+// Profit can be recorded in any or all of three units, each optional:
+//   profitUsd          US dollars, signed, to the cent
+//   profitPerContract  dollars per $1 Kalshi contract, -1 to 1 (a contract bought at 58c and won: 0.42)
+//   profitPct          percent return on the money at risk, -100 or more (+72.41 means +72.41%)
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
 
@@ -17,14 +20,18 @@ const ENTRY_FIELDS = {
   call: { type: "enum", values: DIRS },
   correct: { type: "boolean" },
   speedMs: { type: "integer", min: 0, max: 24 * 3600 * 1000 },
-  profit: { type: "number", min: -1e6, max: 1e6, decimals: 2 },
+  profitUsd: { type: "number", min: -1e6, max: 1e6, decimals: 2 },
+  profitPerContract: { type: "number", min: -1, max: 1, decimals: 4 },
+  profitPct: { type: "number", min: -100, max: 1e5, decimals: 2 },
   void: { type: "boolean" },
 };
 const RECORD_FIELDS = {
   result: { type: "enum", values: DIRS },
   entries: { type: "array", max: MAX_ENTRIES, default: [], of: { type: "object", fields: ENTRY_FIELDS } },
 };
-const METRIC_KEYS = ["call", "correct", "speedMs", "profit"];
+export const PROFIT_KEYS = ["profitUsd", "profitPerContract", "profitPct"];
+const METRIC_KEYS = ["call", "correct", "speedMs", ...PROFIT_KEYS];
+const toPlaces = (v, places) => Math.round(v * 10 ** places) / 10 ** places;
 const HOST = { source: "host", verification: "recorded by host" };
 
 export class Metrics {
@@ -104,12 +111,16 @@ export class Metrics {
     const totals = people.map(e => {
       const mine = rounds.flatMap(r => r.entries.filter(x => x.entrantId === e.id));
       const speeds = mine.filter(x => x.speedMs !== undefined).map(x => x.speedMs);
-      const profits = mine.filter(x => x.profit !== undefined).map(x => x.profit);
+      const vals = k => mine.filter(x => x[k] !== undefined).map(x => x[k]);
+      const sum = (k, places) => { const v = vals(k); return v.length ? toPlaces(v.reduce((a, x) => a + x, 0), places) : null; };
+      const pct = vals("profitPct");
       return {
         entrantId: e.id, name: e.name, slug: e.slug, inLineup: (b.entrants || []).includes(e.id), recorded: mine.length,
         right: mine.filter(x => x.correct === true).length, wrong: mine.filter(x => x.correct === false).length,
         avgSpeedMs: speeds.length ? Math.round(speeds.reduce((a, x) => a + x, 0) / speeds.length) : null,
-        profit: profits.length ? Math.round(profits.reduce((a, x) => a + x, 0) * 100) / 100 : null, ...HOST,
+        // Dollars and per-contract profit add up over the rounds; a percent return is averaged per round.
+        profitUsd: sum("profitUsd", 2), profitPerContract: sum("profitPerContract", 4),
+        avgProfitPct: pct.length ? toPlaces(pct.reduce((a, x) => a + x, 0) / pct.length, 2) : null, ...HOST,
       };
     });
     const out = { battleId: b.id, market: b.market, roundMs: b.roundMs, rounds, totals };
