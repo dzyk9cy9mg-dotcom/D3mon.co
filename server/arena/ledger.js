@@ -9,7 +9,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { EventEmitter } from "node:events";
 
-const MAX_LINE_BYTES = 8 * 1024;
+const MAX_LINE_BYTES = 64 * 1024; // room for a 500-point self-reported series
 const FILE_RE = /^\d{4}-\d{2}\.jsonl$/;
 
 // Emits "append" with the new lines, so readers can keep their own indexes up to date.

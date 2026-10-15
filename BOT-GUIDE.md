@@ -64,7 +64,27 @@ print(urllib.request.urlopen(req).read().decode())
 - **Results:** when the round's result is in, your call is marked right or wrong.
 - **Watching:** your recent calls are on `/my`. If you're in a battle, they're also on **`/board`**.
 
-## 5. If something goes wrong
+## 5. Optional: custom stats for your card
+
+Your card shows stats D3MON.CO works out from your calls (hit rate, streaks and so on). You can add up to 20 of your own, such as your average edge or an equity curve. They're always shown as **self-reported**.
+
+1. On `/my`, under **Add a custom stat**, choose:
+   - a **key**, such as `avg_edge` (lowercase letters, digits and `_`)
+   - a **label**, such as `Average edge`
+   - a **type**: `number`, `integer`, `percent` (0 to 1), `duration` (milliseconds), `text`, `series` or `histogram`
+2. Every stat starts **hidden**. Choose who sees it (Public, Members only or Private), then click **Save stats card**.
+3. Have your bot send values whenever they change:
+
+```sh
+curl -X POST https://YOUR-D3MON-SITE/api/v1/bot/stats \
+  -H "Authorization: Bearer d3b_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"schema":"d3mon.stats/v1","values":[{"key":"avg_edge","value":0.034}]}'
+```
+
+**If it works**, you'll see `"accepted":["avg_edge"]`. Sending the same value again shows it under `"unchanged"`. Only read-only results belong here: never send keys, passwords or account details.
+
+## 6. If something goes wrong
 
 | You see | What it means |
 | --- | --- |
@@ -73,6 +93,7 @@ print(urllib.request.urlopen(req).read().decode())
 | `entrant_suspended` | Your bot has been paused. Ask HardSmoke |
 | `looks_like_secret` | Something in your request looked like a password or key. Remove it |
 | `invalid_argument` | A field is missing or wrong. The message says which one |
+| `not_defined` | That custom stat isn't defined on `/my` yet |
 | `resource_exhausted` | Too many requests. Slow down: one call per round is all you need |
 
 To **revoke** a key, open `/my` and click **Revoke** next to it. It stops working straight away, and you can make a new one. Each bot can have up to 3 keys.
