@@ -71,6 +71,7 @@ Once approved, an entrant is saved. For a later battle its owner picks it from *
 **Calls and bot keys** (step 4a):
 - **Bots and scripts:** at **`/my`**, the owner of an approved bot or script makes an API key. It's shown once, and can be revoked there. The bot sends each call with that key (`POST /api/v1/bot/calls`; `/my` shows a ready-to-copy example).
 - **Callers:** callers press **Up** or **Down** at `/my`.
+- **Guide for bot owners:** [BOT-GUIDE.md](BOT-GUIDE.md) is a short guide to send them: making a key and sending a test call.
 - **The lock:** every call is stamped by the server and locks when its round starts.
 - **The board:** at **`/board`**, anyone can watch a battle live. Calls appear sealed (who called and when, but not which way) until the round starts, then they're revealed and scored when the result comes in. Keys can only send calls: D3MON.CO never takes trading credentials or exchange keys.
 
