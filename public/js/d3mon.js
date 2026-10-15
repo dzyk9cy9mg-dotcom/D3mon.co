@@ -1803,7 +1803,7 @@ function swirlTick(){
     svg.querySelectorAll("path[d]").forEach(p => p.setAttribute("d", d));
   });
 }
-setInterval(swirlTick, 90);
+// setInterval(swirlTick, 90);
 // ---------- HardSmoke battle schedule: Saturdays 7:00 PM Pacific ----------
 const LA = "America/Los_Angeles";
 function laOffsetMin(ms){ try { const v = new Intl.DateTimeFormat("en-US", {timeZone:LA, timeZoneName:"shortOffset"}).formatToParts(new Date(ms)).find(p => p.type === "timeZoneName").value; const m = v.match(/GMT([+-]\d+)(?::(\d+))?/); return m ? (+m[1])*60 + (m[2] ? Math.sign(+m[1])*(+m[2]) : 0) : -480; } catch { return -480; } }
