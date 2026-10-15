@@ -73,9 +73,9 @@ How the page stores battle data today:
 | `server/arena/feed.js` | 2 | Live topics over SSE: `GET /api/v1/feed?topics=…` |
 | `server/arena/registry.js` | 2 | Battles, applications (the log), approved entrants |
 | `server/arena/api.js` | 2 | `/api/v1` routing, session and bot-key auth, rate limits |
-| `server/arena/metrics.js` | 3 | HardSmoke's manual round entry for many bots at once |
+| `server/arena/metrics.js` | 3 | HardSmoke's manual round entry for many bots at once, round results, the battle record |
 | `server/arena/keys.js` | 4 | Bot API keys: issue, hash, rotate, revoke |
-| `server/arena/ledger.js` | 4 | Append-only call and score history, one JSONL file per month |
+| `server/arena/ledger.js` | 3 | Append-only history (metric and score lines from step 3, calls from step 4), one JSONL file per month |
 | `server/arena/rounds.js` | 4 | Round clock, call lock, scoring |
 | `server/arena/stats.js` | 4 | Standard stats from raw history; custom stat definitions and values; visibility |
 | `server/arena/kalshi.js` | 5 | Polls Kalshi's public market data for `KXBTC15M` and records each result |
@@ -83,7 +83,7 @@ How the page stores battle data today:
 ### Storage
 
 - **Store, `data/db.json`:** low-volume records in server-only collections. These are `arena_battles`, `arena_apps`, `arena_entrants`, `arena_keys` (hashes only), `arena_statdefs` (owners' stat settings), and `arena_rounds` (one document per battle round).
-- **Ledger, `data/ledger/YYYY-MM.jsonl`:** one line per call, score or metric entry, written once and never rewritten. It's loaded into memory at startup, which is about 50 MB a year at 10 bots calling every round. Backing up `data/` still covers everything.
+- **Ledger, `data/ledger/YYYY-MM.jsonl`:** one line per call, score or metric entry, written once and never rewritten. Each write is flushed to disk (`fsync`) before the request is answered, so unlike `db.json` it survives a crash or a killed process. A line cut off by a crash is skipped on load. It's loaded into memory at startup, which is about 50 MB a year at 10 bots calling every round. Backing up `data/` still covers everything.
 
 ## 4. Roles and authentication
 
@@ -164,10 +164,24 @@ The `slug` is unique, and it links to the page's existing `config/battleRoster` 
 
 ```json
 { "t": "metric", "battleId": "b_…", "round": 1760925600000, "entrantId": "e_…",
-  "correct": true, "speedMs": 41000, "profit": 0.37, "by": "<admin uid>", "at": 0 }
+  "call": "up", "correct": true, "speedMs": 41000,
+  "profitUsd": 4.2, "profitPerContract": 0.42, "profitPct": 72.41, "by": "<admin uid>", "at": 0 }
 ```
 
-When both exist, a Kalshi-scored call takes precedence over a manual entry. Every manual entry is shown with the label "recorded by host".
+- **Fields:**
+  - `call` is optional.
+  - `correct` is required. It can be left out when `call` and the round's result are both known, because the server works it out.
+  - `speedMs` is the lead time: how long before the round locked the call was made, so more means earlier. It's the same measure step 4 computes automatically.
+  - Profit can be recorded in any or all of three units, each optional and negative for a loss:
+    - `profitUsd`: US dollars, rounded to the cent.
+    - `profitPerContract`: dollars per $1 Kalshi contract, from −1 to 1, to 4 places. For example, a contract bought at 58¢ that wins is 0.42.
+    - `profitPct`: percent return on the money at risk, −100 or more, to 2 places. 72.41 means +72.41%.
+  - In the battle totals, `profitUsd` and `profitPerContract` add up across rounds. `avgProfitPct` is the average over the rounds that have a percent figure. A total is `null` when no round has that unit.
+- **Consistency:** an entry whose `correct` contradicts its `call` and the round's result is refused. If the result is corrected later, the entries already saved are kept as they were and flagged `mismatch` in the view.
+- **Corrections:** `{"void": true}` clears an entry. Corrections and clears are new lines, and the latest line for each round and entrant counts. A re-save that changes nothing writes nothing.
+- **Rounds:** only rounds of the battle that have finished can be recorded, and not for a draft battle.
+- **Precedence:** a hand-entered result is a `score` line with `source: "admin"`. A Kalshi result (step 5) always takes precedence, and once there is one a different result can't be entered by hand.
+- **Labels:** every manual entry is shown with `source: "host"` and `verification: "recorded by host"`.
 
 ## 6. Validation and credential rejection
 
@@ -252,6 +266,7 @@ There is no leaderboard endpoint. Cards are per entrant only.
 | `round.locked` | `battle:<id>` | A round starts. Carries every locked call for it |
 | `call.received` | `battle:<id>`, `entrant:<id>` | A call arrives before the lock |
 | `round.scored` | `battle:<id>`, `entrant:<id>` | A result arrives, with each entrant scored |
+| `round.metrics` | `battle:<id>`, `entrant:<id>` | HardSmoke saves a round by hand (step 3). Carries that round as each reader may see it |
 | `stats.updated` | `entrant:<id>` | A card changed. Clients refetch the card, so privacy filtering stays on the server |
 
 Topic permissions are checked when the stream opens. The feed is separate from the page's `/api/events`, which stays unchanged.
@@ -274,7 +289,20 @@ GET   /api/v1/entrants/:id
 GET   /api/v1/feed?topics=…                    live feed
 ```
 
-- **Step 3:** `PUT /api/v1/battles/:id/rounds/:round/metrics` takes a batch of `{entrantId, correct, speedMs, profit}` for 10 or more bots at once.
+Step 3:
+
+```
+PUT   /api/v1/battles/:id/rounds/:round/metrics   admin: {result?, entries: [{entrantId, call?, correct?, speedMs?,
+                                                  profitUsd?, profitPerContract?, profitPct?, void?}]}
+                                                  up to 50 entrants in one request; :round is the round's start in ms
+GET   /api/v1/battles/:id/metrics                 the battle record: every round (result, entries) and totals per
+                                                  entrant in lineup order (not ranked). ?history=1 (admin) adds every
+                                                  ledger line, with who entered it
+```
+
+The page is `/metrics`.
+
+
 - **Step 4:**
   - `POST /api/v1/entrants/:id/keys`, `DELETE …/keys/:keyId`
   - `POST /api/v1/bot/calls`, `POST /api/v1/bot/stats`

@@ -67,6 +67,10 @@ export class Registry {
     return b;
   }
 
+  entrantById(id) {
+    return this.#get(ENTRANTS, id);
+  }
+
   entrantBySlug(slug) {
     return this.#all(ENTRANTS, [["slug", "==", slug]])[0] || null;
   }

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Round metrics · Battle of the Bots · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="arena">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">Round metrics, the manual fallback. Record a whole round for the lineup at once: each entrant's call, right or wrong, speed and profit. Every entry is shown as "recorded by host", and corrections never erase earlier entries. <a href="applications">← Applications</a> <span class="live-dot" id="live">○ offline</span></p>
+
+  <section class="panel" id="denied" hidden>
+    <h2>Admins only</h2>
+    <p class="empty">Sign in with HardSmoke's account or another admin account. <a href="login">Sign in</a></p>
+  </section>
+
+  <section class="panel" id="pickBox" hidden>
+    <div class="row">
+      <div class="field"><label for="battleSel">Battle</label><select id="battleSel"></select></div>
+    </div>
+    <div style="margin-top:12px"><label>Round</label><div class="rounds" id="rounds"></div></div>
+  </section>
+
+  <section class="panel" id="roundBox" hidden>
+    <h2 id="roundTitle">Round</h2>
+    <div class="row" style="margin-bottom:12px;align-items:center">
+      <span class="tag">Round result</span>
+      <span class="seg2" role="group" aria-label="Round result"><button type="button" class="up" data-result="up">▲ Up</button><button type="button" class="down" data-result="down">▼ Down</button></span>
+      <span class="tag" id="resultSrc"></span>
+    </div>
+    <p class="tag" style="margin:0 0 10px">Pick the round result and each entrant's call, and right or wrong fills in by itself. Speed is how many seconds before the round locked the call was made. Profit can be entered in dollars, per $1 contract, as a percent return, or any mix of them (negative for a loss). Empty a recorded row to clear it.</p>
+    <div class="row" style="margin-bottom:10px;align-items:center"><span class="tag">Profit columns</span><div class="checks" id="units"></div></div>
+    <div class="tablewrap"><table class="mgrid">
+      <thead id="rowsHead"></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <div class="actions" style="margin-top:12px;justify-content:space-between"><span class="tag" id="dirty"></span><button class="btn" type="button" id="save">Save round</button></div>
+  </section>
+
+  <section class="panel" id="totalsBox" hidden>
+    <h2>Battle record</h2>
+    <div class="tablewrap"><table class="mgrid">
+      <thead id="totalsHead"></thead>
+      <tbody id="totals"></tbody>
+    </table></div>
+    <p class="tag">Recorded by host. Listed in lineup order, not ranked.</p>
+  </section>
+
+  <section class="panel" id="histBox" hidden>
+    <h2>Entry history</h2>
+    <div class="list" id="history"></div>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/arena-metrics.js"></script>
+</body>
+</html>

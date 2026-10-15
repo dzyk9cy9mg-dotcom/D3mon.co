@@ -129,7 +129,7 @@ location /d3mon/ {
 - Sign up with the owner username. The admin button appears in the header.
 - To make more admins, run this in the `d3mon` folder on the host (over SSH, or in the panel's terminal): `npm run role -- <username> admin`. The README lists the other role commands.
 - To turn on Cosmic, the AI assistant, set `ANTHROPIC_API_KEY`. Answers are billed to that key.
-- Back up `data/`: `accounts.json`, `roles.json` and `db.json`.
+- Back up `data/`: `accounts.json`, `roles.json`, `db.json` and the `ledger/` folder.
 - To update, build a new zip and replace everything except `data/` and any `.env`, then restart.
 
 Every setting is listed in the README.
