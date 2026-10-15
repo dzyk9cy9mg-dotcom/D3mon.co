@@ -130,3 +130,17 @@ describe("verified stats and typed-in stats", () => {
     assert.deepEqual((await guest.get("/api/v1/entrants/chartist/card")).json.stats, [], "typed-in stats start hidden too");
   });
 });
+
+// The old main page keeps its community Up/Down game; its battle header just points battle callers to
+// /my, where calls are locked by the server, and to the live board. (Temporary, until the 3D site.)
+test("the main page's battle header links to the battle call and the board", async () => {
+  const srv = await startServer();
+  try {
+    const html = (await new Client(srv.base).get("/")).text;
+    const header = html.slice(html.indexOf('id="battle"'), html.indexOf("</div>", html.indexOf('class="bctl"')));
+    for (const href of ['href="apply"', 'href="my"', 'href="board"']) assert.ok(header.includes(href), href);
+    for (const p of ["/my", "/board"]) assert.equal((await new Client(srv.base).get(p)).status, 200, p);
+  } finally {
+    await srv.stop();
+  }
+});
