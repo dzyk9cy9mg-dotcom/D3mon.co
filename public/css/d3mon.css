@@ -2850,3 +2850,10 @@ body.dmmode #ccBtn .lbl-cc{display:none} body.dmmode #ccBtn .lbl-home{display:in
 .dmemfoot{padding:8px 12px;border-top:1px solid var(--line-2)}
 #cxShareBtn{color:#5BE3C8}
 .cxsh{margin:0;color:var(--ink-2);font-size:13px;line-height:1.5}
+
+/* ===== effects off (Oct 2026): the looping stage + HardSmoke logo animations overloaded low-end laptops; same static state the reduce-motion rules already use ===== */
+.stg::after,.stg .stfx i,.stvs .r1,.stvs .r2,.stvs .bolt,.stplate .lv,.stvs .dface,.stvs b,.stvs .tga,.stvs .tgo,.stvs .tgh,.stvs .tgrun,.stvs .tgl,.stvs .tgp,.stvs .tghalo,.stvs .tgred{animation:none!important}
+.stvs .tgrun,.stvs .tgl,.stvs .tgp,.hsbrand .hsorbit,.hsbrand .smk,.hsbrand .hsz .zp,.hsbrand .hsz .zghost,.hsbrand .hsz .zs,.hsbrand .hsz .tw,.hsbrand .hsz .zw{display:none!important}
+.stg::after,.stg .stfx i,.stvs .bolt,.stvs .tgn,.stvs .tgrun,.stvs .dface,.stvs b,.stscr{filter:none!important}
+.hsbrand .hsw,.hsbrand .hsz svg,.hsbrand .hsz .zg,.hsbrand .hsz .zsm,.hsbrand .hsz .zc{animation:none!important}
+.hsbrand .hsz svg{filter:none!important} .hsbrand .hsz .zc{opac
