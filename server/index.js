@@ -395,7 +395,7 @@ export async function createApp(cfg = loadConfig()) {
     if (req.method !== "GET" && req.method !== "HEAD") throw new HttpError(405, "invalid_argument", "Method not allowed.");
     if (pathname === "/") return serveFile(req, res, path.join(cfg.publicDir, "index.html"), PAGE_HEADERS);
     if (pathname === "/login" || pathname === "/account") return serveFile(req, res, path.join(cfg.publicDir, "login.html"), PAGE_HEADERS);
-    if (pathname === "/apply" || pathname === "/applications" || pathname === "/metrics") return serveFile(req, res, path.join(cfg.publicDir, `${pathname.slice(1)}.html`), PAGE_HEADERS);
+    if (["/apply", "/applications", "/metrics", "/my", "/board"].includes(pathname)) return serveFile(req, res, path.join(cfg.publicDir, `${pathname.slice(1)}.html`), PAGE_HEADERS);
     let rel;
     try { rel = decodeURIComponent(pathname); } catch { return false; }
     const file = path.resolve(cfg.publicDir, `.${rel}`);

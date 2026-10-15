@@ -144,14 +144,17 @@ The `slug` is unique, and it links to the page's existing `config/battleRoster` 
 ### Call, one ledger line
 
 ```json
-{ "t": "call", "id": "c_…", "entrantId": "e_…", "market": "KXBTC15M",
-  "round": 1760925600000, "dir": "up | down",
-  "via": "bot-key | button | admin", "receivedAt": 1760925512345, "battleId": "b_… | null" }
+{ "t": "call", "id": "…", "entrantId": "e_…", "market": "KXBTC15M",
+  "round": 1760925600000, "dir": "up | down", "via": "bot-key | button", "keyId": "… (bot-key only)",
+  "battleIds": ["b_…"], "at": 1760925512345, "by": "<owner uid>" }
 ```
 
-- A call for a round is accepted only while `receivedAt < round`, by the **server clock**. At round start it's locked and can't be changed.
-- An entrant's last call before the lock is the one that counts. Earlier ones stay in the ledger, marked `superseded`.
-- Calls are shown live as they arrive, on the `battle:<id>` and `entrant:<id>` topics.
+- **The lock:** a call for a round is accepted only while the **server clock** is before the round's start. `at` is the server's timestamp. At the start the round locks and the call can't be changed. A call for a round that has started gets `409 round_locked`.
+- **Rounds:** calls go to the next round by default. They can be made up to 24 hours ahead.
+- **Repeats and changes:** an entrant's latest call before the lock counts. Earlier ones stay in the ledger. Sending the same direction again writes nothing (`unchanged: true`), so retries are safe.
+- **Battles:** `battleIds` lists the battles (not drafts) whose lineup held the entrant and whose rounds included this one, at the moment of the call. A battle's board shows only those calls, so calls belong to the battle record even if the lineup changes later.
+- **Sealed until the lock:** when a call arrives, everyone sees that it arrived and when (`sealed: true`). Its direction is shown only to the entrant's owner and admins until the round starts. At the lock, every call is revealed (`round.locked`), so nobody can copy a rival's call. Decided in step 4a, and changing it is one condition in `Calls.view`.
+- **Scoring:** when a result arrives, each call is scored (`round.scored`). It's labelled "verified" when Kalshi settled the round, and "recorded by host" when HardSmoke did.
 
 ### Score, a ledger line written when the round settles
 
@@ -207,9 +210,15 @@ A rejected request gets `400 {"error":{"code":"looks_like_secret","field":"notes
 `round` is optional and defaults to the next round. The reply includes the server timestamp and when the round locks:
 
 ```json
-{ "ok": true, "call": { "id": "c_…", "round": "2025-10-19T19:00:00Z", "direction": "up",
+{ "ok": true, "unchanged": false, "call": { "id": "…", "round": "2025-10-19T19:00:00Z", "direction": "up",
   "receivedAt": "2025-10-19T18:58:31.345Z", "locksAt": "2025-10-19T19:00:00Z" } }
 ```
+
+- **The key:** `Authorization: Bearer d3b_<keyId>_<secret>`. The owner makes a key at `/my`, and it's shown once. Only its SHA-256 hash is stored.
+- **Limits:** up to 3 active keys per bot or script. Callers get none. Each key is limited to 30 requests at once, then 1 every 2 seconds.
+- **Errors:** every bad, unknown or revoked key gets the same `401 bad_key`.
+- **Scope:** keys work only on `/api/v1/bot/*`, and session cookies don't work there.
+- **Testing a key:** `GET /api/v1/bot/me` returns the bot's public profile and the next round.
 
 ### Bot pushes custom stat values: `POST /api/v1/bot/stats` (step 4)
 
@@ -263,9 +272,9 @@ There is no leaderboard endpoint. Cards are per entrant only.
 | `battle.updated` | `battle:<id>`, `battles` | A battle is created or its status changes |
 | `application.created` / `application.updated` | `admin:applications` (admins only); `me:applications` (the applicant's own) | Someone applies, or a review decision is made |
 | `entrant.updated` | `entrant:<id>` | Details or lineup change |
-| `round.locked` | `battle:<id>` | A round starts. Carries every locked call for it |
-| `call.received` | `battle:<id>`, `entrant:<id>` | A call arrives before the lock |
-| `round.scored` | `battle:<id>`, `entrant:<id>` | A result arrives, with each entrant scored |
+| `call.received` | `battle:<id>`, `entrant:<id>` | A call arrives before the lock. Sealed: the direction goes only to the owner and admins |
+| `round.locked` | `battle:<id>`, `entrant:<id>` | A round starts. Reveals every call for it |
+| `round.scored` | `battle:<id>`, `entrant:<id>` | A result arrives, with each call scored |
 | `round.metrics` | `battle:<id>`, `entrant:<id>` | HardSmoke saves a round by hand (step 3). Carries that round as each reader may see it |
 | `stats.updated` | `entrant:<id>` | A card changed. Clients refetch the card, so privacy filtering stays on the server |
 
@@ -303,13 +312,28 @@ GET   /api/v1/battles/:id/metrics                 the battle record: every round
 The page is `/metrics`.
 
 
-- **Step 4:**
-  - `POST /api/v1/entrants/:id/keys`, `DELETE …/keys/:keyId`
-  - `POST /api/v1/bot/calls`, `POST /api/v1/bot/stats`
-  - `POST /api/v1/entrants/:id/call` (caller Up/Down)
+Step 4a:
+
+```
+GET    /api/v1/clock                          server time, current and next round (pages count down by it)
+GET    /api/v1/entrants/:id/keys              owner, admin: keys (previews only)
+POST   /api/v1/entrants/:id/keys              owner of a bot or script: {label?} → {key, token} (token shown once)
+DELETE /api/v1/entrants/:id/keys/:keyId       owner, admin: revoke
+GET    /api/v1/bot/me                         bot key: this bot's public profile and the next round
+POST   /api/v1/bot/calls                      bot key: d3mon.call/v1
+POST   /api/v1/entrants/:id/call              caller (session): {direction, round?}, with the same lock
+GET    /api/v1/entrants/:id/calls             call history, latest per round (sealed for others until the lock)
+GET    /api/v1/battles/:id/board              the live board: each round's calls, result and scoring
+```
+
+The pages are `/my` (owners: keys and the caller buttons) and `/board` (public).
+
+- **Step 4b:**
   - `GET/PUT /api/v1/entrants/:id/stat-settings`
   - `GET /api/v1/entrants/:slug/card`
-  - `GET /api/v1/battles/:id/board`
+- **Step 4c:**
+  - `POST /api/v1/bot/stats`
+  - lineups copied into `config/battleRoster` for the current page
 - **Step 5:** `GET /api/v1/rounds?market=KXBTC15M&from&to` and `npm run kalshi:check`.
 
 ## 10. Kalshi (step 5, verify first)

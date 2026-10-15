@@ -68,6 +68,12 @@ Once approved, an entrant is saved. For a later battle its owner picks it from *
 - Corrections and cleared rows are kept in the entry history.
 - The battle record, totals per entrant listed in lineup order and not ranked, is public and updates live. Every figure is labelled "recorded by host".
 
+**Calls and bot keys** (step 4a):
+- **Bots and scripts:** at **`/my`**, the owner of an approved bot or script makes an API key. It's shown once, and can be revoked there. The bot sends each call with that key (`POST /api/v1/bot/calls`; `/my` shows a ready-to-copy example).
+- **Callers:** callers press **Up** or **Down** at `/my`.
+- **The lock:** every call is stamped by the server and locks when its round starts.
+- **The board:** at **`/board`**, anyone can watch a battle live. Calls appear sealed (who called and when, but not which way) until the round starts, then they're revealed and scored when the result comes in. Keys can only send calls: D3MON.CO never takes trading credentials or exchange keys.
+
 Give HardSmoke's account the admin role with `npm run role -- hardsmoke admin`.
 
 Both pages are thin clients over the Arena API (`/api/v1`) and its live feed. [ARCHITECTURE.md](ARCHITECTURE.md) has the design, data formats and endpoints for this and for the later steps (metrics entry, the bot stats API and Kalshi scoring). Arena data is server-only: `/api/db` can't read or write it, and anything that looks like a key, password or wallet phrase is refused.
@@ -89,7 +95,8 @@ public/
   js/d3mon.js         the artifact's app code, unchanged
   js/runtime.js       window.claude for this server (new)
   login.html, js/account.js   sign in, sign up, account settings (new)
-  apply.html, applications.html, metrics.html, js/arena*.js   Battle of the Bots registration, review and round metrics (new)
+  apply.html, applications.html, metrics.html, my.html, board.html, js/arena*.js
+                      Battle of the Bots: registration, review, round metrics, keys and calls, the live board (new)
 app.cjs               startup file for hosting panels (starts server/start.js)
 server/
   start.js            starts the server (npm start)
@@ -101,8 +108,8 @@ server/
   sample.js           Cosmic's link to the Anthropic API
   cli.js              npm run users / npm run role
   arena/              the Arena API under /api/v1: validation and credential refusal, live feed,
-                      battles, applications and saved entrants, round metrics, and the append-only
-                      ledger in data/ledger/ (ARCHITECTURE.md)
+                      battles, applications and saved entrants, round metrics, bot keys, calls locked
+                      at round start, and the append-only ledger in data/ledger/ (ARCHITECTURE.md)
 scripts/package.js    npm run package: builds the upload zip
 test/                 npm test
 ```
@@ -141,7 +148,7 @@ npm install   # only needed for the headless-browser test (jsdom)
 npm test
 ```
 
-There are 100 tests:
+There are 115 tests:
 
 - `server.test.js` covers the API, the access rules, live updates, presence, data on disk and Cosmic (against a mock API).
 - `runtime.test.js` runs `public/js/runtime.js` against a live server, using the page's own `mergeWrite` taken from `d3mon.js`.
@@ -154,6 +161,12 @@ There are 100 tests:
   - result mismatches, and Kalshi's result taking precedence
   - the battle record, privacy and the live feed
   - recorded rounds surviving the server being killed with SIGKILL
+- `calls.test.js` covers bot keys and calls:
+  - who can make, see and revoke keys; only hashes are stored; the same answer for every bad key
+  - keys and session cookies each working only on their own endpoints
+  - calls going to the next round, the server-clock lock, retries and changes, and refusing bad calls
+  - sealed calls, the caller buttons, which calls appear on which battle's board
+  - the live reveal at the lock, live scoring, and the round timer firing at the boundary
 - `package.test.js` builds the upload zip, checks every file in it, then unpacks it and starts the site from `app.cjs`.
 
 ## Differences from the artifact

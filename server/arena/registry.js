@@ -67,6 +67,11 @@ export class Registry {
     return b;
   }
 
+  // The battles an entrant is in (lineup, not a draft) that include this round.
+  battlesFor(entrantId, round) {
+    return this.#all(BATTLES).filter(b => b.status !== "draft" && (b.entrants || []).includes(entrantId) && round >= b.startsAt && round < b.startsAt + b.rounds * b.roundMs);
+  }
+
   entrantById(id) {
     return this.#get(ENTRANTS, id);
   }

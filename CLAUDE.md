@@ -49,6 +49,9 @@ npm run role -- <username> admin|member|owner|ban|unban
 | Profit is recorded in any or all of three units, each optional and signed: `profitUsd` (cents), `profitPerContract` (per $1 Kalshi contract, −1 to 1, 4 places) and `profitPct` (percent return, −100 or more). Totals: dollars and per-contract add up, percent is averaged per round | Owner confirmed dollars and asked for the option to use all three |
 | A metric entry's `correct` must agree with its `call` and the round result. A later result correction flags `mismatch` and doesn't rewrite entries | Mistakes stay visible. History is never rewritten |
 | A Kalshi result beats a hand-entered one, and once there is one, a different result can't be entered by hand | Verified data wins |
+| Calls are **sealed until the lock**: anyone can see that a call arrived and when. The direction goes only to the owner and admins until the round starts, then everyone sees it | Nobody can copy a rival's call. The owner asked for calls to be "shown live", so arrivals are live and directions are revealed at the lock. Changing it is one condition in `Calls.view` |
+| Only an entrant's owner can make its keys (admins can revoke). At most 3 active keys per bot or script. Callers get none. Tokens are `d3b_<keyId>_<secret>`, shown once, and only `sha256(secret)` is stored | Whoever makes a key sees it, and rotating needs a spare |
+| A call records the battles its entrant was in for that round (`battleIds`), and a board shows only those calls | Calls belong to the battle record even if the lineup changes later |
 | No leaderboard. Stat cards are per entrant. Every stat starts hidden. Standard stats are "verified", custom ones "self-reported" | Owner's spec |
 
 ## Backlog
@@ -56,12 +59,12 @@ npm run role -- <username> admin|member|owner|ban|unban
 - [x] **Step 1:** architecture (`ARCHITECTURE.md`)
 - [x] **Step 2:** registration (`/apply`), the application log (`/applications`), saved entrants, `/api/v1` and the live feed
 - [x] **Step 3:** HardSmoke's manual round metrics for 10+ bots at once at `/metrics` (`PUT /api/v1/battles/:id/rounds/:round/metrics`), labelled "recorded by host", with the append-only ledger (`server/arena/ledger.js`, `data/ledger/`)
-- [ ] **Step 4:**
-  - bot API keys (hashed, one entrant each, revocable) and `POST /api/v1/bot/calls` and `/bot/stats`
-  - caller Up/Down buttons with the same lock
-  - standard stats, plus custom stat definitions with visibility settings
-  - stat cards
-  - mirroring lineups into `config/battleRoster`
+- [x] **Step 4a:**
+  - bot keys (`server/arena/keys.js`), `POST /api/v1/bot/calls`
+  - caller Up/Down at `/my` with the same lock, calls sealed until the lock (`server/arena/calls.js`)
+  - the live board (`/board`) and scoring when a result arrives
+- [ ] **Step 4b:** standard stats from call history, visibility settings (hidden, private, members, public; all start hidden), and stat cards (`GET /api/v1/entrants/:slug/card`)
+- [ ] **Step 4c:** custom stat definitions and `POST /api/v1/bot/stats` (self-reported), and mirroring lineups into `config/battleRoster`
 - [ ] **Step 5:** a Kalshi `KXBTC15M` poller and automatic scoring. **Verify first, from the Lightsail server**, because the build sandbox can't reach Kalshi: `curl -s "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXBTC15M&status=settled&limit=2"`. Write the scorer against the real field names it returns
 - [ ] **Flagged, not fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags that admins set, so a member could approve their own transfer
 - [ ] **Flagged, not fixed:** `test/app.e2e.test.js` fails during teardown in about 1 of 4 runs, on `main` too. A page request is still in flight after the server stops
@@ -69,7 +72,7 @@ npm run role -- <username> admin|member|owner|ban|unban
 
 ## Testing notes
 
-- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2) and `test/metrics.test.js` (step 3).
+- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3) and `test/calls.test.js` (step 4a). Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
 - **To test a restart, restart the real process** (spawn `server/start.js`, send SIGTERM, start again on the same data folder). Two servers sharing one folder with a hand-called `saveNow()` misses the debounced accounts save, and that once made a restart look like data loss.
 - When a test passes the first time, break the thing it guards and check that it fails.
 - Arena pages share `d3mon.css`. Avoid class and id names it already styles (`.grid`, `#battle`, bare `.row` and `.top`), because they'll pick up the main page's layout. That happened once with `/metrics`.

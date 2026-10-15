@@ -25,7 +25,7 @@
     const es = new EventSource(`api/v1/feed?topics=${encodeURIComponent(topics.join(","))}`);
     es.addEventListener("hello", () => onState && onState(true));
     es.onerror = () => onState && onState(false);
-    for (const type of ["battle.updated", "application.created", "application.updated", "entrant.updated", "round.metrics"]) {
+    for (const type of ["battle.updated", "application.created", "application.updated", "entrant.updated", "round.metrics", "call.received", "round.locked", "round.scored"]) {
       es.addEventListener(type, e => { try { onEvent(type, JSON.parse(e.data).data); } catch (x) {} });
     }
     return es;
@@ -38,5 +38,17 @@
     try { return (await (await fetch("api/session", { credentials: "same-origin" })).json()).user; } catch (e) { return null; }
   }
 
-  window.Arena = { api, follow, esc, when, kindName, session };
+  // The server's clock decides when rounds lock. Pages count down by it, not by this computer's clock.
+  let offset = 0;
+  async function syncClock() {
+    const t0 = Date.now(), c = await api("GET", "clock"), t1 = Date.now();
+    offset = c.now - (t0 + t1) / 2;
+    return c;
+  }
+  const serverNow = () => Date.now() + offset;
+  const ROUND_MS = 15 * 60000;
+  const nextRound = (now = serverNow()) => Math.floor(now / ROUND_MS) * ROUND_MS + ROUND_MS;
+  const mmss = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+
+  window.Arena = { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, mmss, ROUND_MS };
 })();
