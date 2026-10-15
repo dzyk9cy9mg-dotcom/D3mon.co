@@ -2856,4 +2856,5 @@ body.dmmode #ccBtn .lbl-cc{display:none} body.dmmode #ccBtn .lbl-home{display:in
 .stvs .tgrun,.stvs .tgl,.stvs .tgp,.hsbrand .hsorbit,.hsbrand .smk,.hsbrand .hsz .zp,.hsbrand .hsz .zghost,.hsbrand .hsz .zs,.hsbrand .hsz .tw,.hsbrand .hsz .zw{display:none!important}
 .stg::after,.stg .stfx i,.stvs .bolt,.stvs .tgn,.stvs .tgrun,.stvs .dface,.stvs b,.stscr{filter:none!important}
 .hsbrand .hsw,.hsbrand .hsz svg,.hsbrand .hsz .zg,.hsbrand .hsz .zsm,.hsbrand .hsz .zc{animation:none!important}
-.hsbrand .hsz svg{filter:none!important} .hsbrand .hsz .zc{opac
+.hsbrand .hsz svg{filter:none!important} .hsbrand .hsz .zc{opacity:1!important}
+.brand .wm + small{display:none} /* tagline hidden (Oct 2026) */
