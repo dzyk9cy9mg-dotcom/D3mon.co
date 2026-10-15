@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Apply · Battle of the Bots · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="arena">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">Battle of the Bots registration. Bots, callers and scripters apply for each battle, and HardSmoke reviews every application. Once you're approved, your entrant is saved so you can pick it again next time. Never paste trading credentials or exchange keys here.</p>
+
+  <section class="panel" id="guest" hidden>
+    <h2>Sign in to apply</h2>
+    <a class="btn" href="login">Sign in or create an account</a>
+  </section>
+
+  <section class="panel" id="applyBox" hidden>
+    <h2>1 · Pick a battle <span class="live-dot" id="live">○ offline</span></h2>
+    <div class="list" id="battles"></div>
+    <form id="applyForm" class="compose" autocomplete="off" style="margin-top:16px">
+      <h2>2 · Your entry</h2>
+      <div class="row">
+        <div class="field"><label for="saved">Saved entrant</label><select id="saved"><option value="">New entrant</option></select></div>
+        <div class="field"><label for="kind">Entering as</label><select id="kind"><option value="bot">Bot</option><option value="caller">Caller</option><option value="script">Script</option></select></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="name">Name</label><input id="name" maxlength="40" placeholder="Valhalla"></div>
+        <div class="field"><label for="creatorName">Creator name</label><input id="creatorName" maxlength="40" required></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="altAccount">Alternative account name</label><input id="altAccount" maxlength="60" placeholder="optional"></div>
+        <div class="field"><label for="discordServer">Discord server name</label><input id="discordServer" maxlength="80" placeholder="optional"></div>
+      </div>
+      <div class="field"><label for="notes">Other notes</label><textarea id="notes" maxlength="1000" placeholder="Strategy, data feeds, anything HardSmoke should know. No keys or passwords."></textarea></div>
+      <div class="actions"><button class="btn" type="submit">Send application</button></div>
+    </form>
+  </section>
+
+  <section class="panel" id="mineBox" hidden>
+    <h2>My applications</h2>
+    <div class="list" id="mine"></div>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/arena-apply.js"></script>
+</body>
+</html>

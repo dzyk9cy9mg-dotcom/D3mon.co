@@ -55,6 +55,16 @@ npm run role -- spammer unban
 
 Members can change their display name and password at `/account`. The ⏻ link next to their name in the header leads there.
 
+## Battle of the Bots registration
+
+Bots, callers and scripters apply for each battle at **`/apply`** (also linked from the Battle page as **✚ Apply to battle**). HardSmoke, or any admin, reviews them at **`/applications`**. There they create battles, open and close applications, approve, reject or reopen each application with a note, and see every application ever sent. Nothing in the log is deleted, and every status change is kept in its history.
+
+Once approved, an entrant is saved. For a later battle its owner picks it from **Saved entrant** and sends a new application, because each battle needs its own.
+
+Give HardSmoke's account the admin role with `npm run role -- hardsmoke admin`.
+
+Both pages are thin clients over the Arena API (`/api/v1`) and its live feed. [ARCHITECTURE.md](ARCHITECTURE.md) has the design, data formats and endpoints for this and for the later steps (metrics entry, the bot stats API and Kalshi scoring). Arena data is server-only: `/api/db` can't read or write it, and anything that looks like a key, password or wallet phrase is refused.
+
 ## Deploying
 
 `npm run package` builds `dist/d3mon-site.zip`, which holds only what the site needs to run. [DEPLOY.md](DEPLOY.md) walks through putting it on a server, a hosting panel, or an app platform, either on its own domain or under a path on another site.
@@ -72,6 +82,7 @@ public/
   js/d3mon.js         the artifact's app code, unchanged
   js/runtime.js       window.claude for this server (new)
   login.html, js/account.js   sign in, sign up, account settings (new)
+  apply.html, applications.html, js/arena*.js   Battle of the Bots registration and review (new)
 app.cjs               startup file for hosting panels (starts server/start.js)
 server/
   start.js            starts the server (npm start)
@@ -82,6 +93,8 @@ server/
   rooms.js            presence
   sample.js           Cosmic's link to the Anthropic API
   cli.js              npm run users / npm run role
+  arena/              the Arena API under /api/v1: validation and credential refusal, live feed,
+                      battles, applications and saved entrants (ARCHITECTURE.md)
 scripts/package.js    npm run package: builds the upload zip
 test/                 npm test
 ```
@@ -109,8 +122,9 @@ On claude.ai, any contributor could write any shared document. The page hid its 
 | Streams | The host or an admin |
 | Reviews | The reviewer or an admin |
 | Lounge chat, message boards, daily call sheets, Cortex calls | Any member |
+| Arena records (`arena_*`: battles, applications, entrants) | Nobody through `/api/db`, admins included. They change only through `/api/v1`, which checks every field |
 
-Everything else is public to read. Guests can read but not write.
+Everything else is public to read, except `arena_*`, which is read through `/api/v1` with each reader's privacy applied. Guests can read but not write.
 
 ## Tests
 
@@ -119,11 +133,12 @@ npm install   # only needed for the headless-browser test (jsdom)
 npm test
 ```
 
-There are 59 tests:
+There are 83 tests:
 
 - `server.test.js` covers the API, the access rules, live updates, presence, data on disk and Cosmic (against a mock API).
 - `runtime.test.js` runs `public/js/runtime.js` against a live server, using the page's own `mergeWrite` taken from `d3mon.js`.
 - `app.e2e.test.js` boots the whole page in jsdom, once at the root of a domain and once under `/d3mon/`. A member signs in, creates a subcategory and a thread, and the thread appears live on the owner's page. The page saves its DM key pair to the member's private area, and the test checks that no script errors occur.
+- `arena.test.js` covers the Arena API: battles, applying, review decisions and the log, re-selecting saved entrants, privacy of entrant details, refusing credentials, keeping `/api/db` out of arena data, persistence, and the live feed's per-reader permissions.
 - `package.test.js` builds the upload zip, checks every file in it, then unpacks it and starts the site from `app.cjs`.
 
 ## Differences from the artifact
