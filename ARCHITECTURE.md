@@ -77,12 +77,13 @@ How the page stores battle data today:
 | `server/arena/keys.js` | 4 | Bot API keys: issue, hash, rotate, revoke |
 | `server/arena/ledger.js` | 3 | Append-only history (metric and score lines from step 3, calls from step 4), one JSONL file per month |
 | `server/arena/rounds.js` | 4 | Round clock, call lock, scoring |
-| `server/arena/stats.js` | 4 | Standard stats from raw history; custom stat definitions and values; visibility |
+| `server/arena/stats.js` | 4, Stats Hub | Owner-sent stat values (list and custom), visibility, the card |
+| `server/arena/catalog.js` | Stats Hub 1 | The stat list HardSmoke edits on `/catalog`, value types and formats |
 | `server/arena/kalshi.js` | 5 | Polls Kalshi's public market data for `KXBTC15M` and records each result |
 
 ### Storage
 
-- **Store, `data/db.json`:** low-volume records in server-only collections. These are `arena_battles`, `arena_apps`, `arena_entrants`, `arena_keys` (hashes only), `arena_statdefs` (owners' stat settings), and `arena_rounds` (one document per battle round).
+- **Store, `data/db.json`:** low-volume records in server-only collections. These are `arena_battles`, `arena_apps`, `arena_entrants`, `arena_keys` (hashes only), `arena_statsettings` (owners' stat settings), `arena_statcatalog` (the stat list), and `arena_rounds` (one document per battle round).
 - **Ledger, `data/ledger/YYYY-MM.jsonl`:** one line per call, score or metric entry, written once and never rewritten. Each write is flushed to disk (`fsync`) before the request is answered, so unlike `db.json` it survives a crash or a killed process. A line cut off by a crash is skipped on load. It's loaded into memory at startup, which is about 50 MB a year at 10 bots calling every round. Backing up `data/` still covers everything.
 
 ## 4. Roles and authentication
@@ -223,86 +224,58 @@ A rejected request gets `400 {"error":{"code":"looks_like_secret","field":"notes
 - **Scope:** keys work only on `/api/v1/bot/*`, and session cookies don't work there.
 - **Testing a key:** `GET /api/v1/bot/me` returns the bot's public profile and the next round.
 
-### Bot pushes custom stat values: `POST /api/v1/bot/stats` (step 4)
+### Stats Hub: cards show only what owners send
+
+**Changed in Stats Hub phase 1.** Stat cards no longer show stats the site works out from calls. Every stat on a card is sent by the bot's owner and labelled `self-reported`. Battles are unchanged: calls are stamped and locked by the server, results come from Kalshi (or HardSmoke), and the board and call history stay `verified` / `recorded by host`. Card settings never affect them.
+
+**The stat list (`server/arena/catalog.js`, `arena_statcatalog/<key>`).** The standard stats every bot may send. HardSmoke edits it on `/catalog` with no code change.
+- Each stat: `key`, `label`, `type`, `unit`, `category`, `format`, `description`, `order`, `retired`.
+- Seeded with 30 stats in six groups (Performance, Profit, Timing, Daily & records, Strategy, Risk). The seed only adds stats that are missing, so HardSmoke's edits and retirements stand across restarts and updates.
+- **Types** (what a bot sends): `number`, `integer`, `percent` (0–1), `return` (signed fraction ≥ −1), `money` (dollars, kept to 4 places), `duration` (ms), `text` (≤ 500 characters), `date` (`YYYY-MM-DD`, not in the future), `record` (`{w, l, t?, profit?}`), `series` (≤ 500 `{t, v}` points), `histogram` (≤ 48 named numbers).
+- **Formats** (how a page shows it), allowed per type: number `plain|signed`; integer `plain|signed|streak`; percent and return `percent`; money `money`; duration `duration`; text `short|paragraph`; date `date|since`; record `record`; series and histogram `plain|percent|money` (the scale of their numbers). The first is the default, and changing a type resets an unfitting format.
+- A stat's type is locked once any bot has sent a value under its key. Nothing is deleted: `retired: true` takes a stat off cards and settings and stops bots sending it, and its values stay in the ledger. Restoring it brings back the last value and each owner's choices.
+- Up to 100 stats. The full list with every key and an example is in `BOT-GUIDE.md`.
+
+**Custom stats.** Owners of bots and scripts can still define up to 20 of their own (`PUT /api/v1/entrants/:id/stat-settings` `{ "custom": { "avg_edge": { "type": "percent", "label": "Average edge", "unit": "%", "format"?: … } } }`).
+- Keys: 2–32 lowercase letters, digits or `_`, starting with a letter, and not one already in the list.
+- If the list later gains a key an owner already uses, the owner's custom stat keeps it for that bot.
+- The type can't change once values have been sent. `{ "remove": true }` keeps the history, and defining the key again brings it back.
+
+**Bot pushes values: `POST /api/v1/bot/stats`.**
 
 ```json
-{ "schema": "d3mon.stats/v1", "asOf": "2025-10-19T20:00:00Z",
-  "values": [
-    { "key": "best_session", "value": "London open" },
-    { "key": "avg_edge", "value": 0.034 },
-    { "key": "equity_curve", "value": [ { "t": "2025-10-18", "v": 1.02 }, { "t": "2025-10-19", "v": 1.05 } ] } ] }
+{ "schema": "d3mon.stats/v1", "asOf": "2026-10-15T19:00:00Z",
+  "values": [ { "key": "win_rate", "value": 0.62 }, { "key": "wins_losses", "value": { "w": 255, "l": 157 } },
+              { "key": "avg_edge", "value": 0.034 } ] }
 ```
 
-**What's accepted (step 4c):**
-- Only keys the owner has defined are accepted, and each value must match its declared type.
-- Up to 50 values per request.
-- `asOf` is optional; when sent, it must be within the last 30 days.
-- A value equal to the latest one is skipped, so the reply lists `accepted` and `unchanged` keys.
-- Each new value is a ledger line `{ "t": "stat", "entrantId", "key", "value", "asOf" }`, and the card shows the latest one.
-- Pushes that write something are limited to 10 at once, then 1 every 30 seconds per bot. Refused requests don't count against that limit, only against the key's general limit.
+- Any active list stat, or one of the owner's custom stats (`not_defined` otherwise). Each value must match its stat's type. The whole body is scanned for credentials.
+- Up to 50 values and 128 KB per request. `asOf` is optional and within the last 30 days.
+- A value equal to the latest one is skipped (`accepted` / `unchanged`). Each new value is a ledger line `{ "t": "stat", "entrantId", "key", "value", "asOf" }`.
+- Pushes that write are limited to 10 at once, then 1 every 30 seconds per bot.
 
-### Custom stat definition, set by the owner (step 4)
+**Stats card: `GET /api/v1/entrants/<slug>/card`.**
 
 ```json
-{ "key": "avg_edge", "label": "Average edge", "type": "percent", "unit": "%",
-  "description": "Mean edge over Kalshi's price at entry", "visibility": "hidden", "order": 3 }
-```
-
-- **Types:** `number`, `integer`, `percent` (0–1), `duration` (ms), `text` (≤ 80 characters), `series` (≤ 500 `{t, v}` points), `histogram` (≤ 48 named buckets).
-- **Visibility:** `hidden` (the default for every stat, standard or custom), `private` (owner only), `members`, `public`.
-- **Defining them (step 4c):** the owner defines them with `PUT /api/v1/entrants/:id/stat-settings` `{ "custom": { "avg_edge": { "type": "percent", "label": "Average edge", "unit": "%" } } }`, alongside the standard stats' `stats`.
-- **Keys:** 2–32 lowercase letters, digits or `_`, starting with a letter. A key can't reuse a standard stat's name or look like a credential.
-- **Limit:** up to 20 per bot.
-- **Type:** it can't change once values have been sent.
-- **Removing:** `{ "remove": true }` takes a stat off the card and stops the bot sending it, but keeps its history. Defining the same key again brings it back.
-- **Labels:** custom stats are always `source: "custom"`, `verification: "self-reported"`, with the `asOf` of the latest value.
-
-### Stats card, read by any front end: `GET /api/v1/entrants/<slug>/card` (step 4)
-
-```json
-{ "schema": "d3mon.statcard/v1", "generatedAt": "…", "viewer": "guest | member | owner",
-  "entrant": { "slug": "valhalla", "name": "Valhalla", "kind": "bot", "creatorName": "Odin" },
+{ "schema": "d3mon.statcard/v2", "generatedAt": "…", "viewer": "guest | member | owner",
+  "entrant": { "id": "…", "slug": "valhalla", "name": "Valhalla", "kind": "bot", "creatorName": "Odin" },
   "stats": [
-    { "key": "hit_rate", "label": "Hit rate", "description": "", "order": 1,
-      "type": "percent", "unit": "%", "value": 0.61, "window": "all",
-      "source": "standard", "verification": "verified" },
-    { "key": "best_hours", "label": "Best trading times", "type": "histogram", "unit": "%",
-      "value": { "13:00": 0.72, "14:00": 0.68 }, "source": "standard", "verification": "verified" },
-    { "key": "avg_edge", "label": "Average edge", "type": "percent", "value": 0.034,
-      "source": "custom", "verification": "self-reported", "asOf": "…" } ] }
+    { "key": "win_rate", "label": "Win rate", "description": "…", "order": 10, "category": "Performance",
+      "type": "percent", "format": "percent", "unit": "%", "value": 0.62, "asOf": "…",
+      "source": "catalog", "verification": "self-reported" },
+    { "key": "avg_edge", "label": "Average edge", "category": "Custom", "type": "percent", "format": "percent",
+      "value": 0.034, "asOf": "…", "source": "custom", "verification": "self-reported" } ] }
 ```
 
-The server drops every stat this viewer may not see **before** the response is built, so hidden data never reaches the browser.
+The server drops every stat this viewer may not see **before** the response is built, so hidden data never reaches the browser. Stats with no value yet are left out too.
 
-**Who sees what (step 4b):**
-- **Guests** see `public` stats.
-- **Members** see `public` and `members` stats.
-- **The owner** also sees `private` ones.
+**Who sees what:**
+- **Guests** see `public` stats. **Members** see `public` and `members`. **The owner** also sees `private`.
 - **Admins** read like members, so private means private.
-- **Hidden stats** appear on no card.
-- Owners set each stat's visibility, label, description and order with `GET`/`PUT /api/v1/entrants/:id/stat-settings` (`{ "stats": { "hit_rate": { "visibility": "public", "label": "Accuracy" } } }`). Only what's sent changes, and an empty label or description restores the default.
-- Settings are kept in `arena_statsettings/<entrantId>`, apart from the history, so hiding a stat never deletes anything.
-- Battle calls and results stay on the battle board whatever these settings say.
-
-**Standard stats** are computed from the ledger: from each entrant's latest call per locked round, scored against the round's result. The keys are:
-
-| Key | Type | What it is |
-| --- | --- | --- |
-| `calls` | integer | Rounds called |
-| `wins`, `losses` | integer | Scored calls that were right or wrong |
-| `hit_rate` | percent | Share right, with `n` scored |
-| `current_streak` | streak | +n right or −n wrong in a row |
-| `longest_win_streak`, `longest_loss_streak` | integer | Longest runs |
-| `avg_lead` | duration | Average time before the lock |
-| `best_hours`, `weekdays` | histogram | Hit rate by UTC hour and weekday, with `counts` |
-| `daily_record` | series | `{t, v, w, l}` per UTC day, last 90 days |
-
-**Verification** comes from where the results came from:
-- `verified`: Kalshi settled every round counted.
-- `recorded by host`: every result was entered by hand.
-- `mixed`: some of each, with `sources: {kalshi, host}`.
-- `calls` and `avg_lead` need no result. They come from server-stamped calls, so they're `verified`.
-- Paper profit per $1 contract at Kalshi's price at the lock comes once step 5 records prices.
+- **Every stat starts hidden**, list and custom alike, and hidden stats appear on no card.
+- Owners set each stat's visibility, label, description and order with `GET`/`PUT /api/v1/entrants/:id/stat-settings` (`{ "stats": { "win_rate": { "visibility": "public", "label": "Accuracy" } } }`). Only what's sent changes, and an empty label or description restores the list's.
+- Settings are kept in `arena_statsettings/<entrantId>` under `catalog` and `custom`. The older `stats` field (choices for the old computed stats) is kept but never read, so a choice made for a computed stat can't publish a self-reported one.
+- Callers have no bot key, so they have no stat card. Their calls and results stay on the board.
 
 There is no leaderboard endpoint. Cards are per entrant only.
 
@@ -320,6 +293,7 @@ There is no leaderboard endpoint. Cards are per entrant only.
 | `round.scored` | `battle:<id>`, `entrant:<id>` | A result arrives, with each call scored |
 | `round.metrics` | `battle:<id>`, `entrant:<id>` | HardSmoke saves a round by hand (step 3). Carries that round as each reader may see it |
 | `stats.updated` | `entrant:<id>` | A card changed. Clients refetch the card, so privacy filtering stays on the server |
+| `catalog.updated` | `catalog` (anyone) | HardSmoke changed the stat list. Carries the changed `keys` |
 
 Topic permissions are checked when the stream opens. The feed is separate from the page's `/api/events`, which stays unchanged.
 
@@ -403,6 +377,17 @@ GET /api/v1/rounds?market=KXBTC15M&from=&to=   public: each round's result, sour
 GET /api/v1/kalshi                             admin: the poller's health (last check, errors) and the rounds to enter by hand
 npm run kalshi:check                           on the server: reads Kalshi's latest rounds and shows how each is scored. Records nothing
 ```
+
+Stats Hub phase 1:
+
+```
+GET  /api/v1/stat-catalog    anyone: d3mon.statcatalog/v1, the active stats with types and formats. Admins also see
+                             retired stats and which types are locked
+PUT  /api/v1/stat-catalog    admin: {stats: {<key>: {label?, type?, unit?, category?, format?, description?, order?, retired?}}}
+                             creates or changes stats; a new one needs label, type and category
+```
+
+The page is `/catalog` (admins). Cards and `/my` follow `catalog.updated`.
 
 ## 10. Kalshi (step 5)
 

@@ -117,3 +117,9 @@
 .arena .hist .hb em{font:10px var(--mono);font-style:normal;color:var(--ink-2);white-space:nowrap}
 .arena .hist{height:110px}
 .arena .mgrid.stats .hist{height:64px}
+.arena .hist .hb i.neg{background:color-mix(in srgb,var(--dn) 70%,transparent)}
+.arena .spark{display:block;width:100%;height:70px;color:var(--acc)}
+.arena .para{margin:0;font:15px/1.45 var(--body);color:var(--ink);white-space:pre-line}
+.arena .catgroup{margin:14px 0 4px;font:700 13px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.arena tr.retired{opacity:.55}
+.arena tr.dirty td:first-child{box-shadow:inset 3px 0 0 var(--acc)}

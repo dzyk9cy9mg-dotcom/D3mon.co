@@ -1,5 +1,5 @@
-// /my: an owner's approved entrants. Bots and scripts: API keys (made, shown once, revoked) and how to
-// send calls. Callers: Up/Down buttons for the next round, locked by the server at the round's start.
+// /my: an owner's approved entrants. Bots and scripts: API keys (made, shown once, revoked), how to
+// send calls and stats, and who sees each stat on the card. Callers: Up/Down buttons for the next round, locked by the server at the round's start.
 // Thin client over /api/v1 (entrants, keys, calls, clock) and the live feed.
 (function () {
   "use strict";
@@ -55,20 +55,31 @@
       </details>`;
   }
 
-  // The owner's stat settings: who sees each stat, and its label, description and order.
+  // The owner's stat settings: who sees each stat, and its label, description and order. Grouped as in
+  // HardSmoke's stat list, with the owner's custom stats last.
   function statsBox(e) {
     const st = S.stats[e.id];
     if (!st) return "";
-    return `<h3 class="sub">Stats card</h3>
-      <p class="tag">Every stat starts hidden. Choose who sees each one. Standard stats come from your call history and can't be edited: "verified" means Kalshi settled the rounds, "recorded by host" means HardSmoke did. Custom stats are sent by your bot and shown as "self-reported". Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>
-      <div class="tablewrap"><table class="mgrid stats"><thead><tr><th>Stat</th><th>Who sees it</th><th>Order</th><th>Now</th></tr></thead><tbody>${st.stats.map(x => `<tr>
+    if (e.kind === "caller") return "";
+    const groups = [];
+    for (const x of st.stats) {
+      let g = groups.find(g => g.name === x.category);
+      if (!g) groups.push(g = { name: x.category, list: [] });
+      g.list.push(x);
+    }
+    const row = x => `<tr>
         <td><input data-st="${esc(e.id)}|${esc(x.key)}|label" maxlength="40" value="${esc(x.label === x.defaultLabel ? "" : x.label)}" placeholder="${esc(x.defaultLabel)}" aria-label="Label for ${esc(x.defaultLabel)}">
-          <input data-st="${esc(e.id)}|${esc(x.key)}|description" maxlength="160" value="${esc(x.description === x.defaultDescription ? "" : x.description)}" placeholder="${esc(x.defaultDescription)}" aria-label="Description for ${esc(x.defaultLabel)}" class="desc"></td>
-        <td><select data-st="${esc(e.id)}|${esc(x.key)}|visibility" aria-label="Who sees ${esc(x.defaultLabel)}">${Object.entries(SHOWS).map(([v, t]) => `<option value="${v}" ${v === x.visibility ? "selected" : ""}>${t}</option>`).join("")}</select></td>
-        <td><input type="number" min="0" max="999" data-st="${esc(e.id)}|${esc(x.key)}|order" value="${x.order}" aria-label="Order for ${esc(x.defaultLabel)}" style="width:70px"></td>
-        <td>${statValue(x)} ${verifTag(x)}${x.source === "custom" ? `<div class="tag">custom · <code>${esc(x.key)}</code> · ${esc(x.type)}${x.unit ? ` (${esc(x.unit)})` : ""} <button class="btn ghost sm" type="button" data-rmstat="${esc(e.id)}|${esc(x.key)}">Remove</button></div>` : ""}</td></tr>`).join("")}</tbody></table></div>
+          <input data-st="${esc(e.id)}|${esc(x.key)}|description" maxlength="160" value="${esc(x.description === x.defaultDescription ? "" : x.description)}" placeholder="${esc(x.defaultDescription)}" aria-label="Description for ${esc(x.defaultLabel)}" class="desc">
+          <div class="tag"><code>${esc(x.key)}</code> · ${esc(x.type)}${x.source === "custom" ? ` · custom <button class="btn ghost sm" type="button" data-rmstat="${esc(e.id)}|${esc(x.key)}">Remove</button>` : ""}</div></td>
+        <td><select data-st="${esc(e.id)}|${esc(x.key)}|visibility" data-group="${esc(x.category)}" aria-label="Who sees ${esc(x.defaultLabel)}">${Object.entries(SHOWS).map(([v, t]) => `<option value="${v}" ${v === x.visibility ? "selected" : ""}>${t}</option>`).join("")}</select></td>
+        <td><input type="number" min="0" max="9999" data-st="${esc(e.id)}|${esc(x.key)}|order" value="${x.order}" aria-label="Order for ${esc(x.defaultLabel)}" style="width:80px"></td>
+        <td>${statValue(x)}${x.asOf ? `<div class="tag">sent ${esc(when(Date.parse(x.asOf)))}</div>` : `<div class="tag">not sent yet</div>`}</td></tr>`;
+    return `<h3 class="sub">Stats card</h3>
+      <p class="tag">Your card shows only the stats your bot sends, labelled "self-reported". Every stat starts hidden: choose who sees each one, and only stats with a value appear. Your battle calls and results are scored separately by the server and stay on the board. Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>
+      <div class="tablewrap"><table class="mgrid stats"><thead><tr><th>Stat</th><th>Who sees it</th><th>Order</th><th>Latest value</th></tr></thead><tbody>${groups.map(g => `<tr><th colspan="4" class="catgroup">${esc(g.name)}
+          <select data-groupset="${esc(e.id)}|${esc(g.name)}" aria-label="Set everything in ${esc(g.name)}" style="width:auto;margin-left:10px"><option value="">Set all to…</option>${Object.entries(SHOWS).map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></th></tr>${g.list.map(row).join("")}`).join("")}</tbody></table></div>
       <div class="actions" style="margin-top:10px"><button class="btn" type="button" data-savestats="${esc(e.id)}">Save stats card</button></div>
-      ${e.kind === "caller" ? "" : customForm(e, st)}`;
+      ${customForm(e, st)}`;
   }
 
   // Defining a custom stat the bot will send. Its values are always shown as "self-reported".
@@ -84,12 +95,12 @@
         <button class="btn" type="submit">Add stat</button>
       </form>
       ${st.removedCustom.length ? `<p class="tag">Removed (history kept; add the same key again to bring one back): ${st.removedCustom.map(r => `<code>${esc(r.key)}</code>`).join(", ")}</p>` : ""}
-      <details style="margin-top:8px"><summary class="tag">How your bot sends custom stats</summary>
-        <p class="tag">Types: number, integer, percent (0 to 1), duration (ms), text (up to 80 characters), series (a list of {"t", "v"} points), histogram ({"name": number}). Only keys defined here are accepted. Send whenever values change; unchanged values are skipped.</p>
+      <details style="margin-top:8px"><summary class="tag">How your bot sends stats</summary>
+        <p class="tag">Types: number, integer, percent (0 to 1), return (signed, -1 or more), money (dollars), duration (ms), text (up to 500 characters), date ("2026-03-01"), record ({"w", "l"}), series (a list of {"t", "v"} points), histogram ({"name": number}). Standard stats use their key from the list above; custom ones only once defined here. Send whenever values change; unchanged values are skipped. The bot guide lists every key.</p>
         <pre class="code">curl -X POST ${esc(base)} \\
   -H "Authorization: Bearer d3b_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"schema":"d3mon.stats/v1","values":[{"key":"avg_edge","value":0.034}]}'</pre>
+  -d '{"schema":"d3mon.stats/v1","values":[{"key":"win_rate","value":0.62},{"key":"avg_edge","value":0.034}]}'</pre>
       </details>`;
   }
 
@@ -205,6 +216,15 @@
   }, 1000);
 
   const markDirty = ev => { if (ev.target.dataset && ev.target.dataset.st) S.statsDirty = true; };
+  // "Set all to…" on a group sets each of its stats (saved with Save stats card, like any other edit).
+  document.addEventListener("change", ev => {
+    const g = ev.target.dataset && ev.target.dataset.groupset;
+    if (!g || !ev.target.value) return;
+    const [id, name] = g.split("|");
+    document.querySelectorAll(`[data-st^="${CSS.escape(id)}|"][data-group]`).forEach(el => { if (el.dataset.group === name) el.value = ev.target.value; });
+    ev.target.value = "";
+    S.statsDirty = true;
+  });
   document.addEventListener("input", markDirty);
   document.addEventListener("change", markDirty);
 

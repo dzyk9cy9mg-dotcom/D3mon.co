@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Stat list · Battle of the Bots · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="arena">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">The stat list: the standard stats every bot can send for its card. Bots send the values, and cards show them as "self-reported". Changes apply straight away, with no code change. Nothing is deleted: retiring a stat takes it off cards and stops bots sending it, and its history is kept. A stat's type is locked once a bot has sent a value. <a href="applications">← Applications</a> <span class="live-dot" id="live">○ offline</span></p>
+
+  <section class="panel" id="denied" hidden>
+    <h2>Admins only</h2>
+    <p class="empty">Sign in with HardSmoke's account or another admin account. <a href="login">Sign in</a></p>
+  </section>
+
+  <section class="panel" id="listBox" hidden>
+    <h2>Stats <span class="tag" id="count"></span></h2>
+    <div class="row" style="margin-bottom:10px">
+      <div class="field"><label for="fCat">Group</label><select id="fCat"></select></div>
+      <div class="field"><label for="fText">Find</label><input id="fText" placeholder="key or label"></div>
+      <label class="checks" style="align-self:end"><input type="checkbox" id="fRetired"> Show retired</label>
+    </div>
+    <div class="tablewrap"><table class="mgrid">
+      <thead><tr><th>Key</th><th>Label and description</th><th>Group</th><th>Type</th><th>Format</th><th>Unit</th><th>Order</th><th>Status</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <div class="actions" style="margin-top:12px;justify-content:space-between"><span class="tag" id="dirty"></span><button class="btn" type="button" id="save">Save changes</button></div>
+  </section>
+
+  <section class="panel" id="addBox" hidden>
+    <h2>Add a stat</h2>
+    <form class="row" id="addForm" autocomplete="off">
+      <div class="field"><label for="aKey">Key (bots send this)</label><input id="aKey" name="key" maxlength="32" placeholder="kelly_fraction" pattern="[a-z][a-z0-9_]{1,31}" required></div>
+      <div class="field"><label for="aLabel">Label</label><input id="aLabel" name="label" maxlength="40" placeholder="Kelly fraction" required></div>
+      <div class="field"><label for="aCat">Group</label><input id="aCat" name="category" maxlength="24" list="cats" required></div>
+      <div class="field" style="flex:0 1 140px"><label for="aType">Type</label><select id="aType" name="type"></select></div>
+      <div class="field" style="flex:0 1 140px"><label for="aFormat">Format</label><select id="aFormat" name="format"></select></div>
+      <div class="field" style="flex:0 1 90px"><label for="aUnit">Unit</label><input id="aUnit" name="unit" maxlength="12" placeholder="%"></div>
+      <div class="field"><label for="aDesc">Description</label><input id="aDesc" name="description" maxlength="160" placeholder="optional"></div>
+      <button class="btn" type="submit">Add stat</button>
+    </form>
+    <datalist id="cats"></datalist>
+    <p class="tag" id="typeHelp"></p>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/arena-catalog.js"></script>
+</body>
+</html>
