@@ -7183,3 +7183,4 @@ playIntro(false);
     if(S.view === "thread") openPosts(S.openId);
   })();
 })();
+(() => { const b = document.querySelector("header.top .brand"); if(!b) return; b.style.cursor = "pointer"; b.title = "Home"; b.addEventListener("click", () => { if(S.dmPage) openDM(false); if(S.coinPage) openCoin(false); if(S.mePage) openMe(false); if(S.adminPage) openAdmin(false); if(S.callersPage) openCallersPage(false); if(S.cortex){ if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); openCortex(false); } if(S.cc) openCC(false); if(S.vortexPage) openVortex(false); if(S.battlePage) openBattle(false); window.scrollTo({top:0}); }); })(); // logo -> home (Oct 2026)
