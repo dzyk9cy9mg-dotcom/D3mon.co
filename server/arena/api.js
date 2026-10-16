@@ -10,6 +10,8 @@ import { Metrics } from "./metrics.js";
 import { Keys } from "./keys.js";
 import { Calls, MARKET, nextRound } from "./calls.js";
 import { Stats } from "./stats.js";
+import { Catalog } from "./catalog.js";
+import { Verified } from "./verified.js";
 import { Roster } from "./roster.js";
 import { Kalshi } from "./kalshi.js";
 import { ROUND_MS } from "./registry.js";
@@ -30,7 +32,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": return id === undefined;
+      case "battles": case "catalog": return id === undefined;
       case "battle": case "entrant": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "admin": return id === "applications" && isAdmin(ctx);
@@ -47,7 +49,10 @@ export function createArena({ store, accounts, cfg }) {
   const keys = new Keys({ store, registry });
   const calls = new Calls({ ledger, registry, metrics, feed });
   calls.start();
-  const stats = new Stats({ store, registry, calls, metrics, ledger, feed });
+  const catalog = new Catalog({ store, feed, hasValues: key => stats.hasValues(key) });
+  catalog.seed();
+  const verified = new Verified({ calls, metrics, registry });
+  const stats = new Stats({ store, registry, catalog, verified, calls, ledger, feed });
   const roster = new Roster({ store, registry, ledger });
   const kalshi = new Kalshi({ ledger, metrics, registry, calls, feed, ...(cfg.kalshiUrl ? { base: cfg.kalshiUrl } : {}) });
   if (cfg.kalshi !== false) kalshi.start();
@@ -145,10 +150,13 @@ export function createArena({ store, accounts, cfg }) {
     if ((m = route.match(/^DELETE \/entrants\/([A-Za-z0-9]+)\/keys\/([A-Za-z0-9]+)$/))) { writer(); return ok({ key: keys.revoke(ctx, m[1], m[2]) }); }
     if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)\/board$/))) return ok(calls.board(ctx, m[1]));
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9-]+)\/card$/))) return ok(stats.card(ctx, m[1]));
+    if (route === "GET /stat-catalog") return ok(catalog.view(ctx));
+    if (route === "PUT /stat-catalog") { writer(); return ok(catalog.update(ctx, await body())); }
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9]+)\/stat-settings$/))) return ok(stats.settings(ctx, m[1]));
     if ((m = route.match(/^PUT \/entrants\/([A-Za-z0-9]+)\/stat-settings$/))) { writer(); return ok(stats.updateSettings(ctx, m[1], await body())); }
+    if ((m = route.match(/^POST \/entrants\/([A-Za-z0-9]+)\/stats$/))) { writer(); return ok(stats.fromOwner(ctx, m[1], await readJson(req, 128 * 1024), () => take(limits.botStats, m[1])), 201); }
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, stats, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, catalog, stats, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); feed.close(); } };
 }

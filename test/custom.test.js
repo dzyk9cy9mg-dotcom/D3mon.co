@@ -1,4 +1,4 @@
-// Step 4c: custom stats (defined by the owner, sent by the bot, always "self-reported") and showing a
+// Step 4c: custom stats (defined by the owner, sent by the bot, always "self-reported", like the list stats) and showing a
 // battle's lineup on the current main page (config/battleRoster).
 import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -45,9 +45,10 @@ describe("custom stats", () => {
 
   test("bad definitions are refused", async () => {
     for (const [custom, field, code = "invalid_argument"] of [
-      [{ hit_rate: { type: "number", label: "Mine" } }, "custom.hit_rate"], [{ "Bad-Key": { type: "number", label: "x" } }, "custom.Bad-Key"],
+      [{ win_rate: { type: "number", label: "Mine" } }, "custom.win_rate"], [{ "Bad-Key": { type: "number", label: "x" } }, "custom.Bad-Key"],
       [{ api_key: { type: "number", label: "x" } }, "custom.api_key", "looks_like_secret"], [{ newstat: { label: "No type" } }, "custom.newstat.type"],
-      [{ newstat: { type: "number" } }, "custom.newstat.label"], [{ newstat: { type: "money", label: "x" } }, "custom.newstat.type"],
+      [{ newstat: { type: "number" } }, "custom.newstat.label"], [{ newstat: { type: "colour", label: "x" } }, "custom.newstat.type"],
+      [{ newstat: { type: "number", label: "x", format: "money" } }, "custom.newstat.format"],
       [{ newstat: { type: "number", label: "x", colour: "red" } }, "custom.newstat.colour"],
     ]) {
       const r = await define(custom);
@@ -70,7 +71,7 @@ describe("custom stats", () => {
     assert.equal(r.status, 201);
     assert.deepEqual(r.json.accepted, good.map(v => v.key));
     for (const [value, key] of [
-      [1.2, "avg_edge"], ["0.5", "avg_edge"], [3.5, "trades"], [-1, "hold_time"], ["", "best_session"], ["x".repeat(81), "best_session"],
+      [1.2, "avg_edge"], ["0.5", "avg_edge"], [3.5, "trades"], [-1, "hold_time"], ["", "best_session"], ["x".repeat(501), "best_session"],
       [[{ t: "a", v: "1" }], "equity"], [[{ t: "a", v: 1, extra: 2 }], "equity"], [Array.from({ length: 501 }, () => ({ t: "a", v: 1 })), "equity"],
       [{ a: "x" }, "by_hour"], [[1, 2], "by_hour"], [Infinity, "pnl"],
     ]) {
@@ -106,17 +107,19 @@ describe("custom stats", () => {
 
   test("custom stats follow the owner's privacy choices and say they're self-reported", async () => {
     await define({ avg_edge: { visibility: "public", order: 1 }, trades: { visibility: "members" }, pnl: { visibility: "private" } });
-    await odin.req("PUT", `/api/v1/entrants/${bot}/stat-settings`, { stats: { hit_rate: { visibility: "public" } } });
+    await odin.req("PUT", `/api/v1/entrants/${bot}/stat-settings`, { stats: { win_rate: { visibility: "public" } } });
+    await push([{ key: "win_rate", value: 0.6 }]);
     const keys = async c => (await card(c)).json.stats.map(x => x.key);
-    assert.deepEqual(await keys(guest), ["avg_edge", "hit_rate"]);
-    assert.deepEqual((await keys(loki)).sort(), ["avg_edge", "hit_rate", "trades"]);
-    assert.deepEqual((await keys(hs)).sort(), ["avg_edge", "hit_rate", "trades"]);
-    assert.deepEqual((await keys(odin)).sort(), ["avg_edge", "hit_rate", "pnl", "trades"]);
+    assert.deepEqual(await keys(guest), ["avg_edge", "win_rate"]);
+    assert.deepEqual((await keys(loki)).sort(), ["avg_edge", "trades", "win_rate"]);
+    assert.deepEqual((await keys(hs)).sort(), ["avg_edge", "trades", "win_rate"]);
+    assert.deepEqual((await keys(odin)).sort(), ["avg_edge", "pnl", "trades", "win_rate"]);
     const g = (await card(guest)).json.stats;
-    const edge = g.find(x => x.key === "avg_edge"), hit = g.find(x => x.key === "hit_rate");
+    const edge = g.find(x => x.key === "avg_edge"), hit = g.find(x => x.key === "win_rate");
     assert.deepEqual([edge.source, edge.verification, edge.value, edge.label, edge.unit], ["custom", "self-reported", 0.034, "Average edge", "%"]);
     assert.ok(edge.asOf);
-    assert.deepEqual([hit.source, hit.verification], ["standard", "verified"]);
+    assert.deepEqual([hit.source, hit.verification], ["catalog", "self-reported"]);
+    assert.equal(edge.category, "Custom");
     assert.ok(!JSON.stringify(g).includes("Paper P&L"), "private stats never reach a guest");
   });
 
