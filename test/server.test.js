@@ -215,6 +215,32 @@ describe("D3MON.CO server", () => {
       assert.equal((await owner.db("delete", { path: `requests/${a}` })).status, 200);
     });
 
+    test("only admins can mark a coin transfer done or approved", async () => {
+      const a = alice.user.id, path = `bots/${a}`, get = async () => (await alice.db("get", { path })).json.data;
+      // Alice can ask for a transfer, but can't send it in already approved
+      assert.equal((await alice.db("set", { path, data: { a, list: [], xfer: { x1: { to: "bob", amt: 5, at: 1 } } } })).status, 200);
+      assert.equal((await alice.db("merge", { path, data: { xfer: { x2: { to: "bob", amt: 9, at: 2, done: true, ok: true } } } })).status, 403);
+      // nor approve or decline her pending one, with any write op
+      for (const [op, data] of [
+        ["merge", { xfer: { x1: { done: true, ok: true } } }],
+        ["update", { xfer: { x1: { done: true } } }],
+        ["update", { xfer: { x1: { ok: false } } }],
+        ["set", { a, list: [], xfer: { x1: { to: "bob", amt: 5, at: 1, done: true, ok: true } } }],
+      ]) assert.equal((await alice.db(op, { path, data })).status, 403, `${op} ${JSON.stringify(data)}`);
+      assert.deepEqual((await get()).xfer, { x1: { to: "bob", amt: 5, at: 1 } });
+      // an admin confirms it
+      assert.equal((await owner.db("merge", { path, data: { xfer: { x1: { done: true, ok: true } } } })).status, 200);
+      // after that Alice can't reopen it or flip it to declined, and the page's own saves still work
+      assert.equal((await alice.db("merge", { path, data: { xfer: { x1: { done: false } } } })).status, 403);
+      assert.equal((await alice.db("merge", { path, data: { xfer: { x1: { ok: false } } } })).status, 403);
+      const cur = await get();
+      assert.equal((await alice.db("set", { path, data: { a, list: [{ n: "bot" }], pub: {}, votes: {}, proposals: {}, xfer: cur.xfer } })).status, 200);
+      assert.equal((await alice.db("merge", { path, data: { a, xfer: { x3: { to: "bob", amt: 1, at: 3 } } } })).status, 200);
+      // and deleting the document doesn't let her bring it back approved
+      assert.equal((await alice.db("delete", { path })).status, 200);
+      assert.equal((await alice.db("set", { path, data: { a, xfer: { x1: { to: "bob", amt: 5, at: 1, done: true, ok: true } } } })).status, 403);
+    });
+
     test("each member's private area is theirs alone, even for admins", async () => {
       const a = alice.user.id;
       assert.equal((await alice.db("set", { path: `data/users/${a}/dmkey`, data: { priv: { d: "secret" } } })).status, 200);
