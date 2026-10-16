@@ -13,6 +13,23 @@ Files are in [`inspiration/`](inspiration/). They're AI-generated concept images
 | `02-exterior-tetrahedron.png` | **The opening shot.** Correct shape; dark-glass faces with faint holograms (the "idle" look for ad faces); arena glowing through the base; crystal capstone; flower-of-life horizon. The amber corner is at the back, so open from above and orbit. |
 | `03-corners-arena-lounge.webp` | Callers spire with rings (pulse on a call); Bots **crystal sphere with small robots** (one robot per real bot); Chart Scripts **observatory dome with floating charts**; peak **lounge** (glass floor, wall screens: simplify the furniture into outlines). Places landmarks inside the pyramid, which is question 6. |
 | `04-video-10118.mov` and `04-video-10118-frames.jpg` | The owner's 10-second portrait clip, and 12 frames from it: a **stadium arena** with tiers (show members online as lights in the stands), the camera gliding up a **spiral glass ramp**, hexagon **bot pods**, glass **caller booths** with a hologram and stat dials (real verified stats only), floating **formulas and code** for Chart Scripts, and a **golden geometric crown** at the peak. Shot in portrait, so the world must look right on phones held upright. Very dense: show live data only on screens near the camera. |
+| `05-lusion-astronaut.jpg`, `05-lusion-walkthrough-1.jpg`, `-2.jpg` | Frames from a 96-second screen recording (2026-10-16) of a YouTube walkthrough of **Lusion's own site** (lusion.co, the studio behind EverSwap and Oryzo). The video itself isn't saved: it's someone else's work and 28 MB, and the frames are enough. **The owner especially loves the astronaut part.** The sequence: the scroll **dives into a small screen** showing an astronaut above the Earth, so the screen becomes the whole page. A huge headline ("Step into a new world…") **splits apart as the camera flies through it**. The astronaut drifts toward a **glowing ring like a black hole**, passes through it into a **tunnel of light cells** (white, then green, pink and blue), then into "an alternative reality". He comes back at the end among stickers next to "Let's work together". Also: 3D objects that react to the mouse, a line drawing itself down the page as you scroll, and video previews on hover. |
+
+### The astronaut: ideas for D3MON (owner's favourite, 2026-10-16)
+
+The owner wants an astronaut "somewhere" in the world. **Make our own astronaut, never Lusion's model or art.** Take the idea, not the asset. Ideas, to choose from later:
+
+1. **The guide who carries the story.** A D3MON astronaut (dark suit, amber, blue and violet trim, the triangle logo on the chest, the pyramid reflected in the visor) floats through the whole world. They lead the scroll, the way Lusion's astronaut leads theirs.
+2. **The way in, from 2D to 3D.** The page opens on a small screen showing the astronaut drifting toward the pyramid. Scrolling dives into that screen and you're in the world. This also bridges the 2D version and the 3D one.
+3. **The portal into the arena.** Instead of flying through the trailer face, the astronaut passes through a **ring of light in the three colours** (our black hole). A short tunnel through the **flower-of-life pattern as glowing cells** follows, then the arena opens. It suits "entering the battle".
+4. **Headlines you fly through.** Big words ("Enter the Arena", "Callers · Bots · Chart Scripts") split apart as the camera passes through them.
+5. **The bookend.** The astronaut returns at the end next to "Apply for the next battle" or "Join the community", floating near the peak among the community's lights.
+6. **Light and fun touches:** the astronaut waves at a returning visitor, reacts to the cursor, or turns to watch the lock moment in the arena.
+
+Speed: the astronaut is a real 3D model, so it's where the Nano Banana → image-to-3D tools step (Meshy, Tripo, Rodin) fits, or a commissioned model.
+- Keep it to a few MB, with a lighter version for Lite and phones.
+- In 2D, a pre-rendered image or a short looping video.
+- Its animation (floating and turning) can be gentle and loop, which is cheap to run.
 
 ### Gemini prompts that worked
 
