@@ -25,7 +25,7 @@
     const es = new EventSource(`api/v1/feed?topics=${encodeURIComponent(topics.join(","))}`);
     es.addEventListener("hello", () => onState && onState(true));
     es.onerror = () => onState && onState(false);
-    for (const type of ["battle.updated", "application.created", "application.updated", "entrant.updated", "round.metrics", "call.received", "round.locked", "round.scored", "stats.updated", "catalog.updated", "monitor.updated"]) {
+    for (const type of ["battle.updated", "application.created", "application.updated", "entrant.updated", "round.metrics", "call.received", "round.locked", "round.scored", "stats.updated", "catalog.updated", "monitor.updated", "display.updated"]) {
       es.addEventListener(type, e => { try { onEvent(type, JSON.parse(e.data).data); } catch (x) {} });
     }
     return es;
@@ -97,7 +97,30 @@
     }
   }
   const wide = st => ["histogram", "series", "battles", "form"].includes(st.type) || st.format === "paragraph";
+  const tPct = (v, signed) => `${signed && v > 0 ? "+" : ""}${Math.round(v * 1000) / 10}%`;
+  const tMoney = v => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: Math.abs(v) < 1 ? 4 : 2 })}`;
+  const tNum = (f, v) => f === "percent" ? tPct(v) : f === "money" ? tMoney(v) : String(Math.round(v * 10000) / 10000);
+  // A short, one-line, plain-text version of a stat's value (tables, tickers).
+  function statText(c) {
+    const v = c.value;
+    if (v === null || v === undefined) return "–";
+    switch (c.type) {
+      case "percent": return tPct(v);
+      case "return": return tPct(v, true);
+      case "money": return tMoney(v);
+      case "duration": return `${Math.round(v / 1000)}s`;
+      case "integer": case "number": return c.format === "streak" ? (v > 0 ? `+${v}` : String(v)) : String(v);
+      case "record": return `${v.w}–${v.l}${v.t ? ` (${v.t})` : ""}`;
+      case "form": return v.slice(-10).map(x => (x === "w" ? "✓" : "✗")).join("");
+      case "battles": return `${v.length} battle${v.length === 1 ? "" : "s"}`;
+      case "series": return v.length ? `${v.length} pts, last ${tNum(c.format, v[v.length - 1].v)}` : "–";
+      case "histogram": { const k = Object.keys(v); return k.slice(0, 3).map(x => `${x} ${tNum(c.format, v[x])}`).join(", ") + (k.length > 3 ? " …" : ""); }
+      case "text": return v.length > 28 ? `${v.slice(0, 27)}…` : v;
+      default: return String(v);
+    }
+  }
+
   const verifTag = st => st.verification ? `<span class="vbadge ${esc(st.verification.replace(/\s+/g, "-"))}" title="${st.sources ? esc(`Kalshi: ${st.sources.kalshi}, host: ${st.sources.host}`) : ""}">${esc(st.verification)}</span>` : "";
 
-  window.Arena = { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, mmss, ROUND_MS, statValue, verifTag, wide };
+  window.Arena = { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, mmss, ROUND_MS, statValue, statText, verifTag, wide };
 })();
