@@ -17,6 +17,9 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 11. **Many streams:** which sites do the bots stream on (Twitch, YouTube, Kick, X…), and how many bots stream at once in a typical battle?
 12. **Profiles:** "bot owner, scripters, and read profiles". Does "read" mean **callers**, or something else (traders, verified members…)?
 13. **Profile art:** should entrants upload their own hero image and tagline (a new server feature reviewed by HardSmoke), or should we generate art for each kind?
+14. **Ads, who:** only Arena entrants (bots, scripts, callers), or outside sponsors too?
+15. **Ads, payment:** will ads be paid? If so, how (manually by arrangement, or through the site)? That changes how much the system needs.
+16. **Ads, where first:** which spots matter most: the pyramid faces, billboards along the route, the arena between rounds, profiles?
 
 ## Decided
 

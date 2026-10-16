@@ -23,3 +23,22 @@ How we propose to build it. Status: **proposed, not approved.** Items waiting on
 - **How:** stream players (Twitch, YouTube, Kick…) are placed in 3D over the walls as real embedded players. Their own pages can't be drawn into the 3D scene directly. Sound comes from the spotlight stream only.
 - **To check when building:** which streaming sites the bots use, and each site's embed rules (some need the site's domain registered, e.g. Twitch's `parent=` parameter).
 
+## The advertisement system (first thoughts, not decided)
+
+Built as its own feature, API first, like the display slots. **Ask before building any of it.**
+
+- **Ad spots ("placements"):** named places in the world, such as the pyramid faces, billboards along the route, a screen in the arena between rounds, the trade floor, or a banner on profiles. Each has a name, a shape (16:9, vertical, banner) and a position. In 2D each becomes a simple video or image card in the page.
+- **Ads:** a video link (YouTube, Twitch clip…) or an uploaded image or short video. Each has a title, the entrant it promotes (links to their profile), dates it runs, and the spots it may appear in. Every ad is **clearly labelled "Ad" or "Sponsored"**.
+- **Who decides:** HardSmoke approves every ad before it shows, and chooses where and when. It's a page like `/displays`, with a log of every change, like applications.
+- **Rotation:** several ads per spot take turns, so no spot shows the same ad all day.
+- **Speed:**
+  - Only the ads in view play, muted, with a still image until then.
+  - Phones and Lite show the still until tapped.
+  - Videos come from embeds where possible, to save the server's bandwidth.
+- **Counting:** simple views and clicks per ad, so advertisers can see results. Counts only, no tracking of individual visitors.
+- **Rules for content** (trading ads need care):
+  - no promised or guaranteed profits;
+  - no performance claims that aren't the bot's verified stats;
+  - no links that ask for keys or wallets;
+  - the same secret-scanning as the rest of the Arena.
+

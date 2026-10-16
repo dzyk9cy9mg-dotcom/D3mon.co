@@ -30,3 +30,7 @@ Opening a profile should feel cinematic, like the scroll-driven character site i
 
 Details are in [INSPIRATION.md](INSPIRATION.md) under "Profiles in the cinematic style".
 
+## The advertisement system (added 2026-10-16)
+
+Ads and trailers advertise the bots. Each one is **a billboard or a simple video display placed somewhere** in the world, not only on the pyramid's outside faces. It needs its own design.
+
