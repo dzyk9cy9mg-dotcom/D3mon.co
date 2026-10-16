@@ -81,6 +81,7 @@ How the page stores battle data today:
 | `server/arena/catalog.js` | Stats Hub 1 | The stat list HardSmoke edits on `/catalog`, value types and formats |
 | `server/arena/verified.js` | Stats Hub 1 | Verified stats worked out from each entrant's own calls and the results |
 | `server/arena/monitor.js` | Stats Hub 2 | HardSmoke's monitor: every entrant × stat, health alerts, the refused-push log |
+| `server/arena/displays.js` | Stats Hub 3 | Named display slots, rendered per reader for the widget and any front end |
 | `server/arena/kalshi.js` | 5 | Polls Kalshi's public market data for `KXBTC15M` and records each result |
 
 ### Storage
@@ -320,6 +321,7 @@ There is no leaderboard endpoint. Cards are per entrant only.
 | `stats.updated` | `entrant:<id>` | A card changed. Clients refetch the card, so privacy filtering stays on the server |
 | `catalog.updated` | `catalog` (anyone) | HardSmoke changed the stat list. Carries the changed `keys` |
 | `monitor.updated` | `admin:monitor` (admins only) | Something on the stats monitor changed. Refetch `GET /api/v1/monitor` |
+| `display.updated` | `display:<key>` (anyone) | HardSmoke changed a display slot. Refetch `GET /api/v1/displays/<key>` |
 
 Topic permissions are checked when the stream opens. The feed is separate from the page's `/api/events`, which stays unchanged.
 
@@ -432,6 +434,24 @@ PUT /api/v1/monitor/settings                         admin: {quietHours?, staleD
   - `kalshi`: the rounds `/metrics` already flags.
 - **Refused pushes** (bot stats and calls with a valid key, and an owner's own typed-in stats) are kept in `arena_rejects/<entrantId>`, the latest 50. Only the time, kind, route, error code, field, and the stat key when it is a valid name are kept, never what was sent, because it may have been a secret. Rate-limit refusals aren't logged.
 - **Live:** `monitor.updated` on `admin:monitor` (admins only), at most every 2 seconds, after any stat, call, result or refusal.
+
+Stats Hub phase 3, display slots (`server/arena/displays.js`, page `/displays` for HardSmoke, widget `js/d3mon-widget.js`):
+
+```
+GET /api/v1/displays/:key?e=<slug>&battle=<id>   anyone: d3mon.display/v1, the slot as this reader may see it
+GET /api/v1/display-slots                        admin: every slot, plus the stats a slot can name
+PUT /api/v1/display-slots/:key                   admin: {name, title?, status?, layout?, bots?, stats?, order?, limit?}
+```
+
+- **A slot** (`arena_displays/<key>`, key like `home-featured`): a name and optional heading, `status` on/off, a `layout` (`card`, `row`, `ticker`, `chart`), up to 12 `stats` in order (list and verified keys), an `order` (`listed` or `name`), and a `limit` (up to 18 bots).
+- **Which bots** (`bots.mode`):
+  - `specific`: one entrant.
+  - `list`: several entrants, in the order given.
+  - `battle`: a battle's lineup, by `battle` id, `"current"` (the battle on the main page, else a live one), or `"page"` (the page passes `?battle=`).
+  - `page`: the entrant the page names (`?e=`), for profile pages.
+- **No ordering by a stat's value.** That would be a leaderboard.
+- **Privacy is the cards':** each entrant's values come from `Stats.card()` for this reader, so a slot shows only what each owner shares with them. Entrants that aren't active are left out. A slot that's `off` is a 404 except for admins (to preview).
+- **Pages only name the slot:** `<div data-d3mon-display="key" data-entrant? data-battle?></div>` plus `js/d3mon-widget.js`. The widget loads `arena.js` if needed, redraws when `data-entrant` or `data-battle` changes, and follows `display:<key>`, `catalog` and each entrant's topic. The example `battle-sidebar` slot (seeded once) sits under `/board` and follows its battle picker.
 
 ## 10. Kalshi (step 5)
 

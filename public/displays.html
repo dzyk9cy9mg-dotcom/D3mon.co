@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Displays · Battle of the Bots · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="arena">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">Display slots: named places where stats are shown, like "home featured bot" or "battle sidebar". Choose the bots, the stats, a layout and an order here, and any page shows the slot by its name. Owners' privacy always applies: a slot only shows what each owner has shared with whoever is looking. <a href="applications">← Applications</a> <a href="monitor">Stats monitor →</a></p>
+
+  <section class="panel" id="denied" hidden>
+    <h2>Admins only</h2>
+    <p class="empty">Sign in with HardSmoke's account or another admin account. <a href="login">Sign in</a></p>
+  </section>
+
+  <section class="panel" id="listBox" hidden>
+    <h2>Slots</h2>
+    <div class="list" id="slots"></div>
+    <div class="actions" style="margin-top:10px"><button class="btn" type="button" id="newSlot">New slot</button></div>
+  </section>
+
+  <section class="panel" id="editBox" hidden>
+    <h2 id="editTitle">New slot</h2>
+    <form id="form" autocomplete="off">
+      <div class="row">
+        <div class="field"><label for="fKey">Key (pages use this)</label><input id="fKey" maxlength="40" placeholder="home-featured" pattern="[a-z][a-z0-9\-]{1,39}" required></div>
+        <div class="field"><label for="fName">Name</label><input id="fName" maxlength="60" placeholder="Home featured bot" required></div>
+        <div class="field"><label for="fTitle">Heading shown on the page (optional)</label><input id="fTitle" maxlength="80"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field" style="flex:0 1 160px"><label for="fStatus">Status</label><select id="fStatus"><option value="on">On</option><option value="off">Off (hidden)</option></select></div>
+        <div class="field" style="flex:0 1 160px"><label for="fLayout">Layout</label><select id="fLayout"><option value="card">Card</option><option value="row">Row (table)</option><option value="ticker">Ticker</option><option value="chart">Chart</option></select></div>
+        <div class="field" style="flex:0 1 200px"><label for="fOrder">Bot order</label><select id="fOrder"><option value="listed">As listed</option><option value="name">By name</option></select></div>
+        <div class="field" style="flex:0 1 120px"><label for="fLimit">At most</label><input id="fLimit" type="number" min="1" max="18" value="6"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field" style="flex:0 1 260px"><label for="fMode">Which bots</label><select id="fMode">
+          <option value="specific">One specific entrant</option><option value="list">A list of entrants</option>
+          <option value="battle">A battle's lineup</option><option value="page">The entrant the page names (profile pages)</option></select></div>
+        <div class="field" id="battleField" hidden><label for="fBattle">Battle</label><select id="fBattle"></select></div>
+      </div>
+      <div id="entrantField" hidden style="margin-top:10px"><label>Entrants <span class="tag">(tick to add; ↑↓ to order)</span></label><div class="dsp-pick" id="entrants"></div></div>
+      <div style="margin-top:10px"><label>Stats <span class="tag">(tick to add, up to 12; ↑↓ to order)</span></label><div class="dsp-pick" id="stats"></div></div>
+      <p class="tag" style="margin-top:10px">Bots can't be sorted by a stat's value: that would make a leaderboard.</p>
+      <div class="actions" style="margin-top:10px"><button class="btn" type="submit">Save and preview</button><button class="btn ghost" type="button" id="cancel">Close</button></div>
+    </form>
+    <h3 class="sub">Put it on a page</h3>
+    <pre class="code" id="snippet"></pre>
+    <h3 class="sub">Preview <span class="tag">(as you see it; each reader sees only what owners share with them)</span></h3>
+    <div class="row" style="margin-bottom:8px" id="previewCtl"></div>
+    <div id="preview"></div>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/d3mon-widget.js"></script>
+<script src="js/arena-displays.js"></script>
+</body>
+</html>

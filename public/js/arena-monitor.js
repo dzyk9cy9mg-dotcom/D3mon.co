@@ -4,7 +4,8 @@
 // private, so this page can't show them.
 (function () {
   "use strict";
-  const { api, follow, esc, kindName, session } = window.Arena;
+  const { api, follow, esc, kindName, session, statText } = window.Arena;
+  const short = (c, v) => statText({ ...c, value: v });
   const $ = id => document.getElementById(id);
   const S = { data: null, open: new Set(), sortKey: null };
   const ALERT_NAMES = { quiet: "quiet", stale: "stale stats", rejected: "refused pushes" };
@@ -18,28 +19,6 @@
     const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
     return s < 90 ? "just now" : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`;
   };
-  const pct = (v, signed) => `${signed && v > 0 ? "+" : ""}${Math.round(v * 1000) / 10}%`;
-  const money = v => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: Math.abs(v) < 1 ? 4 : 2 })}`;
-  const num = (f, v) => f === "percent" ? pct(v) : f === "money" ? money(v) : String(Math.round(v * 10000) / 10000);
-  // A short, one-line version of a value for the table.
-  function short(c, v) {
-    if (v === null || v === undefined) return "–";
-    switch (c.type) {
-      case "percent": return pct(v);
-      case "return": return pct(v, true);
-      case "money": return money(v);
-      case "duration": return `${Math.round(v / 1000)}s`;
-      case "integer": case "number": return c.format === "streak" ? (v > 0 ? `+${v}` : String(v)) : String(v);
-      case "record": return `${v.w}–${v.l}${v.t ? ` (${v.t})` : ""}`;
-      case "form": return v.slice(-10).map(x => (x === "w" ? "✓" : "✗")).join("");
-      case "battles": return `${v.length} battle${v.length === 1 ? "" : "s"}`;
-      case "series": return v.length ? `${v.length} pts, last ${num(c.format, v[v.length - 1].v)}` : "–";
-      case "histogram": { const k = Object.keys(v); return k.slice(0, 3).map(x => `${x} ${num(c.format, v[x])}`).join(", ") + (k.length > 3 ? " …" : ""); }
-      case "text": return v.length > 28 ? `${v.slice(0, 27)}…` : v;
-      default: return String(v);
-    }
-  }
-
   function columns() {
     const cat = $("fCat").value, src = $("fSrc").value;
     return S.data.columns.filter(c => (!cat || c.category === cat) && (!src || c.source === src));

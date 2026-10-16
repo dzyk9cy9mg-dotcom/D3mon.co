@@ -40,6 +40,8 @@
 
   function pick(id) {
     S.id = id;
+    // The "battle-sidebar" display slot below the board follows the battle picked here.
+    document.querySelectorAll("[data-d3mon-display][data-battle]").forEach(el => el.setAttribute("data-battle", id));
     try { history.replaceState(null, "", `?battle=${encodeURIComponent(id)}`); } catch (e) {}
     if (S.es) S.es.close();
     let t = null;
