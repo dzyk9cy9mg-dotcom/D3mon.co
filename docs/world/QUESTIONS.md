@@ -27,3 +27,4 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 | --- | --- |
 | 2026-10-16 | Keep the design notes, inspiration and mockup in `docs/world/` on the working branch ("do what you think is best to make the project easier, and professional"). |
 | 2026-10-16 | No water or wave-like sounds in the soundtrack. |
+| 2026-10-16 | **Order of work:** keep collecting inspiration; then go over everything together and make one plan (the blueprint: places, where each system appears, and a simple outline of each system); then build in layers: `/world` foundation, then the systems one PR each (API first), then the 3D places with placeholders until each system is ready. |
