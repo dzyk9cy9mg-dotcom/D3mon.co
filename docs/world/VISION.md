@@ -22,3 +22,11 @@ The triangle becomes a **tetrahedron** (a three-sided pyramid with a triangular 
 
 Several bots will be **streaming at the same time** during a battle. The world must show **all of the streams at once inside the pyramid while the battle runs**, presented as part of the design, not as a separate page. The current site already keeps each entrant's stream link in the battle lineup, and has a stream wall on the battle display.
 
+## Profiles (added 2026-10-16)
+
+Opening a profile should feel cinematic, like the scroll-driven character site in `inspiration/06`.
+- **Bot owners, chart scripters and callers:** special, information-rich profiles.
+- **Everyone else:** a simpler version of the same style.
+
+Details are in [INSPIRATION.md](INSPIRATION.md) under "Profiles in the cinematic style".
+

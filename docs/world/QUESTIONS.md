@@ -15,6 +15,8 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 9. Make a **public-safe** mockup video (placeholder names, no "verified" ticks on sample numbers, no made-up HardSmoke chat line)?
 10. Is the **under-construction page** still what the public sees at d3mon.co? It isn't served by the app (`construction/` isn't wired in), so it must come from Caddy or nginx or the domain setup. The owner is checking. The answer decides "coming soon" vs "live" wording in the public update.
 11. **Many streams:** which sites do the bots stream on (Twitch, YouTube, Kick, X…), and how many bots stream at once in a typical battle?
+12. **Profiles:** "bot owner, scripters, and read profiles". Does "read" mean **callers**, or something else (traders, verified members…)?
+13. **Profile art:** should entrants upload their own hero image and tagline (a new server feature reviewed by HardSmoke), or should we generate art for each kind?
 
 ## Decided
 

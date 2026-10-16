@@ -15,6 +15,8 @@ Files are in [`inspiration/`](inspiration/). They're AI-generated concept images
 | `04-video-10118.mov` and `04-video-10118-frames.jpg` | The owner's 10-second portrait clip, and 12 frames from it: a **stadium arena** with tiers (show members online as lights in the stands), the camera gliding up a **spiral glass ramp**, hexagon **bot pods**, glass **caller booths** with a hologram and stat dials (real verified stats only), floating **formulas and code** for Chart Scripts, and a **golden geometric crown** at the peak. Shot in portrait, so the world must look right on phones held upright. Very dense: show live data only on screens near the camera. |
 | `05-lusion-astronaut.jpg`, `05-lusion-walkthrough-1.jpg`, `-2.jpg` | Frames from a 96-second screen recording (2026-10-16) of a YouTube walkthrough of **Lusion's own site** (lusion.co, the studio behind EverSwap and Oryzo). The video itself isn't saved: it's someone else's work and 28 MB, and the frames are enough. **The owner especially loves the astronaut part.** The sequence: the scroll **dives into a small screen** showing an astronaut above the Earth, so the screen becomes the whole page. A huge headline ("Step into a new world…") **splits apart as the camera flies through it**. The astronaut drifts toward a **glowing ring like a black hole**, passes through it into a **tunnel of light cells** (white, then green, pink and blue), then into "an alternative reality". He comes back at the end among stickers next to "Let's work together". Also: 3D objects that react to the mouse, a line drawing itself down the page as you scroll, and video previews on hover. |
 
+| `06-cinematic-profile-style.jpg` | Frames from a 95-second screen recording (2026-10-16) of a YouTube tutorial, "Create Interactive 3D Scrolling Effects Like Iron Man" (DeviniLabs). Only the first ~20 seconds show the finished site; the rest is the how-to. The video isn't saved. **The owner wants this as the style for profiles** (see the profiles section below). What it does: a full-screen, cinematic character in dark, smoky light that **changes as you scroll**: the suit assembles, the face dissolves into dust, the pose and the backdrop change. A **huge two-tone headline** ("I am **Iron Man.**", with the last words in gold). Thin **HUD micro-labels** in the corners and frame brackets. A short **quote in a small glass card**. Strong focus on one figure. **Iron Man is Marvel's character, so we take the style only, never the character or images.** |
+
 ### The astronaut: ideas for D3MON (owner's favourite, 2026-10-16)
 
 The owner wants an astronaut "somewhere" in the world. **Make our own astronaut, never Lusion's model or art.** Take the idea, not the asset. Ideas, to choose from later:
@@ -30,6 +32,44 @@ Speed: the astronaut is a real 3D model, so it's where the Nano Banana → image
 - Keep it to a few MB, with a lighter version for Lite and phones.
 - In 2D, a pre-rendered image or a short looping video.
 - Its animation (floating and turning) can be gentle and loop, which is cheap to run.
+
+### Profiles in the cinematic style (owner, 2026-10-16)
+
+The owner wants the cinematic style from `06` to be **what it feels like to open a profile**:
+- **Bot owners, chart scripters and callers** get special, information-rich profiles.
+- **Everyone else** gets a simpler version of the same style.
+
+**The rich entrant profile.** Every part follows the owner's privacy choices: stats are hidden by default, and only what's set Public or Members only shows.
+- **Hero:** full-screen art for the entrant, which **changes as you scroll**:
+  - a bot assembles from parts;
+  - a caller's hologram forms;
+  - a script's chart draws itself in light.
+- **Headline:** "I am **NeuroBot 9.**", with the name in its kind's colour (blue for Bots, violet for Chart Scripts, amber for Callers).
+- **HUD labels** in the corners: kind, creator, active since, battles entered, live now or not.
+- **Quote card:** the owner's tagline.
+- **Then, as you scroll:**
+  - ✓ verified stats, then self-reported stats, clearly labelled;
+  - battle history;
+  - recent calls (only after their lock);
+  - their stream and trailer;
+  - their Discord server;
+  - "watch them in the next battle".
+
+**The simple member profile:**
+- the same frame, HUD and headline style;
+- avatar, member since and community activity;
+- no long scroll sequence.
+
+**Speed:** frame-by-frame image sequences are heavy, so we use cheaper ways to get the same feel:
+- a short, compressed sequence;
+- or one image with a shader effect (dissolve, assemble, light sweep), which looks like a sequence for a fraction of the download;
+- Lite and phones: a simple crossfade;
+- 2D: still images.
+
+**What it needs from the server, later:**
+- Entrants need a way to **supply their hero art and a tagline.**
+- That's a new, checked field (images, a size limit, no secrets, reviewed by HardSmoke) on the entrant API. **Ask before building it.**
+- Until then, profiles use generated art in the kind's colour.
 
 ### Gemini prompts that worked
 
