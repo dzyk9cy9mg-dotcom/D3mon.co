@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 980" width="1100" height="980" role="img" aria-label="D3MON world blueprint, seen from above">
+<defs>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <radialGradient id="sky" cx="50%" cy="0%" r="80%"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".12"/><stop offset="1" stop-color="#4DA3FF" stop-opacity="0"/></radialGradient>
+  <pattern id="fol" width="40" height="69.28" patternUnits="userSpaceOnUse"><g fill="none" stroke="#4DA3FF" stroke-opacity=".07"><circle cx="0" cy="0" r="40"/><circle cx="40" cy="0" r="40"/><circle cx="20" cy="34.64" r="40"/><circle cx="0" cy="69.28" r="40"/><circle cx="40" cy="69.28" r="40"/></g></pattern>
+</defs>
+<rect width="1100" height="980" fill="#05080C"/><rect width="1100" height="980" fill="url(#fol)"/><rect width="1100" height="980" fill="url(#sky)"/>
+<text x="40.0" y="52.0" fill="#DCE7EE" font-size="20" text-anchor="start" style="font-family:Orbitron,'Chakra Petch',Arial,sans-serif;font-weight:700;letter-spacing:.12em" >D3MON WORLD · BLUEPRINT · SEEN FROM ABOVE</text>
+<text x="40.0" y="78.0" fill="#587080" font-size="13" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >The triangular spiral climbs inside the pyramid: three runs per turn, a hub at every corner</text>
+<linearGradient id="eAB" gradientUnits="userSpaceOnUse" x1="550" y1="120" x2="140" y2="830"><stop offset="0" stop-color="#FFB547"/><stop offset="1" stop-color="#4DA3FF"/></linearGradient>
+<line x1="550" y1="120" x2="140" y2="830" stroke="url(#eAB)" stroke-width="4" filter="url(#glow)"/>
+<linearGradient id="eBC" gradientUnits="userSpaceOnUse" x1="140" y1="830" x2="960" y2="830"><stop offset="0" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient>
+<line x1="140" y1="830" x2="960" y2="830" stroke="url(#eBC)" stroke-width="4" filter="url(#glow)"/>
+<linearGradient id="eCA" gradientUnits="userSpaceOnUse" x1="960" y1="830" x2="550" y2="120"><stop offset="0" stop-color="#B98CFF"/><stop offset="1" stop-color="#FFB547"/></linearGradient>
+<line x1="960" y1="830" x2="550" y2="120" stroke="url(#eCA)" stroke-width="4" filter="url(#glow)"/>
+<line x1="550" y1="120" x2="550.0" y2="593.3333333333334" stroke="#FFB547" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 6"/>
+<line x1="140" y1="830" x2="550.0" y2="593.3333333333334" stroke="#4DA3FF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 6"/>
+<line x1="960" y1="830" x2="550.0" y2="593.3333333333334" stroke="#B98CFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 6"/>
+<path d="M 550.0 186.3 L 197.4 796.9 L 902.6 796.9 L 550.0 290.4 L 287.6 744.8 L 812.4 744.8 L 550.0 394.5 L 377.8 692.7 L 722.2 692.7 L 550.0 470.3" fill="none" stroke="#9fd0ff" stroke-opacity=".9" stroke-width="7" stroke-linejoin="round" stroke-dasharray="1 0"/>
+<path d="M 550.0 186.3 L 197.4 796.9 L 902.6 796.9 L 550.0 290.4 L 287.6 744.8 L 812.4 744.8 L 550.0 394.5 L 377.8 692.7 L 722.2 692.7 L 550.0 470.3" fill="none" stroke="#05080C" stroke-width="3" stroke-linejoin="round"/>
+<path d="M 550.0 186.3 L 197.4 796.9 L 902.6 796.9 L 550.0 290.4 L 287.6 744.8 L 812.4 744.8 L 550.0 394.5 L 377.8 692.7 L 722.2 692.7 L 550.0 470.3" fill="none" stroke="#cfe6ff" stroke-width="1" stroke-dasharray="6 6" stroke-linejoin="round"/>
+<circle cx="550.0" cy="186.3" r="13" fill="#05080C" stroke="#FFB547" stroke-width="3" filter="url(#glow)"/>
+<circle cx="197.4" cy="796.9" r="13" fill="#05080C" stroke="#4DA3FF" stroke-width="3" filter="url(#glow)"/>
+<circle cx="902.6" cy="796.9" r="13" fill="#05080C" stroke="#B98CFF" stroke-width="3" filter="url(#glow)"/>
+<circle cx="550.0" cy="290.4" r="11" fill="#05080C" stroke="#FFB547" stroke-width="3" filter="url(#glow)"/>
+<circle cx="287.6" cy="744.8" r="11" fill="#05080C" stroke="#4DA3FF" stroke-width="3" filter="url(#glow)"/>
+<circle cx="812.4" cy="744.8" r="11" fill="#05080C" stroke="#B98CFF" stroke-width="3" filter="url(#glow)"/>
+<circle cx="550.0" cy="394.5" r="9" fill="#05080C" stroke="#FFB547" stroke-width="3" filter="url(#glow)"/>
+<circle cx="377.8" cy="692.7" r="9" fill="#05080C" stroke="#4DA3FF" stroke-width="3" filter="url(#glow)"/>
+<circle cx="722.2" cy="692.7" r="9" fill="#05080C" stroke="#B98CFF" stroke-width="3" filter="url(#glow)"/>
+<text x="572.0" y="191.3" fill="#FFB547" font-size="13" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >CALLER BOOTHS · amber hub</text>
+<text x="201.4" y="830.9" fill="#4DA3FF" font-size="13" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >BOT PODS · blue hub</text>
+<text x="898.6" y="830.9" fill="#B98CFF" font-size="13" text-anchor="end" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >SCRIPT SCREENS · violet hub</text>
+<text x="550.0" y="786.9" fill="#587080" font-size="11" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >TURN 1</text>
+<text x="550.0" y="734.8" fill="#587080" font-size="11" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >TURN 2</text>
+<text x="550.0" y="682.7" fill="#587080" font-size="11" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >TURN 3</text>
+<rect x="358.7" y="482.6" width="30" height="18" rx="2" fill="#2a1d05" stroke="#FFB547" stroke-width="1.5"/>
+<text x="373.7" y="495.6" fill="#FFB547" font-size="10" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >AD</text>
+<rect x="535.0" y="735.8" width="30" height="18" rx="2" fill="#2a1d05" stroke="#FFB547" stroke-width="1.5"/>
+<text x="550.0" y="748.8" fill="#FFB547" font-size="10" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >AD</text>
+<rect x="621.1" y="534.6" width="30" height="18" rx="2" fill="#2a1d05" stroke="#FFB547" stroke-width="1.5"/>
+<text x="636.1" y="547.6" fill="#FFB547" font-size="10" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >AD</text>
+<circle cx="550.0" cy="593.3333333333334" r="138" fill="none" stroke="#587080" stroke-opacity=".5" stroke-width="1" stroke-dasharray="2 5"/>
+<line x1="654.0" y1="593.3" x2="670.0" y2="593.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="653.6" y1="602.4" x2="669.5" y2="603.8" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="652.4" y1="611.4" x2="668.2" y2="614.2" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="650.5" y1="620.3" x2="665.9" y2="624.4" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="647.7" y1="628.9" x2="662.8" y2="634.4" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="644.3" y1="637.3" x2="658.8" y2="644.0" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="640.1" y1="645.3" x2="653.9" y2="653.3" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="635.2" y1="653.0" x2="648.3" y2="662.2" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="629.7" y1="660.2" x2="641.9" y2="670.5" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="623.5" y1="666.9" x2="634.9" y2="678.2" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="616.8" y1="673.0" x2="627.1" y2="685.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="609.7" y1="678.5" x2="618.8" y2="691.6" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="602.0" y1="683.4" x2="610.0" y2="697.3" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="594.0" y1="687.6" x2="600.7" y2="702.1" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="585.6" y1="691.1" x2="591.0" y2="706.1" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="576.9" y1="693.8" x2="581.1" y2="709.2" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="568.1" y1="695.8" x2="570.8" y2="711.5" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="559.1" y1="696.9" x2="560.5" y2="712.9" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="550.0" y1="697.3" x2="550.0" y2="713.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="540.9" y1="696.9" x2="539.5" y2="712.9" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="531.9" y1="695.8" x2="529.2" y2="711.5" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="523.1" y1="693.8" x2="518.9" y2="709.2" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="514.4" y1="691.1" x2="509.0" y2="706.1" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="506.0" y1="687.6" x2="499.3" y2="702.1" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="498.0" y1="683.4" x2="490.0" y2="697.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="490.3" y1="678.5" x2="481.2" y2="691.6" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="483.2" y1="673.0" x2="472.9" y2="685.3" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="476.5" y1="666.9" x2="465.1" y2="678.2" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="470.3" y1="660.2" x2="458.1" y2="670.5" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="464.8" y1="653.0" x2="451.7" y2="662.2" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="459.9" y1="645.3" x2="446.1" y2="653.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="455.7" y1="637.3" x2="441.2" y2="644.0" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="452.3" y1="628.9" x2="437.2" y2="634.4" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="449.5" y1="620.3" x2="434.1" y2="624.4" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="447.6" y1="611.4" x2="431.8" y2="614.2" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="446.4" y1="602.4" x2="430.5" y2="603.8" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="446.0" y1="593.3" x2="430.0" y2="593.3" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="446.4" y1="584.3" x2="430.5" y2="582.9" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="447.6" y1="575.3" x2="431.8" y2="572.5" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="449.5" y1="566.4" x2="434.1" y2="562.3" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="452.3" y1="557.8" x2="437.2" y2="552.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="455.7" y1="549.4" x2="441.2" y2="542.6" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="459.9" y1="541.3" x2="446.1" y2="533.3" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="464.8" y1="533.7" x2="451.7" y2="524.5" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="470.3" y1="526.5" x2="458.1" y2="516.2" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="476.5" y1="519.8" x2="465.1" y2="508.5" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="483.2" y1="513.7" x2="472.9" y2="501.4" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="490.3" y1="508.1" x2="481.2" y2="495.0" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="498.0" y1="503.3" x2="490.0" y2="489.4" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="506.0" y1="499.1" x2="499.3" y2="484.6" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="514.4" y1="495.6" x2="509.0" y2="480.6" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="523.1" y1="492.9" x2="518.9" y2="477.4" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="531.9" y1="490.9" x2="529.2" y2="475.2" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="540.9" y1="489.7" x2="539.5" y2="473.8" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="550.0" y1="489.3" x2="550.0" y2="473.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="559.1" y1="489.7" x2="560.5" y2="473.8" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="568.1" y1="490.9" x2="570.8" y2="475.2" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="576.9" y1="492.9" x2="581.1" y2="477.4" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="585.6" y1="495.6" x2="591.0" y2="480.6" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="594.0" y1="499.1" x2="600.7" y2="484.6" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="602.0" y1="503.3" x2="610.0" y2="489.4" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="609.7" y1="508.1" x2="618.8" y2="495.0" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="616.8" y1="513.7" x2="627.1" y2="501.4" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="623.5" y1="519.8" x2="634.9" y2="508.5" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="629.7" y1="526.5" x2="641.9" y2="516.2" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="635.2" y1="533.7" x2="648.3" y2="524.5" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="640.1" y1="541.3" x2="653.9" y2="533.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="644.3" y1="549.4" x2="658.8" y2="542.6" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="647.7" y1="557.8" x2="662.8" y2="552.3" stroke="#2EE59D" stroke-width="2.4"/>
+<line x1="650.5" y1="566.4" x2="665.9" y2="562.3" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="652.4" y1="575.3" x2="668.2" y2="572.5" stroke="#FF4D6A" stroke-width="2.4"/>
+<line x1="653.6" y1="584.3" x2="669.5" y2="582.9" stroke="#2EE59D" stroke-width="2.4"/>
+<circle cx="550.0" cy="593.3333333333334" r="62" fill="none" stroke="#cfe6ff" stroke-opacity=".55" stroke-width="1.2" stroke-dasharray="10 6"/>
+<rect x="606.0" y="589.3" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="597.7" y="620.3" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="575.0" y="643.0" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="544.0" y="651.3" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="513.0" y="643.0" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="490.3" y="620.3" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="482.0" y="589.3" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="490.3" y="558.3" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="513.0" y="535.6" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="544.0" y="527.3" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="575.0" y="535.6" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<rect x="597.7" y="558.3" width="12" height="8" fill="#0f1922" stroke="#cfe6ff" stroke-opacity=".8"/>
+<circle cx="550.0" cy="593.3333333333334" r="18" fill="#9fd0ff" opacity=".25" filter="url(#glow)"/><circle cx="550.0" cy="593.3333333333334" r="8" fill="#fff"/>
+<text x="550.0" y="751.3" fill="#DCE7EE" font-size="13" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >THE ARENA · round clock on the floor</text>
+<text x="550.0" y="627.3" fill="#cfe6ff" font-size="11" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >LIGHT COLUMN · lift</text>
+<text x="622.0" y="529.3" fill="#cfe6ff" font-size="11" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >SECTOR RING (turn 2)</text>
+<text x="550.0" y="94.0" fill="#FFB547" font-size="15" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >CALLERS · spire landmark</text>
+<text x="130.0" y="874.0" fill="#4DA3FF" font-size="15" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >BOTS · crystal landmark</text>
+<text x="970.0" y="874.0" fill="#B98CFF" font-size="15" text-anchor="end" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >CHART SCRIPTS · dome landmark</text>
+<text x="319.0" y="475.0" fill="#FFB547" font-size="12" text-anchor="end" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >OUTSIDE FACE · BILLBOARD</text>
+<text x="781.0" y="475.0" fill="#FFB547" font-size="12" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >OUTSIDE FACE · BILLBOARD</text>
+<text x="550.0" y="860.0" fill="#FFB547" font-size="12" text-anchor="middle" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >OUTSIDE FACE · BILLBOARD</text>
+<line x1="40" y1="900" x2="80" y2="900" stroke="#9fd0ff" stroke-width="6"/>
+<text x="90.0" y="904.0" fill="#8FA3B2" font-size="12" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >spiral ramp (scroll route)</text>
+<rect x="310" y="892" width="22" height="15" fill="#2a1d05" stroke="#FFB547"/>
+<text x="340.0" y="904.0" fill="#8FA3B2" font-size="12" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >ad spot (tasteful: in-world, muted, labelled)</text>
+<circle cx="700" cy="900" r="8" fill="#05080C" stroke="#4DA3FF" stroke-width="3"/>
+<text x="716.0" y="904.0" fill="#8FA3B2" font-size="12" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >kind hub at each corner, every turn</text>
+<text x="40.0" y="934.0" fill="#587080" font-size="12" text-anchor="start" style="font-family:'Share Tech Mono',Menlo,Consolas,monospace" >Trade Floor and golden crown sit at the peak, directly above the centre. Ad-free: the Trade Floor, the opening, live streams during a round.</text>
+</svg>

@@ -27,4 +27,6 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 | 2026-10-16 | **Moving:** scrolling follows a guided route; free flight is available at any time, with "back to route". |
 | 2026-10-16 | **Reduce motion:** opens in 2D, with 3D available by choice; in 3D the camera cuts between places instead of flying. |
 | 2026-10-16 | **Layout (owner: "I like the spiral, as long as it fits the triangle. Do what you think is best"):** a **triangular spiral ramp inside the pyramid**, three straight runs per turn, one along each inside wall. The Callers wall (amber) holds caller booths, the Bots wall (blue) bot pods, the Chart Scripts wall (violet) script screens. It climbs from the arena on the floor to the trade floor at the peak, tightening as the pyramid narrows. The three outside corners keep simple glowing landmarks seen from a distance. |
+| 2026-10-16 | **Ad placement is ours to choose** (owner: "wherever it looks best to run advertisements tastefully. I don't want it to be annoying"). The spots and rules are in BLUEPRINT.md. |
+| 2026-10-16 | **Ads are not built first.** The world is designed with ad spots reserved; until the ad system exists (built last, in step 3), the spots show D3MON's own content (the next battle, "apply", a featured entrant, our trailer), so they're never empty. |
 
