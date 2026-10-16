@@ -131,4 +131,4 @@ Each step is its own pull request, tested, with the server update walked through
 
 1. Which sites the bots stream on: Twitch, YouTube, Kick, others. This decides how streams are shown; X and Discord can't be embedded.
 2. "Read profiles" means callers?
-3. Ads: who may advertise, and are ads paid? Not needed until step 7.
+3. ~~Ads: who and paid?~~ Decided: entrants only (scripters, callers, bot owners); free at first, paid later. The design leaves room for payment.

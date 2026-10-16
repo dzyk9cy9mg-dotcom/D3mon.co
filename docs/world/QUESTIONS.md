@@ -12,8 +12,6 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 11. **Many streams:** which sites do the bots stream on (Twitch, YouTube, Kick, X…), and how many bots stream at once in a typical battle?
 12. **Profiles:** "bot owner, scripters, and read profiles". Does "read" mean **callers**, or something else (traders, verified members…)?
 13. **Profile art:** should entrants upload their own hero image and tagline (a new server feature reviewed by HardSmoke), or should we generate art for each kind?
-14. **Ads, who:** only Arena entrants (bots, scripts, callers), or outside sponsors too?
-15. **Ads, payment:** will ads be paid? If so, how (manually by arrangement, or through the site)? That changes how much the system needs.
 16. **Ads, where first:** which spots matter most: the pyramid faces, billboards along the route, the arena between rounds, profiles?
 
 ## Decided
@@ -29,4 +27,4 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 | 2026-10-16 | **Layout (owner: "I like the spiral, as long as it fits the triangle. Do what you think is best"):** a **triangular spiral ramp inside the pyramid**, three straight runs per turn, one along each inside wall. The Callers wall (amber) holds caller booths, the Bots wall (blue) bot pods, the Chart Scripts wall (violet) script screens. It climbs from the arena on the floor to the trade floor at the peak, tightening as the pyramid narrows. The three outside corners keep simple glowing landmarks seen from a distance. |
 | 2026-10-16 | **Ad placement is ours to choose** (owner: "wherever it looks best to run advertisements tastefully. I don't want it to be annoying"). The spots and rules are in BLUEPRINT.md. |
 | 2026-10-16 | **Ads are not built first.** The world is designed with ad spots reserved; until the ad system exists (built last, in step 3), the spots show D3MON's own content (the next battle, "apply", a featured entrant, our trailer), so they're never empty. |
-
+| 2026-10-16 | **Ads, who and payment:** ads are for **scripters, callers and bot owners** (Arena entrants). They'll be **paid eventually, but not yet**: build the ad system free to start, in a way that can add payment later without redesign. |
