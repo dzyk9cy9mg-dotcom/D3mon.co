@@ -7,8 +7,8 @@
 //   data/users/<uid>/…           that member only (prefs, notes, DM keys, read markers)
 //   config, verified, streamers, results       admins (site settings, roles, round results)
 //   bots, scripts, requests, rolereq, dcreq, reviewreq   /<uid> docs: that member or an admin,
-//                                except a coin transfer's xfer[id].done/ok flags in bots, which only
-//                                admins set (the member could otherwise approve their own transfer)
+//                                except coin transfers in bots: only admins set xfer[id].done/ok, and
+//                                a finished transfer can't be changed or removed by its member
 //   dmx                          the two people in the conversation (doc.p)
 //   reviews                      the reviewer (doc.a) or an admin
 //   subs, threads, posts, chat   the author (authorId) or an admin; anyone posting may bump a
@@ -33,17 +33,22 @@ export const isAdmin = ctx => ctx.role === "admin" || ctx.role === "owner";
 const isServerOnly = segs => segs[0].startsWith("arena_");
 const isPrivateArea = segs => segs[0] === "data" && segs[1] === "users" && segs.length >= 4;
 const inConversation = (doc, uid) => !!doc && Array.isArray(doc.p) && doc.p.includes(uid);
-// A non-admin's write to bots/<uid> must leave every transfer's done/ok flags as they were.
-// New requests carry neither flag; removing a request (withdrawing it) is still allowed.
-const sameXferFlags = (before, after) => {
-  const was = before?.xfer || {}, now = after?.xfer;
-  if (now === undefined) return true;
-  if (!now || typeof now !== "object") return !Object.values(was).some(x => x && (x.done !== undefined || x.ok !== undefined));
-  return Object.entries(now).every(([id, x]) => {
-    const old = Object.hasOwn(was, id) && was[id] && typeof was[id] === "object" ? was[id] : {};
-    const cur = x && typeof x === "object" ? x : {};
-    return cur.done === old.done && cur.ok === old.ok;
-  });
+// A non-admin's write to bots/<uid> must leave the coin transfers' admin decisions alone:
+// no new or pending request may carry done/ok, and a finished one (an admin set done or ok)
+// stays exactly as it is, so it can't be changed, removed, or lost by deleting the document.
+// Pending requests can still be withdrawn.
+const isObj = v => !!v && typeof v === "object";
+const same = (a, b) => {
+  if (!isObj(a) || !isObj(b)) return a === b;
+  const ka = Object.keys(a), kb = Object.keys(b);
+  return ka.length === kb.length && ka.every(k => Object.hasOwn(b, k) && same(a[k], b[k]));
+};
+const isFinished = x => isObj(x) && (x.done !== undefined || x.ok !== undefined);
+const keepsXferDecisions = (before, after) => {
+  const was = isObj(before?.xfer) ? before.xfer : {}, now = isObj(after?.xfer) ? after.xfer : {};
+  const finished = Object.keys(was).filter(id => isFinished(was[id]));
+  return finished.every(id => Object.hasOwn(now, id) && same(was[id], now[id])) &&
+    Object.keys(now).every(id => finished.includes(id) || !isFinished(now[id]));
 };
 const onlyKeys = (obj, keys) => !!obj && Object.keys(obj).length > 0 && Object.keys(obj).every(k => keys.includes(k));
 
@@ -78,7 +83,7 @@ export function canWrite(ctx, { op, segs, before, after, patch }, lookup) {
   if (col === "data") return true; // the path check was enough
   if (col === "dmx" && segs.length === 2) return (!before || inConversation(before, uid)) && (deleting || inConversation(after, uid));
   if (isAdmin(ctx)) return true;
-  if (col === "bots") return deleting || sameXferFlags(before, after);
+  if (col === "bots") return keepsXferDecisions(before, after);
   if (OWN_DOC.has(col) || SHARED.has(col)) return true;
   if (col === "reviews") return (!before || before.a === uid) && (deleting || after.a === uid);
   if (col === "streams") {

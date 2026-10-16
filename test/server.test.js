@@ -236,9 +236,36 @@ describe("D3MON.CO server", () => {
       const cur = await get();
       assert.equal((await alice.db("set", { path, data: { a, list: [{ n: "bot" }], pub: {}, votes: {}, proposals: {}, xfer: cur.xfer } })).status, 200);
       assert.equal((await alice.db("merge", { path, data: { a, xfer: { x3: { to: "bob", amt: 1, at: 3 } } } })).status, 200);
-      // and deleting the document doesn't let her bring it back approved
-      assert.equal((await alice.db("delete", { path })).status, 200);
-      assert.equal((await alice.db("set", { path, data: { a, xfer: { x1: { to: "bob", amt: 5, at: 1, done: true, ok: true } } } })).status, 403);
+      // and deleting the document (allowed while nothing is finished) doesn't let her bring one back approved
+      const b = bob.user.id, bpath = `bots/${b}`;
+      assert.equal((await bob.db("set", { path: bpath, data: { a: b, xfer: { y1: { to: "alice", amt: 2, at: 1 } } } })).status, 200);
+      assert.equal((await bob.db("delete", { path: bpath })).status, 200);
+      assert.equal((await bob.db("set", { path: bpath, data: { a: b, xfer: { y1: { to: "alice", amt: 2, at: 1, done: true, ok: true } } } })).status, 403);
+    });
+
+    test("a finished coin transfer stays as the admin left it", async () => {
+      const carol = new Client(srv.base);
+      await carol.register("carol-xfer", "carol-pass-1", "Carol");
+      const a = carol.user.id, path = `bots/${a}`, get = async () => (await carol.db("get", { path })).json.data;
+      const done = { to: "bob", amt: 4, at: 1, done: true, ok: false };
+      assert.equal((await carol.db("set", { path, data: { a, list: [], xfer: { f1: { to: "bob", amt: 4, at: 1 }, p1: { to: "bob", amt: 1, at: 2 } } } })).status, 200);
+      assert.equal((await owner.db("merge", { path, data: { xfer: { f1: { done: true, ok: false } } } })).status, 200);
+      // Alice can't edit, remove or wipe the declined request, by any route
+      for (const [op, data] of [
+        ["merge", { xfer: { f1: { amt: 400 } } }],
+        ["merge", { xfer: { f1: { memo: "edited" } } }],
+        ["merge", { xfer: { f1: null } }],
+        ["update", { xfer: null }],
+        ["set", { a, list: [], xfer: { p1: { to: "bob", amt: 1, at: 2 } } }],
+        ["set", { a, list: [] }],
+        ["delete", undefined],
+      ]) assert.equal((await carol.db(op, { path, data })).status, 403, `${op} ${JSON.stringify(data)}`);
+      assert.deepEqual((await get()).xfer.f1, done);
+      // she can still withdraw her pending one and save the rest of her document
+      assert.equal((await carol.db("set", { path, data: { a, list: [{ n: "bot" }], pub: {}, votes: {}, proposals: {}, xfer: { f1: { ...done } } } })).status, 200);
+      assert.deepEqual((await get()).xfer, { f1: done });
+      // admins can still tidy up
+      assert.equal((await owner.db("merge", { path, data: { xfer: { f1: null } } })).status, 200);
     });
 
     test("each member's private area is theirs alone, even for admins", async () => {
