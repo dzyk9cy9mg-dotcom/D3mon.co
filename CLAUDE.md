@@ -70,6 +70,8 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 | The standard stat list lives in `arena_statcatalog`, edited by HardSmoke on `/catalog`. The seed only adds missing stats. Stats are retired, never deleted, and a type locks once values exist | Editable without code changes; history stays readable |
 | Old settings for the removed computed stats (`arena_statsettings.stats`) are kept but never read. New settings are under `catalog` | A choice made for a verified stat must not publish a self-reported one |
 | A list key an owner already uses as a custom stat stays theirs for that bot | Their history and type come first |
+| **The stats monitor shows a value only when its owner made it Public or Members only.** Hidden and private stats show activity (updated when, how often, how, errors), never the value | Owner: "I do want owners to have the power to keep private." The same rule as cards, where admins read like members |
+| Refused pushes are logged by error code, field and key name only, never the content | A refused value may have been a secret |
 
 ## Backlog
 
@@ -89,7 +91,8 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
   - one battle's lineup copied to the main page's `config/battleRoster` (`server/arena/roster.js`, the battle's `onMainPage`)
 - [x] **Step 5:** the Kalshi `KXBTC15M` poller and automatic scoring (`server/arena/kalshi.js`), written against the fields Kalshi returned from the Lightsail server. `GET /api/v1/rounds`, `GET /api/v1/kalshi` (admin), `npm run kalshi:check`, and a status line on `/metrics`
 - [x] **Stats Hub phase 1:** the stat list (`server/arena/catalog.js`, `/catalog`, `GET/PUT /api/v1/stat-catalog`) seeded with 30 stats; verified stats for every entrant (`server/arena/verified.js`); owners type values on `/my`; `BOT-GUIDE.md` lists every key
-- [ ] **Stats Hub phase 2:** admin monitor of every bot × stat (latest, last updated, history), sortable and filterable, with health alerts (quiet bots, stale stats, rejected data). Admin only
+- [x] **Stats Hub phase 2:** the stats monitor (`server/arena/monitor.js`, `/monitor`, `GET /api/v1/monitor`): every entrant × stat, sortable and filterable, history per stat, alerts for quiet bots, stale stats, refused pushes and Kalshi gaps, with editable limits
+- [ ] **To check on the live site** (owner's helper, after the phase 1 update): `/catalog` shows the 30 stats; `/my` shows each entrant's Stats card section; the main page's Battle of the Bots header has "Make your battle call" and "Live battle board"
 - [ ] **Stats Hub phase 3:** named display slots (bots, stats, layout, order), one widget plus a `/api/v1` endpoint, and an example slot on the Battle page
 - [ ] **Later:** paper profit per $1 contract at Kalshi's price at the lock. Settled markets don't carry the opening price, so it needs a snapshot of the open market at each round start
 - [ ] **Flagged, not fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags that admins set, so a member could approve their own transfer
@@ -98,7 +101,7 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 
 ## Testing notes
 
-- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a), `test/stats.test.js` (step 4b), `test/custom.test.js` (step 4c), `test/kalshi.test.js` (step 5, against a stand-in Kalshi server) `test/catalog.test.js` and `test/verified.test.js` (Stats Hub phase 1). `test/stats.test.js` sends the full example from `BOT-GUIDE.md`, so the guide can't drift. Test servers run with `kalshi: false`; spawned ones get `D3MON_KALSHI=off`. Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
+- Tests start throwaway servers in `.test-data/` (see `test/helpers.js`). The Arena tests are in `test/arena.test.js` (step 2), `test/metrics.test.js` (step 3), `test/calls.test.js` (step 4a), `test/stats.test.js` (step 4b), `test/custom.test.js` (step 4c), `test/kalshi.test.js` (step 5, against a stand-in Kalshi server) `test/catalog.test.js` and `test/verified.test.js` (Stats Hub phase 1), and `test/monitor.test.js` (phase 2, which moves time by calling `monitor.view(ctx, now)` directly). `test/stats.test.js` sends the full example from `BOT-GUIDE.md`, so the guide can't drift. Test servers run with `kalshi: false`; spawned ones get `D3MON_KALSHI=off`. Call tests move the clock with `srv.app.arena.calls.now = () => ms` instead of waiting for real rounds.
 - **To test a restart, restart the real process** (spawn `server/start.js`, send SIGTERM, start again on the same data folder). Two servers sharing one folder with a hand-called `saveNow()` misses the debounced accounts save, and that once made a restart look like data loss.
 - When a test passes the first time, break the thing it guards and check that it fails.
-- Arena pages share `d3mon.css`. Avoid class and id names it already styles (`.grid`, `#battle`, bare `.row` and `.top`), because they'll pick up the main page's layout. That happened once with `/metrics`.
+- Arena pages share `d3mon.css`. Avoid class and id names it already styles (`.grid`, `#battle`, `.mbadge`, bare `.row` and `.top`), because they'll pick up the main page's layout. That happened once with `/metrics`.

@@ -59,12 +59,16 @@ export class Stats {
     Object.assign(this, { store, registry, catalog, verified, calls, feed, ledger });
     // The latest self-reported value of each stat: entrantId -> Map(key -> ledger line).
     this.latest = new Map();
+    this.history = new Map(); // entrantId -> Map(key -> every ledger line, oldest first), for the monitor
     this.keysWithValues = new Set();
     const index = lines => {
       for (const l of lines) {
         if (l.t !== "stat") continue;
-        if (!this.latest.has(l.entrantId)) this.latest.set(l.entrantId, new Map());
+        if (!this.latest.has(l.entrantId)) { this.latest.set(l.entrantId, new Map()); this.history.set(l.entrantId, new Map()); }
         this.latest.get(l.entrantId).set(l.key, l);
+        const h = this.history.get(l.entrantId);
+        if (!h.has(l.key)) h.set(l.key, []);
+        h.get(l.key).push(l);
         this.keysWithValues.add(l.key);
       }
     };
@@ -82,6 +86,11 @@ export class Stats {
   }
 
   hasValues(key) { return this.keysWithValues.has(key); }
+
+  // For the admin monitor (monitor.js), which applies the owner's visibility itself.
+  defsFor(e) { return this.#defs(e); }
+  valuesFor(e, defs) { return this.#values(e.id, defs); }
+  historyOf(entrantId, key) { return this.history.get(entrantId)?.get(key) || []; }
 
   // ---------- settings ----------
   #doc(entrantId) {

@@ -79,6 +79,8 @@ How the page stores battle data today:
 | `server/arena/rounds.js` | 4 | Round clock, call lock, scoring |
 | `server/arena/stats.js` | 4, Stats Hub | Owner-sent stat values (list and custom), visibility, the card |
 | `server/arena/catalog.js` | Stats Hub 1 | The stat list HardSmoke edits on `/catalog`, value types and formats |
+| `server/arena/verified.js` | Stats Hub 1 | Verified stats worked out from each entrant's own calls and the results |
+| `server/arena/monitor.js` | Stats Hub 2 | HardSmoke's monitor: every entrant × stat, health alerts, the refused-push log |
 | `server/arena/kalshi.js` | 5 | Polls Kalshi's public market data for `KXBTC15M` and records each result |
 
 ### Storage
@@ -317,6 +319,7 @@ There is no leaderboard endpoint. Cards are per entrant only.
 | `round.metrics` | `battle:<id>`, `entrant:<id>` | HardSmoke saves a round by hand (step 3). Carries that round as each reader may see it |
 | `stats.updated` | `entrant:<id>` | A card changed. Clients refetch the card, so privacy filtering stays on the server |
 | `catalog.updated` | `catalog` (anyone) | HardSmoke changed the stat list. Carries the changed `keys` |
+| `monitor.updated` | `admin:monitor` (admins only) | Something on the stats monitor changed. Refetch `GET /api/v1/monitor` |
 
 Topic permissions are checked when the stream opens. The feed is separate from the page's `/api/events`, which stays unchanged.
 
@@ -412,6 +415,23 @@ PUT  /api/v1/stat-catalog    admin: {stats: {<key>: {label?, type?, unit?, categ
 ```
 
 The page is `/catalog` (admins). Cards and `/my` follow `catalog.updated`.
+
+Stats Hub phase 2, the stats monitor (`server/arena/monitor.js`, page `/monitor`, admins only, not a leaderboard):
+
+```
+GET /api/v1/monitor                                  admin: d3mon.monitor/v1, every entrant × every stat, alerts, summary
+GET /api/v1/monitor/entrants/:id/stats/:key          admin: one stat's history, newest first
+PUT /api/v1/monitor/settings                         admin: {quietHours?, staleDays?, rejectHours?}
+```
+
+- **Privacy:** a value (in the table and in history) is included only when its owner made the stat `public` or `members`, which is what any signed-in member could see on the card. For `hidden` and `private` stats, only the activity is included: whether it has a value, how many updates, when, and how (`bot-key` or `owner`).
+- **Alerts:**
+  - `quiet`: a bot or script that hasn't sent a stat or a call within `quietHours` (default 24), or ever.
+  - `stale`: a self-reported stat its owner made visible that hasn't been updated within `staleDays` (default 7), or never.
+  - `rejected`: pushes refused in the last `rejectHours` (default 24).
+  - `kalshi`: the rounds `/metrics` already flags.
+- **Refused pushes** (bot stats and calls with a valid key, and an owner's own typed-in stats) are kept in `arena_rejects/<entrantId>`, the latest 50. Only the time, kind, route, error code, field, and the stat key when it is a valid name are kept, never what was sent, because it may have been a secret. Rate-limit refusals aren't logged.
+- **Live:** `monitor.updated` on `admin:monitor` (admins only), at most every 2 seconds, after any stat, call, result or refusal.
 
 ## 10. Kalshi (step 5)
 

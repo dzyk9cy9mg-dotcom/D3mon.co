@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Stats monitor · Battle of the Bots · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="arena wide-page">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">Stats monitor: every bot, script and caller against every stat, for HardSmoke only. Not a leaderboard. Owners' privacy still wins: a value shows only when its owner made it Public or Members only. Hidden and private stats show when they were updated, never the value. <a href="applications">← Applications</a> <a href="catalog">Stat list →</a> <span class="live-dot" id="live">○ offline</span></p>
+
+  <section class="panel" id="denied" hidden>
+    <h2>Admins only</h2>
+    <p class="empty">Sign in with HardSmoke's account or another admin account. <a href="login">Sign in</a></p>
+  </section>
+
+  <section class="panel" id="monBox" hidden>
+    <div class="monsum" id="summary"></div>
+    <div id="globalAlerts"></div>
+    <div class="row" style="margin:10px 0">
+      <div class="field" style="flex:0 1 140px"><label for="fKind">Kind</label><select id="fKind"><option value="">All</option><option value="bot">Bots</option><option value="script">Scripts</option><option value="caller">Callers</option></select></div>
+      <div class="field" style="flex:0 1 180px"><label for="fCat">Stat group</label><select id="fCat"></select></div>
+      <div class="field" style="flex:0 1 160px"><label for="fSrc">Stats</label><select id="fSrc"><option value="">All</option><option value="verified">Verified only</option><option value="catalog">Self-reported only</option></select></div>
+      <div class="field" style="flex:0 1 180px"><label for="fAlert">Show</label><select id="fAlert"><option value="">Everyone</option><option value="any">With any alert</option><option value="quiet">Quiet</option><option value="stale">Stale stats</option><option value="rejected">Refused pushes</option></select></div>
+      <div class="field" style="flex:0 1 200px"><label for="fSort">Sort by</label><select id="fSort"><option value="name">Name</option><option value="alerts">Most alerts</option><option value="recent">Most recent activity</option><option value="oldest">Least recent activity</option></select></div>
+      <div class="field"><label for="fText">Find</label><input id="fText" placeholder="name or owner"></div>
+    </div>
+    <p class="tag">Click an entrant for its alerts and custom stats, a stat heading to sort by when it was last updated, and a cell for its history. 🔒 = the owner keeps it hidden or private. Faded = not updated within the stale limit.</p>
+    <div class="tablewrap monwrap"><table class="mgrid montable" id="table"></table></div>
+  </section>
+
+  <section class="panel" id="histBox" hidden>
+    <h2 id="histTitle">History</h2>
+    <div id="hist"></div>
+  </section>
+
+  <section class="panel" id="setBox" hidden>
+    <details><summary class="tag">Alert limits</summary>
+      <form class="row" id="setForm" style="margin-top:10px">
+        <div class="field" style="flex:0 1 200px"><label for="sQuiet">Quiet after (hours)</label><input id="sQuiet" type="number" min="1" max="720"></div>
+        <div class="field" style="flex:0 1 200px"><label for="sStale">Stale after (days)</label><input id="sStale" type="number" min="1" max="365"></div>
+        <div class="field" style="flex:0 1 220px"><label for="sRej">Show refused pushes for (hours)</label><input id="sRej" type="number" min="1" max="168"></div>
+        <button class="btn" type="submit">Save limits</button>
+      </form>
+    </details>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/arena-monitor.js"></script>
+</body>
+</html>
