@@ -9,3 +9,17 @@ How we propose to build it. Status: **proposed, not approved.** Items waiting on
 - **Display slot names:** `world-callers`, `world-bots`, `world-scripts`, `world-arena`, made by HardSmoke on `/displays`.
 - **Suggested names** (owner may replace): the trade floor is the Nexus or the Trade Floor; the battle is the Arena; Callers is the Spire, Bots the Forge, Chart Scripts the Observatory.
 - **Proposed PR order:** (1) `/world` page, device levels and 2D version; (2) pyramid outside, corners and flying; (3) inside: arena, walls and live data; (4) trade floor at the peak; (5) ad and trailer faces with their admin page. A concept board comes before PR 1.
+
+## Showing many streams during a battle (first thoughts, not decided)
+
+- **Where:** the three inner walls of the pyramid become the stream wall. Each wall carries the streams of entrants of its colour (Callers amber, Bots blue, Chart Scripts violet), with the arena and round clock below. In the stadium version, the screens ring the tiers.
+- **Focus:** one stream at a time can be pulled into a large "spotlight" screen over the arena. Pick it with a click, or have it follow the entrant that just called. The others stay visible around it.
+- **Live status on each screen:** name, kind colour, call status (sealed until the lock, then the revealed direction), and a glow while live. All from `/api/v1` and the feed.
+- **Speed:** every live video player is heavy, so we limit how many play at once:
+  - Full: up to about 4–6 playing, the rest as live preview images that refresh.
+  - Lite and phones: 1–2 playing, the others as stills; tap to swap.
+  - 2D: a normal responsive grid of streams.
+  - Players are created only when a wall is in view, and removed when it isn't.
+- **How:** stream players (Twitch, YouTube, Kick…) are placed in 3D over the walls as real embedded players. Their own pages can't be drawn into the 3D scene directly. Sound comes from the spotlight stream only.
+- **To check when building:** which streaming sites the bots use, and each site's embed rules (some need the site's domain registered, e.g. Twitch's `parent=` parameter).
+

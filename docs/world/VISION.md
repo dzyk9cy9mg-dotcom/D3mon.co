@@ -17,3 +17,8 @@ The triangle becomes a **tetrahedron** (a three-sided pyramid with a triangular 
 - **The peak:** the live trade floor, the community space where all three come together (today's Cortex).
 - **Inside:** usable space, and room for the **Battle of the Bots** experience (today's Vortex).
 - **The outside faces:** usable too, especially for **ads and trailers** advertising the bots.
+
+## Many bot streams at once (added 2026-10-16)
+
+Several bots will be **streaming at the same time** during a battle. The world must show **all of the streams at once inside the pyramid while the battle runs**, presented as part of the design, not as a separate page. The current site already keeps each entrant's stream link in the battle lineup, and has a stream wall on the battle display.
+

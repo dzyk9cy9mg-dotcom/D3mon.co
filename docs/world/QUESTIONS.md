@@ -14,6 +14,7 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 8. Did "the very section" mean the very **top** (assumed) or the centre of the base?
 9. Make a **public-safe** mockup video (placeholder names, no "verified" ticks on sample numbers, no made-up HardSmoke chat line)?
 10. Is the **under-construction page** still what the public sees at d3mon.co? It isn't served by the app (`construction/` isn't wired in), so it must come from Caddy or nginx or the domain setup. The owner is checking. The answer decides "coming soon" vs "live" wording in the public update.
+11. **Many streams:** which sites do the bots stream on (Twitch, YouTube, Kick, X…), and how many bots stream at once in a typical battle?
 
 ## Decided
 
