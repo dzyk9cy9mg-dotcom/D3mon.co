@@ -1,0 +1,329 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>D3MON World mockup</title>
+<style>
+  :root{--bg:#05080C;--ink:#DCE7EE;--ink2:#8FA3B2;--ink3:#587080;--callers:#FFB547;--bots:#4DA3FF;--scripts:#B98CFF;--up:#2EE59D;--dn:#FF4D6A;--line:#1A2A36}
+  html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;color:var(--ink);font:500 15px/1.4 "Rajdhani","Barlow",system-ui,sans-serif}
+  canvas{display:block}
+  .ui{position:fixed;inset:0;pointer-events:none}
+  .mono{font-family:"Share Tech Mono",ui-monospace,Menlo,monospace}
+  .disp{font-family:"Orbitron","Chakra Petch",system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+  .bar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:26px;padding:18px 28px;background:linear-gradient(#05080Ccc,transparent)}
+  .brand{font:800 19px "Orbitron",system-ui,sans-serif;letter-spacing:.14em;display:flex;align-items:center;gap:10px}
+  .nav{display:flex;gap:6px;margin-left:auto}
+  .nav span{padding:6px 12px;border:1px solid transparent;font:600 12px "Share Tech Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+  .nav span.on{color:var(--c,#fff);border-color:color-mix(in srgb,var(--c,#fff) 55%,transparent);background:color-mix(in srgb,var(--c,#fff) 10%,transparent)}
+  .q{font:12px "Share Tech Mono",monospace;color:var(--ink3);border:1px solid var(--line);padding:5px 9px}
+  .tag{position:absolute;right:28px;bottom:22px;font:12px "Share Tech Mono",monospace;color:var(--callers);border:1px solid #FFB54755;background:#FFB5470f;padding:5px 10px;letter-spacing:.1em}
+  .mini{position:absolute;left:26px;bottom:22px;width:120px;height:110px}
+  .title{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+  .title h1{margin:0;font:900 64px "Orbitron",system-ui,sans-serif;letter-spacing:.22em;text-shadow:0 0 30px #4DA3FF88}
+  .title p{margin:10px 0 0;font:600 15px "Share Tech Mono",monospace;letter-spacing:.32em;color:var(--ink2);text-transform:uppercase}
+  .card{position:absolute;width:300px;padding:16px 18px;background:#070D14d9;border:1px solid color-mix(in srgb,var(--c) 50%,var(--line));box-shadow:0 0 40px -10px var(--c);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+  .card h3{margin:0 0 2px;font:700 15px "Orbitron",system-ui,sans-serif;letter-spacing:.12em;color:var(--c);text-transform:uppercase}
+  .card .sub{font:12px "Share Tech Mono",monospace;color:var(--ink3);letter-spacing:.08em;margin-bottom:10px}
+  .card .ent{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-top:1px solid var(--line)}
+  .card .ent b{font-weight:700;font-size:16px}
+  .card .ent i{font-style:normal;font:13px "Share Tech Mono",monospace;color:var(--ink2)}
+  .card .ent em{font-style:normal;font:12px "Share Tech Mono",monospace;color:var(--up)}
+  .hud{position:absolute;right:28px;top:84px;width:330px;padding:16px 18px;background:#070D14d9;border:1px solid var(--line)}
+  .hud h3{margin:0;font:700 14px "Orbitron",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+  .hud .meta{font:12px "Share Tech Mono",monospace;color:var(--ink3);margin:3px 0 10px;letter-spacing:.06em}
+  .lock{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--line);margin-bottom:10px}
+  .lock b{font:800 26px "Orbitron",system-ui,sans-serif;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+  .call{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
+  .call .k{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px;background:var(--c)}
+  .call .d{font:13px "Share Tech Mono",monospace;color:var(--ink3)}
+  .call .d.up{color:var(--up)} .call .d.dn{color:var(--dn)}
+  .chat{position:absolute;left:28px;top:96px;width:360px;padding:14px 16px;background:#070D14cc;border:1px solid var(--line)}
+  .chat h3{margin:0 0 8px;font:700 14px "Orbitron",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+  .chat p{margin:6px 0;font-size:15px}
+  .chat p b{color:var(--c)}
+  .cap{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);font:600 14px "Share Tech Mono",monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--ink2);text-align:center}
+</style></head>
+<body>
+<div class="ui">
+  <div class="bar"><div class="brand"><svg width="26" height="26" viewBox="-50 -50 100 100"><path d="M0 -38 L33 19 L-33 19 Z" fill="none" stroke="#4DA3FF" stroke-width="5"/><circle cx="0" cy="-38" r="8" fill="#FFB547"/><circle cx="-33" cy="19" r="8" fill="#4DA3FF"/><circle cx="33" cy="19" r="8" fill="#B98CFF"/></svg>D3MON.CO</div>
+    <div class="nav" id="nav"><span data-k="callers" style="--c:var(--callers)">Callers</span><span data-k="bots" style="--c:var(--bots)">Bots</span><span data-k="scripts" style="--c:var(--scripts)">Chart Scripts</span><span data-k="arena" style="--c:#E8F0FF">Arena</span><span data-k="lounge" style="--c:#BFE0FF">Trade Floor</span></div>
+    <span class="q">QUALITY · AUTO (FULL)</span></div>
+  <div class="title" id="title"><div><h1>D3MON.CO</h1><p>Callers · Bots · Chart Scripts</p><p style="margin-top:40px;font-size:12px;color:#587080">scroll to enter ↓</p></div></div>
+  <div class="card" id="cBots" style="--c:var(--bots);left:70px;top:150px"><h3>Bots</h3><div class="sub">THE FORGE · 3 LIVE IN BATTLE</div>
+    <div class="ent"><b>NeuroBot 9</b><i>Win rate 61% <em>✓ verified</em></i></div><div class="ent"><b>Quant Hawk</b><i>Calls 412 <em>✓ verified</em></i></div><div class="ent"><b>Delta Drift</b><i>Lead 2m 10s <em>✓ verified</em></i></div></div>
+  <div class="card" id="cCallers" style="--c:var(--callers);right:70px;top:150px"><h3>Callers</h3><div class="sub">THE SPIRE · 12 CALLERS ONLINE</div>
+    <div class="ent"><b>Alpha Signal</b><i>Win rate 58% <em>✓ verified</em></i></div><div class="ent"><b>Moon Oracle</b><i>Calls 248 <em>✓ verified</em></i></div><div class="ent"><b>Tape Reader</b><i>Streak 6 <em>✓ verified</em></i></div></div>
+  <div class="card" id="cScripts" style="--c:var(--scripts);left:70px;top:150px"><h3>Chart Scripts</h3><div class="sub">THE OBSERVATORY · 7 SCRIPTS</div>
+    <div class="ent"><b>Fib Scout</b><i>Win rate 55% <em>✓ verified</em></i></div><div class="ent"><b>RSI Lantern</b><i>Calls 190 <em>✓ verified</em></i></div><div class="ent"><b>Wave Smith</b><i>Lead 4m 02s <em>✓ verified</em></i></div></div>
+  <div class="hud" id="hud"><h3>Battle of the Bots</h3><div class="meta">KXBTC15M · ROUND 5 OF 8 · LIVE</div>
+    <div class="lock"><span class="mono" style="color:#8FA3B2;font-size:12px;letter-spacing:.1em" id="lockLbl">ROUND LOCKS IN</span><b id="lockT">00:06</b></div>
+    <div id="calls"></div></div>
+  <div class="chat" id="chat"><h3>Trade Floor <span class="mono" style="font-size:12px;color:#2EE59D;letter-spacing:.06em">● 128 ONLINE</span></h3>
+    <p><b style="--c:var(--callers)">Moon Oracle</b> round 5 locked, I'm on UP</p><p><b style="--c:var(--bots)">kiki_trades</b> NeuroBot 9 called it again 👀</p><p><b style="--c:var(--scripts)">wavesmith</b> RSI Lantern flipped short on the 15m</p><p><b style="--c:#5BE3C8">HardSmoke</b> round 6 starts at :45, get your calls in</p></div>
+  <div class="cap" id="cap"></div>
+  <div class="title" id="end" style="opacity:0;place-items:end center;padding-bottom:110px;box-sizing:border-box"><div><h1 style="font-size:52px">D3MON.CO</h1><p>The world · Callers · Bots · Chart Scripts</p><p style="margin-top:22px;font-size:12px;color:#FFB547">concept mockup · sample data</p></div></div>
+  <svg class="mini" id="mini" viewBox="0 0 120 110"><path d="M60 8 L108 92 L12 92 Z" fill="none" stroke="#1A2A36" stroke-width="2"/><path d="M60 8 L60 64 M108 92 L60 64 M12 92 L60 64" stroke="#1A2A36" stroke-width="1"/><circle cx="60" cy="8" r="5" fill="#FFB547"/><circle cx="12" cy="92" r="5" fill="#4DA3FF"/><circle cx="108" cy="92" r="5" fill="#B98CFF"/><circle id="me" cx="60" cy="64" r="5" fill="#fff" stroke="#05080C" stroke-width="2"/><text x="60" y="108" fill="#587080" font-size="9" text-anchor="middle" font-family="monospace">YOU ARE HERE</text></svg>
+  <div class="tag">MOCKUP · SAMPLE DATA</div>
+</div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1);
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const BG = new THREE.Color("#05080C");
+scene.background = BG; scene.fog = new THREE.FogExp2(BG, 0.012);
+const camera = new THREE.PerspectiveCamera(55, W / H, 0.05, 600);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(W, H, { samples: 4, type: THREE.HalfFloatType }));
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.55, 0.45, 0.32);
+composer.addPass(bloom); composer.addPass(new OutputPass());
+
+// seeded random so every render is identical
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const C = { callers: new THREE.Color("#FFB547"), bots: new THREE.Color("#4DA3FF"), scripts: new THREE.Color("#B98CFF"), peak: new THREE.Color("#EAF4FF"), up: new THREE.Color("#2EE59D"), dn: new THREE.Color("#FF4D6A") };
+const add = THREE.AdditiveBlending;
+
+// ---- geometry of the tetrahedron ----
+const R = 10, Hh = R * Math.SQRT2;
+const at = (deg, r, y = 0) => new THREE.Vector3(r * Math.cos(deg * Math.PI / 180), y, r * Math.sin(deg * Math.PI / 180));
+const ANG = { callers: -90, bots: 150, scripts: 30 };
+const V = { callers: at(-90, R), bots: at(150, R), scripts: at(30, R), peak: new THREE.Vector3(0, Hh, 0) };
+
+// glow dot texture
+const dotTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"); const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.25, "rgba(255,255,255,.6)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+const glow = (color, size, pos, op = 1) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex, color, blending: add, transparent: true, depthWrite: false, opacity: op })); s.scale.setScalar(size); s.position.copy(pos); scene.add(s); return s; };
+
+// ---- flower of life floor ----
+{
+  const pts = [], r = 2.2, seg = 48;
+  for (let row = -40; row <= 40; row++) for (let col = -40; col <= 40; col++) {
+    const cx = col * r + (row & 1 ? r / 2 : 0), cz = row * r * Math.sqrt(3) / 2;
+    if (cx * cx + cz * cz > 90 * 90) continue;
+    for (let i = 0; i < seg; i++) { const a = i / seg * Math.PI * 2, b = (i + 1) / seg * Math.PI * 2; pts.push(cx + r * Math.cos(a), 0, cz + r * Math.sin(a), cx + r * Math.cos(b), 0, cz + r * Math.sin(b)); }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+  const floor = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: "#2C5F8F", transparent: true, opacity: .38 }));
+  floor.position.y = -0.6; scene.add(floor);
+  // faint top glow in the sky
+  const sky = glow(new THREE.Color("#1B3F66"), 260, new THREE.Vector3(0, 120, -120), .18);
+}
+
+// ---- edges: glowing tubes with colour gradients ----
+const edges = [["callers", "bots"], ["bots", "scripts"], ["scripts", "callers"], ["peak", "callers"], ["peak", "bots"], ["peak", "scripts"]];
+const colorOf = k => C[k];
+for (const [a, b] of edges) {
+  const A = V[a], B = V[b];
+  const geo = new THREE.TubeGeometry(new THREE.LineCurve3(A, B), 1, 0.07, 8, false);
+  // colour by how far along the edge each vertex is
+  const pos = geo.attributes.position, col = [], AB = B.clone().sub(A), L2 = AB.lengthSq(), v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const t = THREE.MathUtils.clamp(v.clone().sub(A).dot(AB) / L2, 0, 1); const c = colorOf(a).clone().lerp(colorOf(b), t).multiplyScalar(1.6); col.push(c.r, c.g, c.b); }
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  scene.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })));
+}
+// corner glows
+for (const k of ["callers", "bots", "scripts"]) { glow(C[k], 3.2, V[k], .7); glow(C[k], 1.1, V[k]); }
+
+// flowing particles along the edges
+const FLOW = 26, flowPts = new THREE.BufferGeometry(), flowPos = new Float32Array(edges.length * FLOW * 3), flowCol = new Float32Array(edges.length * FLOW * 3), flowOff = [];
+for (let e = 0; e < edges.length; e++) for (let i = 0; i < FLOW; i++) flowOff.push(rnd());
+flowPts.setAttribute("position", new THREE.BufferAttribute(flowPos, 3)); flowPts.setAttribute("color", new THREE.BufferAttribute(flowCol, 3));
+scene.add(new THREE.Points(flowPts, new THREE.PointsMaterial({ size: .45, map: dotTex, vertexColors: true, blending: add, transparent: true, depthWrite: false })));
+function flowUpdate(t) {
+  let n = 0;
+  edges.forEach(([a, b], e) => { for (let i = 0; i < FLOW; i++, n++) { const u = (flowOff[e * FLOW + i] + t * 0.09) % 1; const p = V[a].clone().lerp(V[b], u); flowPos.set([p.x, p.y, p.z], n * 3); const c = C[a].clone().lerp(C[b], u); flowCol.set([c.r, c.g, c.b], n * 3); } });
+  flowPts.attributes.position.needsUpdate = flowPts.attributes.color.needsUpdate = true;
+}
+
+// ---- glass faces, one carrying a "trailer" ----
+const trailerCv = document.createElement("canvas"); trailerCv.width = 512; trailerCv.height = 512;
+const trailerTex = new THREE.CanvasTexture(trailerCv); trailerTex.colorSpace = THREE.SRGBColorSpace;
+function drawTrailer(t) {
+  const g = trailerCv.getContext("2d"); g.clearRect(0, 0, 512, 512);
+  g.fillStyle = "rgba(6,14,24,.55)"; g.fillRect(0, 0, 512, 512);
+  // candles
+  let y = 330; const s = 7 + Math.floor(t * 3);
+  let r = s * 9301 % 233280;
+  for (let i = 0; i < 26; i++) { r = (r * 9301 + 49297) % 233280; const d = (r / 233280 - .47) * 40; const o = y; y += d; const up = d < 0; g.fillStyle = up ? "#2EE59D" : "#FF4D6A"; g.globalAlpha = .85; g.fillRect(80 + i * 13.5, Math.min(o, y), 8, Math.max(3, Math.abs(d))); g.fillRect(83 + i * 13.5, Math.min(o, y) - 8, 2, Math.abs(d) + 16); }
+  g.globalAlpha = 1; g.fillStyle = "#B98CFF"; g.font = "700 30px Orbitron, sans-serif"; g.textAlign = "center";
+  g.fillText("NEUROBOT 9", 256, 410); g.fillStyle = "#8FA3B2"; g.font = "18px monospace"; g.fillText("TRAILER · NOW IN THE ARENA", 256, 440);
+  g.fillStyle = "#FF4D6A"; g.fillText("● AD", 256, 470);
+  trailerTex.needsUpdate = true;
+}
+function face(A, B, P, opts) {
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute([...A.toArray(), ...B.toArray(), ...P.toArray()], 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, 1, 0, .5, 1], 2));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, depthWrite: false, ...opts })); scene.add(m); return m;
+}
+const trailerFace = face(V.bots, V.scripts, V.peak, { map: trailerTex, opacity: .9, side: THREE.FrontSide });           // front face: the trailer screen
+face(V.scripts, V.callers, V.peak, { color: "#1a1030", opacity: .32 });
+face(V.callers, V.bots, V.peak, { color: "#0c1a2c", opacity: .32 });
+
+// ---- capstone crystal: the trade floor chamber ----
+const capY = Hh * 0.62;
+{
+  const k = 1 - capY / Hh, s = v => new THREE.Vector3(v.x * k, capY, v.z * k);
+  const ring = [s(V.callers), s(V.bots), s(V.scripts)];
+  const g = new THREE.BufferGeometry().setFromPoints([ring[0], ring[1], ring[1], ring[2], ring[2], ring[0]]);
+  scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: "#BFE0FF", transparent: true, opacity: .8 })));
+  const fl = face(ring[0], ring[1], ring[2], { color: "#5aa9ff", opacity: .12 });
+  glow(new THREE.Color("#CFE6FF"), 2.6, V.peak, .8);
+  glow(new THREE.Color("#ffffff"), .9, V.peak);
+}
+// lounge screens inside the capstone (three panels on the inner walls)
+const chatCv = document.createElement("canvas"); chatCv.width = 512; chatCv.height = 256; const chatTex = new THREE.CanvasTexture(chatCv); chatTex.colorSpace = THREE.SRGBColorSpace;
+function drawChat(t) { const g = chatCv.getContext("2d"); g.fillStyle = "rgba(7,16,28,.9)"; g.fillRect(0, 0, 512, 256); g.strokeStyle = "#4DA3FF"; g.globalAlpha = .9; g.beginPath(); for (let i = 0; i <= 60; i++) { const x = 20 + i * 7.9, y = 150 + Math.sin(i * .35 + t * 1.5) * 30 + Math.sin(i * 1.3) * 12; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.lineWidth = 3; g.stroke(); g.globalAlpha = 1; g.fillStyle = "#DCE7EE"; g.font = "700 26px Orbitron,sans-serif"; g.fillText("BTC 15M · LIVE", 20, 44); g.fillStyle = "#2EE59D"; g.font = "22px monospace"; g.fillText("▲ 61% UP CALLS", 20, 236); chatTex.needsUpdate = true; }
+for (const k of ["callers", "bots", "scripts"]) {
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(1.3, .65), new THREE.MeshBasicMaterial({ map: chatTex, transparent: true, side: THREE.DoubleSide, toneMapped: false }));
+  const dir = at(ANG[k] + 180, 1.25, capY + .7); p.position.copy(dir); p.lookAt(0, capY + .7, 0); scene.add(p);
+}
+
+// ---- corner landmarks (outside the corners) ----
+const land = {};
+// Callers: the spire with broadcast rings
+{
+  const base = at(ANG.callers, R * 1.5); land.callers = base;
+  const spire = new THREE.Mesh(new THREE.CylinderGeometry(.08, .7, 9, 6, 1, true), new THREE.MeshBasicMaterial({ color: "#3a2a12", transparent: true, opacity: .9 }));
+  spire.position.copy(base).add(new THREE.Vector3(0, 4.5, 0)); scene.add(spire);
+  scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(spire.geometry), new THREE.LineBasicMaterial({ color: C.callers })).translateX(spire.position.x).translateY(spire.position.y).translateZ(spire.position.z));
+  glow(C.callers, 1.6, base.clone().add(new THREE.Vector3(0, 9.1, 0)), .8);
+  land.rings = [0, 1, 2, 3].map(i => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .03, 6, 64), new THREE.MeshBasicMaterial({ color: C.callers, transparent: true, blending: add, toneMapped: false })); m.position.copy(base).add(new THREE.Vector3(0, 9, 0)); m.lookAt(0, 9, 0); scene.add(m); return m; });
+}
+// Bots: the crystal sphere with orbiting bots
+{
+  const base = at(ANG.bots, R * 1.5); land.bots = base;
+  const ico = new THREE.IcosahedronGeometry(2.4, 1);
+  const shell = new THREE.Mesh(ico, new THREE.MeshBasicMaterial({ color: "#0d2a4a", transparent: true, opacity: .45 }));
+  const wire = new THREE.LineSegments(new THREE.EdgesGeometry(ico), new THREE.LineBasicMaterial({ color: C.bots }));
+  const grp = new THREE.Group(); grp.add(shell, wire); grp.position.copy(base).add(new THREE.Vector3(0, 3.6, 0)); scene.add(grp); land.botSphere = grp;
+  glow(C.bots, 3, grp.position);
+  land.botsOrbit = [0, 1, 2, 3, 4].map(i => { const m = new THREE.Mesh(new THREE.OctahedronGeometry(.28), new THREE.MeshBasicMaterial({ color: C.bots.clone().multiplyScalar(1.5), toneMapped: false })); scene.add(m); return m; });
+}
+// Chart Scripts: observatory dome with floating chart panels
+const chartCv = document.createElement("canvas"); chartCv.width = 256; chartCv.height = 160; const chartTex = new THREE.CanvasTexture(chartCv); chartTex.colorSpace = THREE.SRGBColorSpace;
+function drawChart(t) { const g = chartCv.getContext("2d"); g.fillStyle = "rgba(30,14,52,.75)"; g.fillRect(0, 0, 256, 160); g.strokeStyle = "#B98CFF"; g.lineWidth = 3; g.beginPath(); for (let i = 0; i <= 40; i++) { const x = 10 + i * 5.9, y = 95 - Math.sin(i * .3 + t) * 22 - i * .9 + Math.sin(i * 1.7) * 6; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); g.strokeStyle = "rgba(185,140,255,.25)"; g.lineWidth = 1; g.strokeRect(1, 1, 254, 158); chartTex.needsUpdate = true; }
+{
+  const base = at(ANG.scripts, R * 1.5); land.scripts = base;
+  const dome = new THREE.SphereGeometry(1.8, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  const d = new THREE.LineSegments(new THREE.WireframeGeometry(dome), new THREE.LineBasicMaterial({ color: C.scripts, transparent: true, opacity: .7 }));
+  d.position.copy(base).add(new THREE.Vector3(0, 2.4, 0)); scene.add(d);
+  const tower = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.7, 2.4, 24, 1, true), new THREE.MeshBasicMaterial({ color: "#20123a", transparent: true, opacity: .8, side: THREE.DoubleSide }));
+  tower.position.copy(base).add(new THREE.Vector3(0, 1.2, 0)); scene.add(tower);
+  glow(C.scripts, 3, base.clone().add(new THREE.Vector3(0, 3.4, 0)));
+  land.panels = [0, 1, 2, 3, 4, 5].map(i => { const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.25), new THREE.MeshBasicMaterial({ map: chartTex, transparent: true, side: THREE.DoubleSide, blending: add, depthWrite: false })); scene.add(m); return m; });
+}
+
+// ---- the arena inside ----
+const arena = {};
+{
+  // round clock: 96 ticks = last 24 h of 15-minute rounds
+  arena.ticks = [];
+  for (let i = 0; i < 96; i++) {
+    const a = i / 96 * Math.PI * 2, m = new THREE.Mesh(new THREE.BoxGeometry(.06, .02, .42), new THREE.MeshBasicMaterial({ color: (rnd() < .53 ? C.up : C.dn).clone().multiplyScalar(1.3), toneMapped: false }));
+    m.position.set(Math.cos(a) * 4.2, .02, Math.sin(a) * 4.2); m.rotation.y = -a + Math.PI / 2; scene.add(m); arena.ticks.push(m);
+  }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(3.3, 3.34, 96), new THREE.MeshBasicMaterial({ color: "#4DA3FF", transparent: true, opacity: .5, side: THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = .03; scene.add(ring);
+  arena.core = glow(new THREE.Color("#ffffff"), 1.4, new THREE.Vector3(0, .8, 0));
+  arena.coreHalo = glow(new THREE.Color("#7fbfff"), 4, new THREE.Vector3(0, .8, 0), .45);
+  // light column to the peak
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(.05, .12, capY - .8, 12, 1, true), new THREE.MeshBasicMaterial({ color: "#9fd0ff", transparent: true, opacity: .7, blending: add, toneMapped: false }));
+  col.position.set(0, .8 + (capY - .8) / 2, 0); scene.add(col); arena.col = col;
+  // entrants orbiting
+  arena.ents = [["NeuroBot 9", "bots"], ["Alpha Signal", "callers"], ["Fib Scout", "scripts"], ["Quant Hawk", "bots"], ["Moon Oracle", "callers"], ["RSI Lantern", "scripts"]].map(([name, k], i) => ({ name, k, a0: i / 6 * Math.PI * 2, s: glow(C[k], .6, new THREE.Vector3()), beam: (() => { const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]); const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: C[k], transparent: true, opacity: .55, blending: add })); scene.add(l); return l; })(), pulse: glow(new THREE.Color("#ffffff"), .35, new THREE.Vector3()) }));
+}
+
+// ---- camera path (time, camera angle, radius, height, target angle, radius, height) ----
+const KEYS = [
+  [0, 90, .5, 46, 0, 0, 0], [3, 90, .5, 44, 0, 0, 0],
+  [7.5, 90, 36, 7, 0, 0, 6],
+  [11, 160, 25, 4.5, 150, 15, 3.2], [13.5, 165, 24, 4.5, 150, 15, 3.4],
+  [17, 258, 25, 6, 270, 15, 5.5], [19.5, 262, 24, 6, 270, 15, 5.5],
+  [23, 378, 25, 4.5, 390, 15, 2.6], [25.5, 382, 24, 4.5, 390, 15, 2.6],
+  [28.5, 450, 20, 3.5, 450, 0, 2], [31, 450, 3.2, 4.3, 450, 0, .3], [37, 480, 3.0, 4.1, 480, 0, .3],
+  [40, 500, 1.0, capY - 1.2, 500, .2, capY + 3], [42.5, 510, .25, capY + .55, 690, 1.25, capY + .7], [45, 630, .25, capY + .55, 810, 1.25, capY + .7],
+  [49, 810, 42, 17, 900, 0, 5], [52, 815, 44, 18, 905, 0, 5]
+];
+const ease = x => x * x * (3 - 2 * x);
+function camAt(t) {
+  const n = KEYS.length; let i = 0; while (i < n - 2 && KEYS[i + 1][0] <= t) i++;
+  const k0 = KEYS[Math.max(0, i - 1)], k1 = KEYS[i], k2 = KEYS[i + 1], k3 = KEYS[Math.min(n - 1, i + 2)];
+  let u = THREE.MathUtils.clamp((t - k1[0]) / (k2[0] - k1[0]), 0, 1);
+  if (i === 0) u = u * u * (3 - 2 * u);                 // gentle start
+  if (i === n - 2) u = 1 - (1 - u) * (1 - u);           // gentle stop
+  const cr = (a, b, c, d) => 0.5 * ((2 * b) + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (-a + 3 * b - 3 * c + d) * u * u * u);
+  const L = j => cr(k0[j], k1[j], k2[j], k3[j]);
+  camera.position.copy(at(L(1), Math.max(.3, L(2)), L(3)));
+  camera.lookAt(at(L(4), Math.max(0, L(5)), L(6)));
+}
+export const DURATION = 52;
+
+// ---- overlays ----
+const $ = id => document.getElementById(id);
+const fade = (el, o) => { el.style.opacity = typeof o === "boolean" ? (o ? 1 : 0) : o; };
+const win = (t, a, b, k = .5) => Math.max(0, Math.min(1, (t - a) / k, (b - t) / k));
+const navOn = k => document.querySelectorAll("#nav span").forEach(s => s.classList.toggle("on", s.dataset.k === k));
+const callsEl = $("calls");
+callsEl.innerHTML = arena.ents.slice(0, 5).map((e, i) => `<div class="call" id="call${i}" style="--c:var(--${e.k})"><span><i class="k"></i>${e.name}</span><span class="d" id="cd${i}">waiting</span></div>`).join("");
+const DIRS = ["UP ▲", "DOWN ▼", "UP ▲", "UP ▲", "DOWN ▼"];
+const LOCK = 35;
+const MINI = { top: [60, 64], bots: [12, 92], callers: [60, 8], scripts: [108, 92], arena: [60, 64], lounge: [60, 64] };
+
+function overlays(t) {
+  fade($("title"), win(t, -1, 4.2, .8));
+  const sec = t < 9.5 ? null : t < 15.5 ? "bots" : t < 21.5 ? "callers" : t < 27.5 ? "scripts" : t < 39 ? "arena" : "lounge";
+  navOn(sec);
+  fade($("cBots"), win(t, 11.6, 15.6)); fade($("cCallers"), win(t, 17.6, 21.6)); fade($("cScripts"), win(t, 23.6, 27.6));
+  fade($("hud"), win(t, 30, 39.6)); fade($("chat"), win(t, 41.2, 46.8)); fade($("end"), win(t, 47.6, 99, .8));
+  const m = MINI[sec || "top"]; $("me").setAttribute("cx", m[0]); $("me").setAttribute("cy", m[1]);
+  // captions
+  const cap = t > 4.4 && t < 9 ? "from above it's the logo… then it becomes a world" : t > 26.4 && t < 29.6 ? "flying through the trailer screen into the arena" : t > 31 && t < 34.6 ? "calls arrive sealed 🔒 · directions reveal at the lock" : t > 37.6 && t < 41 ? "rising up the light column to the trade floor" : t > 44.8 && t < 47.4 ? "back out to the whole world" : "";
+  $("cap").textContent = cap; fade($("cap"), cap ? 1 : 0);
+  // battle feed: calls arrive sealed, directions reveal at the lock
+  const left = Math.max(0, LOCK - t);
+  $("lockT").textContent = left > 0 ? `00:${String(Math.ceil(left)).padStart(2, "0")}` : "LOCKED";
+  $("lockLbl").textContent = left > 0 ? "ROUND LOCKS IN" : "ROUND 5 · DIRECTIONS REVEALED";
+  arena.ents.slice(0, 5).forEach((e, i) => {
+    const arrive = 31 + i * .7, d = $(`cd${i}`);
+    if (t < arrive) { d.textContent = "waiting"; d.className = "d"; }
+    else if (t < LOCK) { d.textContent = "🔒 call in · sealed"; d.className = "d"; }
+    else { d.textContent = DIRS[i]; d.className = "d " + (DIRS[i][0] === "U" ? "up" : "dn"); }
+  });
+}
+
+// ---- one frame at time t (seconds) ----
+window.frame = (t) => {
+  flowUpdate(t);
+  drawTrailer(t); drawChat(t); drawChart(t);
+  land.rings.forEach((r, i) => { const u = ((t * .35) + i / 4) % 1; r.scale.setScalar(.6 + u * 5); r.material.opacity = (1 - u) * .45; });
+  land.botSphere.rotation.y = t * .3; land.botSphere.rotation.x = t * .12;
+  land.botsOrbit.forEach((m, i) => { const a = t * .7 + i / 5 * Math.PI * 2; m.position.copy(land.bots).add(new THREE.Vector3(Math.cos(a) * 3.8, 3.6 + Math.sin(a * 2) * .8, Math.sin(a) * 3.8)); m.rotation.y = t * 2; });
+  land.panels.forEach((m, i) => { const a = t * .18 + i / 6 * Math.PI * 2; m.position.copy(land.scripts).add(new THREE.Vector3(Math.cos(a) * 3.6, 3 + (i % 2) * 1.6, Math.sin(a) * 3.6)); m.lookAt(land.scripts.x, m.position.y, land.scripts.z); });
+  // arena
+  const pulseCore = 1 + Math.sin(t * 3) * .08; arena.core.scale.setScalar(1.4 * pulseCore);
+  arena.ents.forEach((e, i) => {
+    const a = e.a0 + t * .25, p = new THREE.Vector3(Math.cos(a) * 2.6, .8 + Math.sin(t + i) * .15, Math.sin(a) * 2.6);
+    e.s.position.copy(p);
+    e.beam.geometry.setFromPoints([p, new THREE.Vector3(0, .8, 0)]);
+    const arrive = 31 + i * .7, u = THREE.MathUtils.clamp((t - arrive) / 1.2, 0, 1);
+    const show = i < 5 && t > arrive && u < 1;
+    e.pulse.visible = show; e.pulse.position.copy(p.clone().lerp(new THREE.Vector3(0, .8, 0), u));
+    // sealed pulses are white; after the lock they take the call's colour
+    e.pulse.material.color = t < LOCK ? new THREE.Color("#ffffff") : (DIRS[i]?.[0] === "U" ? C.up : C.dn);
+    if (t >= LOCK && i < 5) { e.pulse.visible = true; const v = ((t - LOCK) * .8 + i * .17) % 1; e.pulse.position.copy(p.clone().lerp(new THREE.Vector3(0, .8, 0), v)); }
+  });
+  arena.ticks.forEach((m, i) => { if (i === 95) m.material.color.setScalar(.6 + .4 * Math.abs(Math.sin(t * 4))); });
+  trailerFace.material.opacity = .9 * Math.max(0, Math.min(1, (28.6 - t) / 1.2, (t - 39) / 2));
+  arena.col.material.opacity = .7 * Math.max(0, Math.min(1, (40.3 - t) / .8, (t - 46.5) / 1));
+  camAt(t);
+  overlays(t);
+  composer.render();
+};
+window.ready = true;
+window.frame(0);
+</script>
+</body></html>
