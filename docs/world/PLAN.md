@@ -2,7 +2,8 @@
 
 How we propose to build it. Status: **proposed, not approved.** Items waiting on the owner are listed in [QUESTIONS.md](QUESTIONS.md).
 
-- **Engine:** three.js, vendored as one pinned file in `public/vendor/` (browser only; the server stays dependency-free). Alternative: hand-written WebGL.
+- **Engine (decided):** three.js, vendored as one pinned file in `public/vendor/` (browser only; the server stays dependency-free).
+- **Layout (decided):** a triangular spiral ramp inside the pyramid, one wall per kind, climbing from the arena to the trade floor. Outside corners as distant landmarks. See QUESTIONS.md.
 - **Device levels:** Full / Lite / Mobile Lite / 2D. **Start at Lite** and step up only after the device proves smooth. Weak or low-memory devices, software rendering, reduce-motion, battery or data saver all go to 2D. A visible Quality switch (Auto / Full / Lite / 2D). Pause when the tab is hidden or nothing moves. 2D never downloads the 3D code. Test with CPU throttling ×4 and ×6, plus `/world?fps` for real devices.
 - **Text stays real HTML** placed over the scene (sharp, accessible, reuses `d3mon-widget.js` and the privacy rules). Calls stay sealed until the lock; the world draws only what the server sends each reader.
 - **Ads and trailers:** YouTube, Twitch and similar links placed on the faces as embedded players (no server bandwidth). Only the face in view plays. Lite and phones show a still image until tapped. Choosing ads needs a small admin page like `/displays`: a later, separate PR, and **ask before building it**.

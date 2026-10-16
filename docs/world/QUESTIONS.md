@@ -4,13 +4,8 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 
 ## Open
 
-1. Engine: three.js vendored (recommended) or hand-written WebGL?
-2. Moving: scroll follows a route with free flight any time (recommended), or free flight only?
 3. First version: the places plus links out to the rest of the site (recommended), or more inside the world (Cortex chat etc.)?
-4. Reduce-motion: open in 2D with 3D by choice (recommended), or a still 3D view?
 5. Display slot names OK?
-6. Landmarks **outside at the base corners**, or **inside** the pyramid? The 10118 video suggests inside along a ramp, with the outside corners as distant landmarks only.
-7. **Spiral glass ramp** as the scroll path (from the 10118 video)?
 8. Did "the very section" mean the very **top** (assumed) or the centre of the base?
 9. Make a **public-safe** mockup video (placeholder names, no "verified" ticks on sample numbers, no made-up HardSmoke chat line)?
 10. Is the **under-construction page** still what the public sees at d3mon.co? It isn't served by the app (`construction/` isn't wired in), so it must come from Caddy or nginx or the domain setup. The owner is checking. The answer decides "coming soon" vs "live" wording in the public update.
@@ -28,3 +23,8 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 | 2026-10-16 | Keep the design notes, inspiration and mockup in `docs/world/` on the working branch ("do what you think is best to make the project easier, and professional"). |
 | 2026-10-16 | No water or wave-like sounds in the soundtrack. |
 | 2026-10-16 | **Order of work:** keep collecting inspiration; then go over everything together and make one plan (the blueprint: places, where each system appears, and a simple outline of each system); then build in layers: `/world` foundation, then the systems one PR each (API first), then the 3D places with placeholders until each system is ready. |
+| 2026-10-16 | **Engine:** three.js, one pinned file kept in the repo (browser only; the server stays dependency-free). |
+| 2026-10-16 | **Moving:** scrolling follows a guided route; free flight is available at any time, with "back to route". |
+| 2026-10-16 | **Reduce motion:** opens in 2D, with 3D available by choice; in 3D the camera cuts between places instead of flying. |
+| 2026-10-16 | **Layout (owner: "I like the spiral, as long as it fits the triangle. Do what you think is best"):** a **triangular spiral ramp inside the pyramid**, three straight runs per turn, one along each inside wall. The Callers wall (amber) holds caller booths, the Bots wall (blue) bot pods, the Chart Scripts wall (violet) script screens. It climbs from the arena on the floor to the trade floor at the peak, tightening as the pyramid narrows. The three outside corners keep simple glowing landmarks seen from a distance. |
+
