@@ -12,6 +12,7 @@ import { Calls, MARKET, nextRound } from "./calls.js";
 import { Stats } from "./stats.js";
 import { Catalog } from "./catalog.js";
 import { Verified } from "./verified.js";
+import { Monitor } from "./monitor.js";
 import { Roster } from "./roster.js";
 import { Kalshi } from "./kalshi.js";
 import { ROUND_MS } from "./registry.js";
@@ -35,7 +36,7 @@ export function createArena({ store, accounts, cfg }) {
       case "battles": case "catalog": return id === undefined;
       case "battle": case "entrant": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
-      case "admin": return id === "applications" && isAdmin(ctx);
+      case "admin": return (id === "applications" || id === "monitor") && isAdmin(ctx);
       default: return false;
     }
   }
@@ -56,6 +57,7 @@ export function createArena({ store, accounts, cfg }) {
   const roster = new Roster({ store, registry, ledger });
   const kalshi = new Kalshi({ ledger, metrics, registry, calls, feed, ...(cfg.kalshiUrl ? { base: cfg.kalshiUrl } : {}) });
   if (cfg.kalshi !== false) kalshi.start();
+  const monitor = new Monitor({ store, registry, stats, catalog, calls, ledger, kalshi, feed, userName });
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
   const limits = {
     bot: new RateLimiter({ capacity: 30, refillPerSec: 0.5 }), // per key
@@ -116,9 +118,16 @@ export function createArena({ store, accounts, cfg }) {
       const auth = keys.authenticate(req.headers.authorization);
       take(limits.bot, auth.key.id);
       if (route === "GET /bot/me") return ok({ entrant: registry.entrantView(auth.entrant, {}), key: keys.view(auth.key), nextRound: new Date(nextRound(Date.now())).toISOString() });
-      if (route === "POST /bot/calls") return ok(calls.fromBot(auth, await body()), 201);
-      // Only pushes that would write count against the stats limit, so fixing a bad request costs nothing.
-      if (route === "POST /bot/stats") return ok(stats.fromBot(auth, await readJson(req, 128 * 1024), () => take(limits.botStats, auth.entrant.id)), 201);
+      // Refused pushes are noted for the monitor (the error only, never what was sent).
+      let sent;
+      try {
+        if (route === "POST /bot/calls") return ok(calls.fromBot(auth, (sent = await body())), 201);
+        // Only pushes that would write count against the stats limit, so fixing a bad request costs nothing.
+        if (route === "POST /bot/stats") return ok(stats.fromBot(auth, (sent = await readJson(req, 128 * 1024)), () => take(limits.botStats, auth.entrant.id)), 201);
+      } catch (err) {
+        monitor.reject(auth.entrant.id, route.endsWith("/calls") ? "call" : "stats", "bot-key", err, sent);
+        throw err;
+      }
       throw new ApiError(404, "not_found", "No such endpoint.");
     }
 
@@ -154,9 +163,19 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "PUT /stat-catalog") { writer(); return ok(catalog.update(ctx, await body())); }
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9]+)\/stat-settings$/))) return ok(stats.settings(ctx, m[1]));
     if ((m = route.match(/^PUT \/entrants\/([A-Za-z0-9]+)\/stat-settings$/))) { writer(); return ok(stats.updateSettings(ctx, m[1], await body())); }
-    if ((m = route.match(/^POST \/entrants\/([A-Za-z0-9]+)\/stats$/))) { writer(); return ok(stats.fromOwner(ctx, m[1], await readJson(req, 128 * 1024), () => take(limits.botStats, m[1])), 201); }
+    if ((m = route.match(/^POST \/entrants\/([A-Za-z0-9]+)\/stats$/))) {
+      writer();
+      let sent;
+      try { return ok(stats.fromOwner(ctx, m[1], (sent = await readJson(req, 128 * 1024)), () => take(limits.botStats, m[1])), 201); } catch (err) {
+        if (ctx.uid && registry.entrantById(m[1])?.ownerId === ctx.uid) monitor.reject(m[1], "stats", "owner", err, sent); // only the owner's own mistakes
+        throw err;
+      }
+    }
+    if (route === "GET /monitor") return ok(monitor.view(ctx));
+    if (route === "PUT /monitor/settings") { writer(); return ok({ settings: monitor.updateSettings(ctx, await body()) }); }
+    if ((m = route.match(/^GET \/monitor\/entrants\/([A-Za-z0-9]+)\/stats\/([a-z][a-z0-9_]{1,31})$/))) return ok(monitor.history(ctx, m[1], m[2]));
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, catalog, stats, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, catalog, stats, monitor, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); monitor.stop(); feed.close(); } };
 }

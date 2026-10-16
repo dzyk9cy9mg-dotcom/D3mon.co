@@ -129,3 +129,22 @@
 .arena .pos{color:var(--up)}
 .arena .neg{color:var(--dn)}
 .arena input.newval{width:130px}
+.arena.wide-page{max-width:none;padding-left:16px;padding-right:16px}
+.arena.wide-page>*{min-width:0}
+.arena .monsum{display:flex;flex-wrap:wrap;gap:8px}
+.arena .monsum button{background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:8px 12px;font:600 13px var(--mono);cursor:pointer}
+.arena .monsum button b{font:700 20px var(--display);margin-right:6px}
+.arena .monsum button.warn b{color:var(--dn)}
+.arena .monsum button[aria-pressed="true"]{border-color:var(--acc)}
+.arena .monwrap{max-height:75vh;overflow:auto}
+.arena .montable th,.arena .montable td{white-space:nowrap;font-size:12px;padding:5px 8px;vertical-align:top}
+.arena .montable thead th{position:sticky;top:0;background:var(--surface);z-index:2;cursor:pointer}
+.arena .montable thead tr.mongrp th{cursor:default;color:var(--ink-3);font-weight:400}
+.arena .montable .ment{position:sticky;left:0;background:var(--surface);z-index:1;min-width:190px;cursor:pointer}
+.arena .montable thead .ment{z-index:3}
+.arena .montable td.mcell{cursor:pointer}
+.arena .montable td.mcell:hover{outline:1px solid var(--acc)}
+.arena .montable td.stale{opacity:.5}
+.arena .montable .age{display:block;color:var(--ink-3);font-size:10px}
+.arena .monalert{display:inline-block;font:10px var(--mono);padding:0 5px;margin:2px 2px 0 0;border:1px solid var(--dn);color:var(--dn)}
+.arena .mdetail td{white-space:normal;background:var(--bg)}

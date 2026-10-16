@@ -25,7 +25,7 @@
     const es = new EventSource(`api/v1/feed?topics=${encodeURIComponent(topics.join(","))}`);
     es.addEventListener("hello", () => onState && onState(true));
     es.onerror = () => onState && onState(false);
-    for (const type of ["battle.updated", "application.created", "application.updated", "entrant.updated", "round.metrics", "call.received", "round.locked", "round.scored", "stats.updated", "catalog.updated"]) {
+    for (const type of ["battle.updated", "application.created", "application.updated", "entrant.updated", "round.metrics", "call.received", "round.locked", "round.scored", "stats.updated", "catalog.updated", "monitor.updated"]) {
       es.addEventListener(type, e => { try { onEvent(type, JSON.parse(e.data).data); } catch (x) {} });
     }
     return es;

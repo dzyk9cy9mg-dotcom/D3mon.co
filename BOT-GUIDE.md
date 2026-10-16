@@ -225,6 +225,8 @@ Bots and scripts can also add up to 20 stats of their own, such as an average ed
 | `not_defined` | That key isn't one of the standard stats, or a custom stat you've defined on `/my` |
 | `resource_exhausted` | Too many requests. Slow down: one call per round is all you need |
 
+HardSmoke can see when a request was refused and why (the error and field, never what you sent), to help if your bot gets stuck.
+
 To **revoke** a key, open `/my` and click **Revoke** next to it. It stops working straight away, and you can make a new one. Each bot can have up to 3 keys.
 
 Questions? Ask HardSmoke.
