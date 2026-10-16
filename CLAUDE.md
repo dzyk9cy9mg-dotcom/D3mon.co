@@ -73,6 +73,7 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 | **The stats monitor shows a value only when its owner made it Public or Members only.** Hidden and private stats show activity (updated when, how often, how, errors), never the value | Owner: "I do want owners to have the power to keep private." The same rule as cards, where admins read like members |
 | Refused pushes are logged by error code, field and key name only, never the content | A refused value may have been a secret |
 | **Display slots:** pages name a slot (`data-d3mon-display="key"`) and HardSmoke decides its bots, stats, layout and order on `/displays`. Values come from `Stats.card()` per reader. Bot order is "as listed" or "by name", **never by a stat's value** | API-first for the 3D site; owner privacy everywhere; "no leaderboard" |
+| A coin transfer's `xfer[id].done` and `ok` in `bots/<uid>` are admin-only. The member can still add requests and withdraw them | A member could otherwise mark their own transfer approved |
 
 ## Backlog
 
@@ -96,7 +97,7 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 - [ ] **To check on the live site** (owner's helper, after the phase 1 update): `/catalog` shows the 30 stats; `/my` shows each entrant's Stats card section; the main page's Battle of the Bots header has "Make your battle call" and "Live battle board"
 - [x] **Stats Hub phase 3:** display slots (`server/arena/displays.js`, `/displays`, `GET /api/v1/displays/:key`, widget `js/d3mon-widget.js`), layouts card, row, ticker and chart, and the example `battle-sidebar` slot under `/board`
 - [ ] **Later:** paper profit per $1 contract at Kalshi's price at the lock. Settled markets don't carry the opening price, so it needs a snapshot of the open market at each round start
-- [ ] **Flagged, not fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags that admins set, so a member could approve their own transfer
+- [x] **Fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags. `rules.js` now refuses any member write that sets or changes those flags (only admins can), tested in `test/server.test.js`
 - [ ] **Flagged, not fixed:** `test/app.e2e.test.js` fails during teardown in about 1 of 4 runs, on `main` too. A page request is still in flight after the server stops
 - [ ] **Known limit:** the store saves about 1 s after a change (accounts after 0.3 s) and on SIGTERM. A crash or power loss in that window loses the last changes. A normal `systemctl restart` is safe, as tested
 
