@@ -1,15 +1,16 @@
 // Calls (step 4): a bot's up/down call for a Kalshi BTC 15-minute round, sent with its key, or a
 // caller's, made with the Up/Down buttons. Bots call DURING the round, like Kalshi traders, so a
-// call is accepted from before the round starts until its calls close: a few minutes into the round
-// (callWindowMin, set per battle, 5 by default; 0 means before the round starts). The server stamps
+// call is accepted from before the round starts until its calls close: by default any time until the
+// round ends (callWindowMin 15), or earlier where a battle sets it (0 means before the round starts). The server stamps
 // each call with its own clock, and the same clock decides whether calls are still open.
 //
 // One call per entrant per round, final when made: a retry of the same call changes nothing, a
 // different one is refused ("already_called"). A call is never moved to another round on its own.
 //
-// Sealed until the calls close: everyone sees that a call arrived and when, but its direction is
-// shown only to the entrant's owner and admins until then, so nobody can copy a rival's call. At the
-// close the directions are revealed (round.locked), and once the round has a result each call is
+// Callers' calls (chart readers, people) are sealed until the calls close: everyone sees that a call
+// arrived and when, but its direction is shown only to the caller and admins until then, so nobody
+// can copy it. Bots' and chart scripts' calls are shown the moment they're made (owner, 2026-10-17).
+// At the close every direction is revealed (round.locked), and once the round has a result each call is
 // scored (round.scored): "verified" when Kalshi settled it, "recorded by host" when HardSmoke did.
 //
 // Ledger line: { t: "call", entrantId, market, round, dir, via: "bot-key" | "button", keyId?,
@@ -78,11 +79,13 @@ export class Calls {
     return !!(e && ctx.uid && e.ownerId === ctx.uid);
   }
 
-  // One call as this reader may see it: sealed (no direction) until its calls close, unless it's theirs.
+  // One call as this reader may see it. A caller's call is sealed (no direction) until its calls close,
+  // unless it's theirs; a bot's or script's is shown straight away.
   view(l, ctx) {
     const now = this.now(), locksAt = closesAtOf(l), locked = now >= locksAt, e = this.registry.entrantById(l.entrantId);
     const out = { id: l.id, entrantId: l.entrantId, name: e ? e.name : null, market: l.market, round: l.round, receivedAt: l.at, intoRoundMs: l.at - l.round, via: l.via, locksAt, locked };
-    if (locked || this.#canSeeDirection(ctx, l.entrantId)) out.direction = l.dir;
+    const sealable = !e || e.kind === "caller"; // an unknown entrant stays sealed, to be safe
+    if (locked || !sealable || this.#canSeeDirection(ctx, l.entrantId)) out.direction = l.dir;
     else out.sealed = true;
     const r = locked ? this.metrics.result(l.market, l.round) : null;
     if (r) Object.assign(out, { result: r.result, correct: l.dir === r.result, verification: r.source === "kalshi" ? "verified" : "recorded by host" });

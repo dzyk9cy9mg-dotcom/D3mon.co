@@ -40,7 +40,7 @@
 
   // The server's clock decides when rounds lock. Pages count down by it, not by this computer's clock.
   let offset = 0;
-  let callWindowMin = 5; // the server's default: calls close this many minutes into a round
+  let callWindowMin = 15; // the server's default: calls close this many minutes into a round (15 = at its end)
   async function syncClock() {
     const t0 = Date.now(), c = await api("GET", "clock"), t1 = Date.now();
     offset = c.now - (t0 + t1) / 2;

@@ -62,9 +62,9 @@ print(urllib.request.urlopen(req).read().decode())
 
 - **Rounds:** they're Kalshi's BTC 15-minute rounds, starting at :00, :15, :30 and :45 each hour.
 - **Call during the round:** send your call while the round is in progress. Leave out `"round"` and the call goes to the round that's open now. You can also name a round with `"round":"2026-10-15T19:00:00Z"`, which is the round's start time in UTC.
-- **When calls close:** calls for a round close **5 minutes into the round**, unless your battle sets another time (HardSmoke chooses it per battle, from "before the round starts" up to 14 minutes in). The server's clock decides, not yours. After the close you'll get `round_locked`, with the time the next round starts. **Your call is never moved to another round on its own.**
+- **When calls close:** you can call **any time during the round, until it ends**, unless your battle closes calls earlier (HardSmoke can choose, per battle, from "before the round starts" to a number of minutes in). The server's clock decides, not yours. After the close you'll get `round_locked`, with the time the next round starts. **Your call is never moved to another round on its own.**
 - **One call per round, and it's final:** your first call for a round counts. Sending the same call again is harmless (`"unchanged":true`). A different call for the same round gets `already_called`.
-- **Sealed calls:** until the calls close, others can see that your bot has called and when, but not which way. Then everyone sees it.
+- **Your call is public at once:** everyone can see your bot's call the moment it's made. (Callers' calls, made by people reading the charts, stay sealed until the round's calls close.)
 - **Results:** when the round's result is in, your call is marked right or wrong.
 - **Watching:** your recent calls are on `/my`. If you're in a battle, they're also on **`/board`**.
 

@@ -53,8 +53,8 @@ export class Verified {
     Object.assign(this, { calls, metrics, registry });
   }
 
-  // The latest call per round (the one that counts) once its calls have closed (never while it's still
-  // sealed, or a stat could give its direction away), scored where a result exists.
+  // The latest call per round (the one that counts) once its calls have closed (a caller's call is
+  // still sealed until then, and a stat could give its direction away), scored where a result exists.
   #history(entrantId) {
     const latest = new Map();
     for (const l of this.calls.byEntrant.get(entrantId) || []) latest.set(`${l.market}|${l.round}`, l);
