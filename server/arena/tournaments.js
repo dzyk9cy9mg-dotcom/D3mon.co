@@ -16,6 +16,12 @@
 //
 // Tournament ids name the period in Eastern time: hourly-2026-10-17T18, daily-2026-10-17,
 // weekly-2026-10-12 (its Monday) and monthly-2026-10. The hour repeated when clocks go back is "…T01b".
+//
+// Step 5 saves the final standings. Once a tournament has ended and Kalshi has settled all its rounds (or
+// 30 minutes after it ended, whichever comes first), its standings are written to the ledger and never
+// rewritten. A Kalshi correction that arrives later doesn't change them: the tournament is flagged instead.
+//
+// Ledger line: { t: "tournament_final", tournamentId, startsAt, endsAt, settledRounds, standings: [...] }
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
 import { nextRound, currentRound, MARKET } from "./calls.js";
@@ -27,6 +33,9 @@ export const TIME_ZONE = "America/New_York";
 export const NOTICE = "For entertainment. Not financial advice. D3MON never trades.";
 const TITLES = { hourly: "Hourly", daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
 const HOUR = 3600000;
+const FINAL_GRACE_MS = 30 * 60000; // matches the Kalshi poller's "still unsettled" flag
+const LOOKBACK = { hourly: 48, daily: 14, weekly: 6, monthly: 3 }; // past tournaments checked for saving
+const SCORING = "Most correct calls, then accuracy, then the earlier average call. Only rounds Kalshi settled count.";
 
 // ---------- Eastern time ----------
 const fmt = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short" });
@@ -87,8 +96,11 @@ export class Tournaments {
   constructor({ ledger, registry, feed, calls, metrics, now = () => Date.now() }) {
     Object.assign(this, { ledger, registry, feed, calls, metrics, now });
     this.byEntrant = new Map(); // entrantId -> tournament_entry lines, in write order
+    this.finals = new Map(); // tournamentId -> its tournament_final line
+    this.empty = new Set(); // ended tournaments past their grace time that nobody played: nothing to save
     const index = lines => {
       for (const l of lines) {
+        if (l.t === "tournament_final" && !this.finals.has(l.tournamentId)) this.finals.set(l.tournamentId, l);
         if (l.t !== "tournament_entry") continue;
         if (!this.byEntrant.has(l.entrantId)) this.byEntrant.set(l.entrantId, []);
         this.byEntrant.get(l.entrantId).push(l);
@@ -147,10 +159,56 @@ export class Tournaments {
     return { timeZone: TIME_ZONE, notice: NOTICE, now, tournaments: PERIODS.map(k => this.#summary(periodAt(k, now), now)) };
   }
 
-  // GET /tournaments/:id: one tournament's standings, live while it runs and final once it has ended.
+  // GET /tournaments/:id: one tournament's standings: live while it runs, "scoring" while its last rounds
+  // are settled, then "final" from the saved line.
   standings(id) {
     const p = periodById(id), now = this.now();
     if (!p || p.startsAt > now) throw new ApiError(404, "not_found", "No such tournament.");
+    const live = this.#compute(p, now);
+    const saved = this.finals.get(p.id);
+    const out = { ...this.#summary(p, now, live.settled), notice: NOTICE, timeZone: TIME_ZONE, scoring: SCORING, standings: live.rows };
+    if (!saved) {
+      if (now >= p.endsAt) out.status = "scoring";
+      return out;
+    }
+    // Saved: the standings are the saved ones. A later Kalshi correction is shown as a flag, never applied.
+    const key = rows => rows.map(r => `${r.entrant.id}:${r.rank}:${r.correct}:${r.played}`).join(",");
+    return { ...out, status: "final", savedAt: saved.at, settledRounds: saved.settledRounds, standings: saved.standings,
+      ...(key(saved.standings) !== key(live.rows) ? { corrected: true, correctedNote: "Kalshi corrected a result after these standings were saved. The saved standings stand." } : {}) };
+  }
+
+  // Saves the standings of tournaments that have ended and are fully settled (or past their grace time).
+  // Runs every minute; returns the ids it saved.
+  finalizeDue(now = this.now()) {
+    const saved = [];
+    for (const kind of PERIODS) {
+      let p = periodAt(kind, now);
+      for (let i = 0; i < LOOKBACK[kind]; i++) {
+        p = periodAt(kind, p.startsAt - 1);
+        if (this.finals.has(p.id) || this.empty.has(p.id)) continue;
+        const c = this.#compute(p, now);
+        const late = now >= p.endsAt + FINAL_GRACE_MS;
+        if (c.settled < c.ended && !late) continue; // wait for Kalshi
+        if (!c.rows.length) { if (late) this.empty.add(p.id); continue; }
+        this.ledger.append([{ t: "tournament_final", tournamentId: p.id, startsAt: p.startsAt, endsAt: p.endsAt, settledRounds: c.settled, standings: c.rows }], null, now);
+        saved.push(p.id);
+      }
+    }
+    if (saved.length) this.feed.publish("tournaments", "tournament.updated", () => ({ reason: ["final"], saved }));
+    return saved;
+  }
+
+  start() {
+    this.stop();
+    const tick = () => { try { this.finalizeDue(); } catch (e) { console.error("tournaments:", e); } };
+    this.timer = setInterval(tick, 60000);
+    this.timer.unref?.();
+    setTimeout(tick, 5000).unref?.();
+  }
+  stop() { if (this.timer) clearInterval(this.timer); this.timer = null; }
+
+  // The standings as of `now`, from the ledger: rows, rounds ended so far, and how many Kalshi settled.
+  #compute(p, now) {
     const rounds = [];
     for (let r = p.startsAt; r < p.endsAt && r + ROUND_MS <= now; r += ROUND_MS) rounds.push(r); // rounds that have ended
     const settled = new Map(); // round -> "up" | "down", Kalshi's result only
@@ -189,7 +247,7 @@ export class Tournaments {
       const prev = rows[i - 1];
       row.rank = prev && prev.correct === row.correct && prev.accuracy === row.accuracy && prev.avgLeadMs === row.avgLeadMs ? prev.rank : i + 1;
     });
-    return { ...this.#summary(p, now, settled.size), notice: NOTICE, timeZone: TIME_ZONE, scoring: "Most correct calls, then accuracy, then the earlier average call. Only rounds Kalshi settled count.", standings: rows };
+    return { rows, ended: rounds.length, settled: settled.size };
   }
 
   #summary(p, now, settledRounds) {
