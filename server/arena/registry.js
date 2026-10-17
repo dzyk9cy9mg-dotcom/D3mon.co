@@ -15,6 +15,10 @@ export const ROUND_MS = 15 * 60000; // Kalshi BTC 15-minute rounds
 // Calls are made during a round, until this many minutes in: 15 = any time until the round ends (the default),
 // 0 = before the round starts. Each battle can set its own.
 export const DEFAULT_CALL_WINDOW_MIN = 15;
+// A battle is over once its last round ends. Its stored status isn't changed (that stays HardSmoke's
+// choice); views show "over" in its place, except for drafts and final battles.
+export const battleOver = (b, now = Date.now()) => now >= b.startsAt + b.rounds * b.roundMs;
+export const battleState = (b, now = Date.now()) => (b.status !== "draft" && b.status !== "final" && battleOver(b, now) ? "over" : b.status);
 export const callWindowMs = b => (b && Number.isInteger(b.callWindowMin) ? b.callWindowMin : DEFAULT_CALL_WINDOW_MIN) * 60000;
 const BATTLE_STATUS = ["draft", "open", "closed", "live", "final"];
 const LIVE_APP = new Set(["pending", "approved"]);
@@ -102,7 +106,7 @@ export class Registry {
   battleView(b, ctx) {
     const entrants = (b.entrants || []).map(id => this.#get(ENTRANTS, id)).filter(Boolean).map(e => this.entrantView(e, ctx));
     const out = { id: b.id, title: b.title, market: b.market, startsAt: b.startsAt, rounds: b.rounds, roundMs: b.roundMs,
-      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, status: b.status, onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
+      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, status: b.status, state: battleState(b), over: battleOver(b), onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
     if (isAdmin(ctx)) {
       out.applications = {};
       for (const a of this.#all(APPS, [["battleId", "==", b.id]])) out.applications[a.status] = (out.applications[a.status] || 0) + 1;
@@ -158,7 +162,7 @@ export class Registry {
     this.#requireMember(ctx);
     const b = this.battleFor(ctx, battleId);
     if (b.status !== "open") throw new ApiError(409, "applications_closed", "This battle isn't taking applications.");
-    if (Date.now() >= b.startsAt + b.rounds * b.roundMs) throw new ApiError(409, "applications_closed", "This battle is over.");
+    if (battleOver(b)) throw new ApiError(409, "applications_closed", "This battle is over.");
     const f = check(body, APP_FIELDS);
     let kind = f.kind, name = f.name, entrantId = null;
     if (f.entrantId) {
@@ -249,7 +253,7 @@ export class Registry {
     if (!a || a.applicantId !== ctx.uid) throw new ApiError(404, "not_found", "No such application.");
     if (!LIVE_APP.has(a.status)) throw new ApiError(409, "bad_state", `This application is already ${a.status}.`);
     const b = this.#get(BATTLES, a.battleId);
-    if (b && (b.status === "live" || b.status === "final")) throw new ApiError(409, "battle_started", "The battle has started, so the lineup is locked. Ask HardSmoke.");
+    if (b && (b.status === "live" || b.status === "final" || battleOver(b))) throw new ApiError(409, "battle_started", "The battle has started, so the lineup is locked. Ask HardSmoke.");
     if (a.status === "approved") this.#leaveBattle(a, ctx.uid);
     return this.#transition(a, ctx.uid, "withdrawn", "withdrawn", "");
   }

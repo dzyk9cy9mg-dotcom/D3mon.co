@@ -18,6 +18,7 @@
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
 import { VERIFIED } from "./verified.js";
+import { battleOver } from "./registry.js";
 
 const DISPLAYS = "arena_displays";
 const KEY = /^[a-z][a-z0-9-]{1,39}$/;
@@ -112,7 +113,7 @@ export class Displays {
   #battleFor(which, pageBattle) {
     const all = this.registry.allBattles().filter(b => b.status !== "draft");
     if (which === "page") return all.find(b => b.id === pageBattle) || null;
-    if (which === "current") return all.find(b => b.onMainPage) || all.filter(b => b.status === "live").sort((a, b) => b.startsAt - a.startsAt)[0] || null;
+    if (which === "current") return all.find(b => b.onMainPage) || all.filter(b => b.status === "live" && !battleOver(b)).sort((a, b) => b.startsAt - a.startsAt)[0] || null;
     return all.find(b => b.id === which) || null;
   }
 

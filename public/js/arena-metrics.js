@@ -265,8 +265,8 @@
     try {
       S.battles = (await api("GET", "battles")).battles.filter(b => b.status !== "draft");
       if (!S.battles.length) { $("battleSel").innerHTML = `<option value="">No battles yet</option>`; return; }
-      $("battleSel").innerHTML = S.battles.map(b => `<option value="${esc(b.id)}">${esc(b.title)} · ${esc(b.status)}</option>`).join("");
-      const pick = S.battles.find(b => b.status === "live") || S.battles.find(b => b.startsAt <= Date.now()) || S.battles[0];
+      $("battleSel").innerHTML = S.battles.map(b => `<option value="${esc(b.id)}">${esc(b.title)} · ${esc(b.state || b.status)}</option>`).join("");
+      const pick = S.battles.find(b => b.status === "live" && !b.over) || S.battles.find(b => b.startsAt <= Date.now()) || S.battles[0];
       $("battleSel").value = pick.id;
       await pickBattle(pick.id);
     } catch (e) { msg(e.message); }

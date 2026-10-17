@@ -211,6 +211,37 @@ describe("tournaments: joining without a battle", () => {
     assert.equal(r.json.error.message, "This battle is over.");
   });
 
+  test("a battle shows as over once its last round ends, without changing its status", async () => {
+    const Q = 15 * 60000, now = Math.floor(Date.now() / Q) * Q;
+    const mk = body => hs.post("/api/v1/battles", { title: "State test", ...body }).then(r => r.json.battle);
+    const ended = await mk({ startsAt: now - 4 * Q, rounds: 2, status: "live" });
+    const running = await mk({ startsAt: now - Q, rounds: 4, status: "live" });
+    const soon = await mk({ startsAt: now + Q, status: "open" });
+    const oldDraft = await mk({ startsAt: now - 9 * Q, rounds: 1 });
+    const view = async id => (await hs.get(`/api/v1/battles/${id}`)).json.battle;
+    const e = await view(ended.id);
+    assert.equal(e.state, "over");
+    assert.equal(e.status, "live", "the stored status is untouched");
+    assert.equal(e.over, true);
+    assert.equal((await view(running.id)).state, "live");
+    assert.equal((await view(soon.id)).state, "open");
+    assert.equal((await view(oldDraft.id)).state, "draft", "a draft stays a draft");
+    await hs.req("PATCH", `/api/v1/battles/${ended.id}`, { status: "final" });
+    assert.equal((await view(ended.id)).state, "final");
+  });
+
+  test("an application to a battle that's over can't be withdrawn", async () => {
+    const Q = 15 * 60000, start = Math.floor(Date.now() / Q) * Q + Q;
+    const b = (await hs.post("/api/v1/battles", { title: "Short one", startsAt: start, rounds: 1, status: "open" })).json.battle;
+    const a = (await freya.post(`/api/v1/battles/${b.id}/applications`, { kind: "caller", name: "Freya Reads", creatorName: "Freya" })).json.application;
+    const real = Date.now;
+    Date.now = () => start + 2 * Q; // the battle has ended
+    try {
+      const r = await freya.post(`/api/v1/applications/${a.id}/withdraw`, {});
+      assert.equal(r.json.error.code, "battle_started");
+    } finally { Date.now = real; }
+  });
+
   test("a joined entrant can still be entered in a battle", async () => {
     const Q = 15 * 60000;
     const battle = (await hs.post("/api/v1/battles", { title: "Special event", startsAt: Math.floor(Date.now() / Q) * Q + Q, status: "open" })).json.battle;
