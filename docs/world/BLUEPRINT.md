@@ -1,6 +1,6 @@
 # D3MON World: blueprint
 
-**Status: draft for the owner's approval (2026-10-16).** This is the one design that every build step follows. It turns the [vision](VISION.md), the [inspiration](INSPIRATION.md) and the [decisions](QUESTIONS.md) into a single world.
+**Status: draft for the owner's approval (updated 2026-10-17: the walkable spiral ramp is replaced by the triple helix of entrants; see section 4).** This is the one design that every build step follows. It turns the [vision](VISION.md), the [inspiration](INSPIRATION.md) and the [decisions](QUESTIONS.md) into a single world.
 
 Diagrams: [`blueprint/map-top.svg`](blueprint/map-top.svg) (seen from above) and [`blueprint/section-side.svg`](blueprint/section-side.svg) (cut through the side).
 
@@ -38,6 +38,20 @@ Scrolling follows this route. Free flight is available at any time, with "back t
 The **light column** in the centre is the fast lift: tap any level to rise or drop straight to it.
 
 ## 4. Places
+
+> **Update 2026-10-17. This replaces the ramp described below.** The owner felt dizzy climbing the ramp and found stairs too literal. The proposal now:
+> - **The Helix:** a **triple helix of entrants** rising up the centre from the Arena to the Trade Floor. Three strands twist together: an **amber strand of Callers**, a **blue strand of Bots** and a **violet strand of Chart Scripts**. Every entrant is a glowing card on its strand, ordered as listed or by name, never by a stat.
+> - **Scrolling turns and raises the helix past a steady camera,** so the cards slide by one at a time. The camera never spins, which is what prevents dizziness.
+> - **Filtering:** tap a kind and its strand glows and comes forward while the others dim. Tap a card to fly gently into that entrant's profile.
+> - **Three calm levels:** the **Arena** (floor), the **Helix** (middle) and the **Trade Floor** (peak).
+> - **The three inside walls** are each kind's gallery and stream wall: Callers amber, Bots blue, Chart Scripts violet. There are no ramps or railings.
+> - **Comfort rules everywhere:**
+>   - no continuous camera spin;
+>   - a level horizon;
+>   - vertical moves are slow lifts;
+>   - reduce motion gets instant cuts.
+>
+> The ramp text below stays until the owner approves the change.
 
 ### Outside
 
