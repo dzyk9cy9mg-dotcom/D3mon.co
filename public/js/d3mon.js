@@ -4732,7 +4732,7 @@ setInterval(() => {
 S.bootAt = Date.now();
 
 // ---------- admin control center ----------
-const AP_TABS = [["overview","Overview"],["connect","Connect requests"],["listings","Listings"],["members","Members"],["site","Site & brand"],["announce","Announcements"],["callers","Callers"],["streaming","Streaming"],["voice","Voice rooms"],["cxall","Cortex controls"],["dchat","Discord chats"],["moderation","Moderation"],["social","Posts & business"],["reviews","Reviews & reviewers"],["boards","Message boards"],["dms","Messages"],["forum","Forum"],["registry","Bots & scripts"],["battle","Battle of the Bots"],["legal","Legal pages"],["launch","Launch checklist"]];
+const AP_TABS = [["overview","Overview"],["connect","Connect requests"],["listings","Listings"],["members","Members"],["site","Site & brand"],["announce","Announcements"],["callers","Callers"],["streaming","Streaming"],["voice","Voice rooms"],["cxall","Cortex controls"],["dchat","Discord chats"],["moderation","Moderation"],["social","Posts & business"],["reviews","Reviews & reviewers"],["boards","Message boards"],["dms","Messages"],["forum","Forum"],["registry","Bots & scripts"],["battle","Battle of the Bots"],["arena","Arena pages"],["legal","Legal pages"],["launch","Launch checklist"]];
 const LAUNCH = [
   ["Foundation", [["domain","Custom domain","Buy d3mon.co (or similar) and point it at your host."],["hosting","Own hosting","Vercel, Netlify or Cloudflare Pages to serve the site outside claude.ai."],["dbauth","Database + sign-in","Supabase or Firebase for accounts, data and access rules."],["oauth","Discord login","Let members sign in with Discord so names and roles match."],["backups","Backups","Automatic daily database backups and an export you've tested."]]],
   ["Community", [["cxready","Cortex chat ready","The Cortex is the site's own chat: pin a welcome message in #main-floor and add voice room links."],["bridge","Discord ↔ message boards bridge (optional)","Only needed if a caller, bot or script board is set to Both, mirrored."],["mods","Moderator team","At least 2 trusted mods with clear roles."],["rulespub","Community rules published","Fill in Legal pages → Community rules."],["verifyproc","Caller verification process","Decide what a caller must show before you verify them."]]],
@@ -4969,8 +4969,25 @@ function renderAdmin(){
       <div class="astat"><b style="font-size:16px">${cfg.first ? esc(new Date(cfg.first).toLocaleString()) : "—"}</b><span>First round</span></div>
       <div class="astat"><b style="font-size:16px">${(() => { const F = foNames(); return F.a || F.b ? esc((F.a || "?") + " vs " + (F.b || "?")) : "—"; })()}</b><span>Face-off</span></div></div>
       <p class="hint">The roster, face-off, round timing and results are edited right on the Battle page.</p>
-      <div class="aacts"><button class="btn sm" type="button" data-apgo="battle">Open Battle controls</button></div></div>
+      <div class="aacts"><button class="btn sm" type="button" data-apgo="battle">Open Battle controls</button><a class="btn ghost sm" href="applications" style="text-decoration:none">Applications</a><button class="btn ghost sm" type="button" data-aptab="arena">All Arena pages</button></div></div>
       <div class="acard"><h3>Round results</h3><p class="hint">Mark UP/DOWN outcomes for rounds that haven't settled. The round desk is off the main page now; the button below opens it for admins only (▲/▼ buttons next to each round).</p><div class="aacts"><button class="btn ghost sm" type="button" data-apgo="desk">Open the Round Desk</button></div></div>`;
+  }
+  if(T === "arena"){
+    // Links only: each page checks the reader's role on the server.
+    const page = ([href, name, what]) => `<div class="arow" style="grid-template-columns:minmax(0,1fr) auto"><div class="t"><b>${name}</b><small>${what}</small></div><div class="aacts"><a class="btn sm" href="${href}" style="text-decoration:none">Open</a></div></div>`;
+    const group = (title, rows) => `<div class="acard"><h3>${title}</h3><div class="alist">${rows.map(page).join("")}</div></div>`;
+    h += group("Run the battles <small>admins</small>", [
+      ["applications", "Applications &amp; battles", "Create and schedule battles, change their status, review and approve applications, and see the full application log."],
+      ["metrics", "Round metrics", "Enter round results and metrics by hand, and check the Kalshi status line."],
+      ["board", "Live battle board", "Watch a battle live: calls arriving, the lock and the results."]]);
+    h += group("Stats Hub <small>admins</small>", [
+      ["catalog", "Stat list", "Edit the standard stats every bot and script can show on its card."],
+      ["monitor", "Stats monitor", "Every entrant and stat in one table: activity, history, alerts for quiet bots, stale stats and refused pushes."],
+      ["displays", "Display slots", "Choose which bots, stats and layout each display on the site shows."]]);
+    h += group("Entrant pages <small>everyone who's signed in</small>", [
+      ["apply", "Apply to a battle", "The form bots, callers and scripters use to apply."],
+      ["my", "My entrants &amp; keys", "Make battle calls, manage bot keys, type stats and choose who sees each stat."],
+      ["board", "Stats cards", "Each entrant's stats card opens from their name on the live board."]]);
   }
   if(T === "legal"){
     h += [["terms","Terms of Service","Who can use the site, what's allowed, account termination, no warranties, limitation of liability."],["privacy","Privacy Policy","What data you collect (names, messages, calls), why, how long you keep it, and how people can ask for deletion."],["rules","Community rules","Be respectful, no spam or pumping, disclose paid promotions, no personal attacks, mods have the final say."]]
@@ -7153,7 +7170,7 @@ playIntro(false);
       const me = await user.me();
       meId = me.id; isOwner = me.isOwner; S.meGuest = !!me.guest;
       isAdmin = await user.canEdit();
-      $("adminBtn").hidden = !isAdmin;
+      $("adminBtn").hidden = !isAdmin; $("battleAppsBtn").hidden = !isAdmin;
       renderCxTop.sig = null; if(S.cortex) renderCxTop();
       const cw = await user.can("data.write");
       if(cw === false || !meId) canWrite = false;

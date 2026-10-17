@@ -1,0 +1,157 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>D3MON World helix concept</title>
+<style>
+  :root{--callers:#FFB547;--bots:#4DA3FF;--scripts:#B98CFF;--ink:#DCE7EE;--ink2:#8FA3B2;--ink3:#587080;--line:#1A2A36}
+  html,body{margin:0;height:100%;background:#05080C;overflow:hidden;color:var(--ink);font:500 15px/1.4 "Rajdhani",system-ui,sans-serif}
+  canvas{display:block}
+  .ui{position:fixed;inset:0;pointer-events:none}
+  .bar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:18px;padding:16px 26px;background:linear-gradient(#05080Cdd,transparent)}
+  .brand{display:flex;align-items:center;gap:10px;font:800 17px Orbitron,system-ui,sans-serif;letter-spacing:.14em}
+  .sp{flex:1}
+  .apply{font:700 13px Orbitron,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;padding:9px 16px;color:#05080C;background:linear-gradient(90deg,var(--callers),var(--bots),var(--scripts));clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+  .ghost{font:600 12px "Share Tech Mono",monospace;letter-spacing:.12em;text-transform:uppercase;padding:8px 12px;border:1px solid #2a3c4a;color:var(--ink2)}
+  .av{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#4DA3FF,#152536);outline:1px solid #2a3c4a;outline-offset:2px}
+  .chips{position:absolute;left:50%;top:78px;transform:translateX(-50%);display:flex;gap:8px}
+  .chip{font:600 12px "Share Tech Mono",monospace;letter-spacing:.14em;text-transform:uppercase;padding:7px 14px;border:1px solid #2a3c4a;color:var(--ink2);background:#070d14cc}
+  .chip.on{color:var(--c);border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,#070d14);box-shadow:0 0 20px -6px var(--c)}
+  .focus{position:absolute;width:300px;padding:14px 16px;background:#070D14e0;border:1px solid color-mix(in srgb,var(--c) 55%,var(--line));box-shadow:0 0 40px -12px var(--c);clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+  .focus h3{margin:0;font:800 22px Orbitron,system-ui,sans-serif;letter-spacing:.06em}
+  .focus h3 em{font-style:normal;color:var(--c)}
+  .focus .sub{font:12px "Share Tech Mono",monospace;letter-spacing:.12em;color:var(--ink3);margin:3px 0 10px;text-transform:uppercase}
+  .focus .row{display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line);font-size:15px}
+  .focus .row i{font-style:normal;font:13px "Share Tech Mono",monospace;color:#2EE59D}
+  .focus .cta{margin-top:10px;font:12px "Share Tech Mono",monospace;letter-spacing:.14em;color:var(--c);text-transform:uppercase}
+  .cap{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);text-align:center;width:90%}
+  .cap b{display:block;font:700 22px Orbitron,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 0 18px #4DA3FF66}
+  .cap span{display:block;margin-top:6px;font:14px "Share Tech Mono",monospace;letter-spacing:.14em;color:var(--ink2);text-transform:uppercase}
+  .tag{position:absolute;right:26px;bottom:24px;font:12px "Share Tech Mono",monospace;color:var(--callers);border:1px solid #FFB54755;background:#FFB5470f;padding:5px 10px;letter-spacing:.1em}
+  .icons{position:absolute;left:26px;bottom:24px;display:flex;gap:8px}
+  .icons span{width:30px;height:30px;border:1px solid #2a3c4a;display:grid;place-items:center;font:12px "Share Tech Mono",monospace;color:var(--ink3)}
+  [hidden]{display:none!important}
+</style></head>
+<body>
+<div class="ui">
+  <div class="bar"><div class="brand"><svg width="26" height="26" viewBox="-50 -50 100 100"><path d="M0 -38 L33 19 L-33 19 Z" fill="none" stroke="#4DA3FF" stroke-width="5"/><circle cx="0" cy="-38" r="8" fill="#FFB547"/><circle cx="-33" cy="19" r="8" fill="#4DA3FF"/><circle cx="33" cy="19" r="8" fill="#B98CFF"/></svg>D3MON.CO</div>
+    <div class="sp"></div><span class="apply">Apply for a battle</span><span class="ghost">Menu ▾</span><span class="av"></span></div>
+  <div class="chips" id="chips"><span class="chip" data-k="all" style="--c:#DCE7EE">All</span><span class="chip" data-k="callers" style="--c:var(--callers)">Callers</span><span class="chip" data-k="bots" style="--c:var(--bots)">Bots</span><span class="chip" data-k="scripts" style="--c:var(--scripts)">Chart Scripts</span></div>
+  <div class="focus" id="focus" style="--c:var(--bots);right:60px;top:200px"><h3>I am <em>NeuroBot 9.</em></h3><div class="sub">Bot · by kiki_trades · live in today's battle</div>
+    <div class="row"><span>Win rate</span><i>61% ✓ verified</i></div><div class="row"><span>Calls</span><i>412 ✓ verified</i></div><div class="row"><span>Avg lead time</span><i>2m 10s ✓ verified</i></div><div class="cta">Tap to open profile →</div></div>
+  <div class="cap" id="cap"><b></b><span></span></div>
+  <div class="icons"><span>HD</span><span>♪</span></div>
+  <div class="tag">CONCEPT · SAMPLE NAMES</div>
+</div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1); document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene(); const BG = new THREE.Color("#05080C");
+scene.background = BG; scene.fog = new THREE.FogExp2(BG, 0.008);
+const camera = new THREE.PerspectiveCamera(55, W / H, 0.05, 800);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(W, H, { samples: 4, type: THREE.HalfFloatType }));
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.55, 0.45, 0.3); composer.addPass(bloom); composer.addPass(new OutputPass());
+
+let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const C = { callers: new THREE.Color("#FFB547"), bots: new THREE.Color("#4DA3FF"), scripts: new THREE.Color("#B98CFF"), peak: new THREE.Color("#EAF4FF"), up: new THREE.Color("#2EE59D"), dn: new THREE.Color("#FF4D6A"), gold: new THREE.Color("#FFD27A") };
+const HEX = { callers: "#FFB547", bots: "#4DA3FF", scripts: "#B98CFF" };
+const add = THREE.AdditiveBlending;
+const R = 16, PH = R * Math.SQRT2, TRADE = PH * 0.64;
+const at = (deg, r, y = 0) => new THREE.Vector3(r * Math.cos(deg * Math.PI / 180), y, r * Math.sin(deg * Math.PI / 180));
+const ANG = { callers: -90, bots: 150, scripts: 30 }, KINDS = ["callers", "bots", "scripts"];
+const V = { callers: at(-90, R), bots: at(150, R), scripts: at(30, R), peak: new THREE.Vector3(0, PH, 0) };
+const dotTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"); const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.25, "rgba(255,255,255,.6)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+const glow = (color, size, pos, op = 1) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex, color, blending: add, transparent: true, depthWrite: false, opacity: op })); s.scale.setScalar(size); s.position.copy(pos); scene.add(s); return s; };
+const lineMat = (color, op = 1) => new THREE.LineBasicMaterial({ color, transparent: true, opacity: op });
+
+// floor
+{ const pts = [], r = 3.2, seg = 40;
+  for (let row = -36; row <= 36; row++) for (let col = -36; col <= 36; col++) { const cx = col * r + (row & 1 ? r / 2 : 0), cz = row * r * Math.sqrt(3) / 2; if (cx * cx + cz * cz > 120 * 120) continue; for (let i = 0; i < seg; i++) { const a = i / seg * Math.PI * 2, b = (i + 1) / seg * Math.PI * 2; pts.push(cx + r * Math.cos(a), 0, cz + r * Math.sin(a), cx + r * Math.cos(b), 0, cz + r * Math.sin(b)); } }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3)); const f = new THREE.LineSegments(g, lineMat("#2C5F8F", .34)); f.position.y = -.05; scene.add(f); }
+// pyramid
+for (const [a, b] of [["callers", "bots"], ["bots", "scripts"], ["scripts", "callers"], ["peak", "callers"], ["peak", "bots"], ["peak", "scripts"]]) {
+  const A = V[a], B = V[b], geo = new THREE.TubeGeometry(new THREE.LineCurve3(A, B), 1, 0.1, 8, false);
+  const pos = geo.attributes.position, col = [], AB = B.clone().sub(A), L2 = AB.lengthSq(), v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const t = THREE.MathUtils.clamp(v.clone().sub(A).dot(AB) / L2, 0, 1); const c = C[a].clone().lerp(C[b], t).multiplyScalar(1.4); col.push(c.r, c.g, c.b); }
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3)); scene.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })));
+}
+for (const k of KINDS) { glow(C[k], 4.5, V[k], .7); glow(C[k], 1.5, V[k]); }
+glow(new THREE.Color("#CFE6FF"), 3.5, V.peak, .8);
+const face = (A, B, P, color, op) => { const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute([...A.toArray(), ...B.toArray(), ...P.toArray()], 3)); const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: op, depthWrite: false })); scene.add(m); return m; };
+face(V.bots, V.scripts, V.peak, "#0c1a2c", .2); face(V.scripts, V.callers, V.peak, "#1a1030", .2); face(V.callers, V.bots, V.peak, "#0c1a2c", .2);
+
+// arena
+{ for (let i = 0; i < 96; i++) { const a = i / 96 * Math.PI * 2, m = new THREE.Mesh(new THREE.BoxGeometry(.08, .03, .6), new THREE.MeshBasicMaterial({ color: (rnd() < .53 ? C.up : C.dn).clone().multiplyScalar(1.3), toneMapped: false })); m.position.set(Math.cos(a) * 4.8, .03, Math.sin(a) * 4.8); m.rotation.y = -a + Math.PI / 2; scene.add(m); }
+  glow(new THREE.Color("#ffffff"), 1.8, new THREE.Vector3(0, 1.0, 0)); glow(new THREE.Color("#7fbfff"), 5, new THREE.Vector3(0, 1.0, 0), .4);
+  for (let t = 0; t < 3; t++) for (let i = 0; i < 80; i++) { const a = i / 80 * Math.PI * 2, r = 6 + t * .55; if (rnd() < .55) glow(new THREE.Color("#cfe6ff"), .16, new THREE.Vector3(Math.cos(a) * r, .12 + t * .26, Math.sin(a) * r), .8); } }
+// stream walls on the lower inner faces
+const streamCv = document.createElement("canvas"); streamCv.width = 256; streamCv.height = 144; const streamTex = new THREE.CanvasTexture(streamCv); streamTex.colorSpace = THREE.SRGBColorSpace;
+{ const g = streamCv.getContext("2d"); g.fillStyle = "#0b1726"; g.fillRect(0, 0, 256, 144); g.fillStyle = "rgba(77,163,255,.25)"; for (let i = 0; i < 6; i++) g.fillRect(20 + i * 38, 40 + (i * 13) % 50, 22, 200); g.fillStyle = "#FF4D6A"; g.font = "16px monospace"; g.fillText("● LIVE", 12, 22); g.fillStyle = "#fff"; g.beginPath(); g.moveTo(118, 58); g.lineTo(118, 88); g.lineTo(142, 73); g.fill(); streamTex.needsUpdate = true; }
+for (const [a, b, ka] of [["callers", "bots", "callers"], ["bots", "scripts", "bots"], ["scripts", "callers", "scripts"]]) for (let j = 0; j < 4; j++) {
+  const y = 2.4 + (j % 2) * 1.3, k = 1 - y / PH, p = V[a].clone().lerp(V[b], .26 + j * .16).multiplyScalar(k * .93); p.y = y;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.12), new THREE.MeshBasicMaterial({ map: streamTex, transparent: true, opacity: .85, side: THREE.DoubleSide })); m.position.copy(p); m.lookAt(0, y, 0); scene.add(m);
+  scene.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([[-1, -.56], [1, -.56], [1, .56], [-1, .56]].map(([x, z]) => m.localToWorld(new THREE.Vector3(x, z, 0)))), lineMat(C[ka], .9)));
+}
+// trade floor + crown
+{ const k = 1 - TRADE / PH, ring = KINDS.map(n => new THREE.Vector3(V[n].x * k, TRADE, V[n].z * k)); face(ring[0], ring[1], ring[2], "#5aa9ff", .14); scene.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ring), lineMat("#cfe6ff", .9)));
+  const pts = []; for (let i = 0; i <= 12; i++) { const a = i / 12 * Math.PI * 2, r = i % 2 ? .7 : 1.6; pts.push(new THREE.Vector3(Math.cos(a) * r, TRADE + 3, Math.sin(a) * r)); }
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat(C.gold, 1))); glow(C.gold, 3.2, new THREE.Vector3(0, TRADE + 3, 0), .5); }
+
+// ---- the triple helix ----
+const Y0 = 2.2, Y1 = TRADE - .8, HR = 2.6, TURNS = 2.2;
+const NAMES = { callers: ["Alpha Signal", "Moon Oracle", "Tape Reader", "Night Owl", "Delta Vee", "Wick Hunter", "Fade King", "Sir Breakout", "Candle Monk", "Echo"],
+  bots: ["NeuroBot 9", "Quant Hawk", "Delta Drift", "Byte Bull", "Ion Trader", "Vector Six", "Loop Ghost", "Kestrel", "Orbit", "Static"],
+  scripts: ["Fib Scout", "RSI Lantern", "Wave Smith", "Pivot Ray", "MACD Muse", "Band Walker", "Zigzag", "VWAP Rider", "Gann Grid", "Ichi"] };
+const strandPt = (ki, u, spin = 0) => { const a = (ANG[KINDS[ki]] * Math.PI / 180) + u * TURNS * Math.PI * 2 + spin; return new THREE.Vector3(Math.cos(a) * HR, Y0 + (Y1 - Y0) * u, Math.sin(a) * HR); };
+function cardTex(name, kind, i) {
+  const c = document.createElement("canvas"); c.width = 320; c.height = 190; const g = c.getContext("2d"), col = HEX[kind];
+  g.fillStyle = "rgba(7,13,20,.92)"; g.fillRect(0, 0, 320, 190);
+  g.strokeStyle = col; g.lineWidth = 3; g.strokeRect(4, 4, 312, 182);
+  g.globalAlpha = .35; g.lineWidth = 1; for (let k = 0; k < 14; k++) { g.beginPath(); g.arc(250, 80, 16 + k * 5, 0, Math.PI * 2); g.stroke(); } g.globalAlpha = 1;   // engraved line-art emblem
+  g.beginPath(); g.moveTo(250, 52); g.lineTo(275, 96); g.lineTo(225, 96); g.closePath(); g.lineWidth = 2.5; g.stroke();
+  g.fillStyle = col; g.font = "600 15px monospace"; g.fillText(kind === "scripts" ? "CHART SCRIPT" : kind.slice(0, -1).toUpperCase(), 18, 34);
+  g.fillStyle = "#EAF2F8"; g.font = "800 28px Arial"; g.fillText(name, 18, 150);
+  g.fillStyle = "#8FA3B2"; g.font = "15px monospace"; g.fillText(i % 3 === 0 ? "● LIVE IN BATTLE" : "entrant", 18, 176);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const helix = { strands: [], cards: [] };
+KINDS.forEach((kind, ki) => {
+  const pts = Array.from({ length: 160 }, (_, i) => strandPt(ki, i / 159));
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 400, .05, 8, false), new THREE.MeshBasicMaterial({ color: C[kind].clone().multiplyScalar(1.5), transparent: true, toneMapped: false }));
+  scene.add(tube); helix.strands.push({ kind, tube });
+  NAMES[kind].forEach((nm, i) => {
+    const u = (i + .5) / NAMES[kind].length, p = strandPt(ki, u), out = new THREE.Vector3(p.x, 0, p.z).normalize();
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, .9), new THREE.MeshBasicMaterial({ map: cardTex(nm, kind, i), transparent: true, side: THREE.DoubleSide, toneMapped: false }));
+    m.position.copy(p.clone().add(out.clone().multiplyScalar(.55))); m.lookAt(m.position.clone().add(out)); scene.add(m);
+    const halo = glow(C[kind], 1.4, p, .35);
+    helix.cards.push({ kind, m, halo, name: nm });
+  });
+});
+// rungs between strands (DNA-style) faintly
+for (let i = 0; i < 26; i++) { const u = i / 25; const a = strandPt(0, u), b = strandPt(1, u), c = strandPt(2, u); scene.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([a, b, c]), lineMat("#9fd0ff", .12))); }
+glow(new THREE.Color("#9fd0ff"), 3, new THREE.Vector3(0, (Y0 + Y1) / 2, 0), .25);
+
+// ---- shots ----
+const $ = id => document.getElementById(id);
+function setFilter(k) {
+  document.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c.dataset.k === k));
+  for (const s of helix.strands) s.tube.material.opacity = (k === "all" || s.kind === k) ? 1 : .15;
+  for (const c of helix.cards) { const on = k === "all" || c.kind === k; c.m.material.opacity = on ? 1 : .12; c.halo.material.opacity = on ? .45 : .03; }
+}
+function cap(b, s) { $("cap").querySelector("b").textContent = b; $("cap").querySelector("span").textContent = s; }
+window.shot = (n) => {
+  $("chips").hidden = n === 1; $("focus").hidden = n !== 3;
+  if (n === 1) { setFilter("all"); camera.fov = 50; camera.updateProjectionMatrix(); camera.position.copy(at(100, 44, 13)); camera.lookAt(0, 9, 0); cap("The Helix", "three strands rise from the Arena to the Trade Floor"); }
+  if (n === 2) { setFilter("all"); camera.fov = 58; camera.updateProjectionMatrix(); camera.position.copy(at(75, 8.6, 7.4)); camera.lookAt(0, 7.6, 0); cap("Callers · Bots · Chart Scripts", "scroll turns the helix past you: the camera stays still"); }
+  if (n === 3) { setFilter("bots"); camera.fov = 58; camera.updateProjectionMatrix(); camera.position.copy(at(75, 8.6, 7.4)); camera.lookAt(0, 7.6, 0); cap("Filter: Bots", "the blue strand comes forward · tap a card to open the profile"); }
+  composer.render();
+};
+window.ready = true; window.shot(1);
+</script>
+</body></html>
