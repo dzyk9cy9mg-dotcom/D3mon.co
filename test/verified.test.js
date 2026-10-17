@@ -73,7 +73,7 @@ describe("verified stats and typed-in stats", () => {
     assert.deepEqual([v("v_crowd"), sv(s, "v_crowd").n], [0.75, 8], "went against Fox and Hammer 8 times, right 6");
     assert.deepEqual([v("v_participation"), sv(s, "v_participation").n], [0.9091, 11], "10 of the 11 battle rounds so far");
     assert.deepEqual(v("v_battles"), [{ t: "Callers night", w: 6, l: 4, called: 10, rounds: 11 }]);
-    assert.equal(v("v_lead"), 30000);
+    assert.equal(v("v_lead"), 330000, "made 30 s before the round starts; calls close 5 minutes in");
     assert.equal(v("v_calls"), 10);
     assert.deepEqual(v("v_last_30_days").w + v("v_last_30_days").l, 10);
     assert.deepEqual([sv(s, "v_win_rate").verification, sv(s, "v_win_rate").sources], ["mixed", { kalshi: 5, host: 5 }]);
