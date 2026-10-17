@@ -28,6 +28,7 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 ## How the owner wants work done
 
 - **One step at a time.** Test each component before moving on. Never claim something works without running it.
+- **Keep messages to the owner short and simple:** one topic per message, no long lists, plain words. End every message with one clear **"Your next step:"** line.
 - **Deliver work as pull requests** for the owner to review and merge. Then walk them through the server update step by step.
 - **API first.** Every feature is a `/api/v1` JSON endpoint plus live feed events. Pages are thin clients, because the front end will be rebuilt as an immersive 3D site. Don't put logic in `public/js/d3mon.js`.
 - Bot owners share **read-only stats only**. Refuse anything that looks like a key or secret (`server/arena/validate.js`).
