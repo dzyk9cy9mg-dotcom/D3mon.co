@@ -190,3 +190,12 @@
 .anav-drop b:first-child{margin-top:0}
 .anav-drop a{display:block}
 @media (max-width:560px){.anav{position:relative;justify-content:center}.anav-links{justify-content:center}.anav-admin{position:static}.anav-drop{left:0;right:0;top:100%}}
+/* /tournaments */
+.arena .tkinds button{padding:8px 16px;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.arena .tkinds button[aria-pressed="true"]{color:var(--acc);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent)}
+.arena .tnav{margin-top:10px;gap:6px}
+.arena .tstand .trank{font:700 18px var(--display);color:var(--ink-2);width:56px}
+.arena .tstand tr.lead .trank{color:var(--acc)}
+.arena .tstand a{color:var(--ink);text-decoration:none}
+.arena .tstand a:hover b{color:var(--acc)}
+.arena .tnotice{margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);font:500 12px var(--mono);letter-spacing:.06em;color:var(--ink-2)}

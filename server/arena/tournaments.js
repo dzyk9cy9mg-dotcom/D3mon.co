@@ -95,7 +95,13 @@ export class Tournaments {
       }
     };
     index(ledger.lines);
-    ledger.on("append", index);
+    ledger.on("append", lines => {
+      index(lines);
+      // Standings change when Kalshi settles a round, a call arrives or a bot joins or leaves. The event is
+      // only a nudge: readers fetch the standings again.
+      const kinds = new Set(lines.filter(l => (l.t === "score" && l.source === "kalshi") || l.t === "call" || l.t === "tournament_entry").map(l => l.t));
+      if (kinds.size) this.feed.publish("tournaments", "tournament.updated", () => ({ reason: [...kinds] }));
+    });
   }
 
   // Whether an entrant plays in the tournaments for the round starting at `round`.
@@ -188,7 +194,8 @@ export class Tournaments {
 
   #summary(p, now, settledRounds) {
     const out = { id: p.id, kind: p.kind, title: `${TITLES[p.kind]} tournament`, startsAt: p.startsAt, endsAt: p.endsAt,
-      rounds: Math.round((p.endsAt - p.startsAt) / ROUND_MS), status: now >= p.endsAt ? "final" : "live" };
+      rounds: Math.round((p.endsAt - p.startsAt) / ROUND_MS), status: now >= p.endsAt ? "final" : "live",
+      previous: periodAt(p.kind, p.startsAt - 1).id, next: now >= p.endsAt ? periodAt(p.kind, p.endsAt).id : null };
     if (settledRounds !== undefined) out.settledRounds = settledRounds;
     return out;
   }

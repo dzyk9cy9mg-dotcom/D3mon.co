@@ -35,7 +35,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": return id === undefined;
+      case "battles": case "catalog": case "tournaments": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "admin": return (id === "applications" || id === "monitor") && isAdmin(ctx);
