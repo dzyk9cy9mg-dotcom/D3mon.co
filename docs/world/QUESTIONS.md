@@ -5,7 +5,6 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 ## Open
 
 8. Did "the very section" mean the very **top** (assumed) or the centre of the base?
-10. Is the **under-construction page** still what the public sees at d3mon.co? It isn't served by the app (`construction/` isn't wired in), so it must come from Caddy or nginx or the domain setup. The owner is checking. The answer decides "coming soon" vs "live" wording in the public update.
 11. **Many streams:** which sites do the bots stream on (Twitch, YouTube, Kick, X…), and how many bots stream at once in a typical battle?
 12. **Profiles:** "bot owner, scripters, and read profiles". Does "read" mean **callers**, or something else (traders, verified members…)?
 13. **Profile art:** should entrants upload their own hero image and tagline (a new server feature reviewed by HardSmoke), or should we generate art for each kind?
@@ -31,4 +30,5 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 | 2026-10-17 | **Grand Hall decision 4, moving between levels:** **scroll, plus a level switch.** Scrolling glides smoothly between the Grand Hall, the Helix and the Trade Floor like a quiet lift, with no spinning. A small side switch (Hall · Helix · Trade Floor), also in the Menu, jumps to any level in one tap. |
 | 2026-10-17 | **Ads, where first:** answered by the owner's "placement is up to you, tasteful, not annoying". The spots are in BLUEPRINT.md section 7, and will be revised with the Grand Hall and Helix layout. |
 | 2026-10-17 | **Small questions, decided by Claude as recommended** (the owner asked us to go with the recommendations): the first version has the world's places plus links out to the rest of the site; the display slot names `world-callers`, `world-bots`, `world-scripts` and `world-arena` stay; a public-safe mockup video is made only when the owner wants one for posting. |
+| 2026-10-17 | **Live site:** a tester confirmed **d3mon.co shows only the Under Construction page**, including at `/api/v1/bot/me`, so bots can't connect through d3mon.co yet. The real app runs on the Lightsail server at another address (the owner is finding which). The test copy at the owner's other domain runs older code without bots. The bot guide PDF (which says d3mon.co) needs the right address. Suggested fix: a beta address (e.g. `beta.d3mon.co`) pointed at the real app, keeping the construction page public until launch. |
 
