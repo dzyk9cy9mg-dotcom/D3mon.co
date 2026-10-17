@@ -22,6 +22,7 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
   - To update:
     1. Back up: `sudo cp -a /var/lib/private/d3mon /var/lib/private/d3mon.bak-$(date +%F-%H%M)`. The time is in the name because a second backup with an existing name would be copied *inside* the first one.
     2. `cd /srv/d3mon && sudo git pull && sudo systemctl restart d3mon`
+  - **d3mon.co is still behind the Under Construction page** (Caddy, `/etc/caddy/Caddyfile`). Browsers that opened the owner's private preview link get a cookie and reach the app. On 2026-10-17 a `@botapi` block was added so `/api/v1/bot/*` and `/api/v1/stat-catalog` reach the app without the cookie, letting bots connect with their key while the public still sees the construction page. The backup is `Caddyfile.bak-2026-10-17-0104`. Never write the preview link or cookie value into the repo.
   - The role and user commands must be given the data folder, or they'd read `/srv/d3mon/data` instead: `cd /srv/d3mon && sudo D3MON_DATA_DIR=/var/lib/private/d3mon npm run users` (and the same for `npm run role -- <username> admin`).
 
 ## How the owner wants work done
