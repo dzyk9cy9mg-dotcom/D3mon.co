@@ -4,15 +4,6 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 
 ## Open
 
-3. First version: the places plus links out to the rest of the site (recommended), or more inside the world (Cortex chat etc.)?
-5. Display slot names OK?
-8. Did "the very section" mean the very **top** (assumed) or the centre of the base?
-9. Make a **public-safe** mockup video (placeholder names, no "verified" ticks on sample numbers, no made-up HardSmoke chat line)?
-10. Is the **under-construction page** still what the public sees at d3mon.co? It isn't served by the app (`construction/` isn't wired in), so it must come from Caddy or nginx or the domain setup. The owner is checking. The answer decides "coming soon" vs "live" wording in the public update.
-11. **Many streams:** which sites do the bots stream on (Twitch, YouTube, Kick, X…), and how many bots stream at once in a typical battle?
-12. **Profiles:** "bot owner, scripters, and read profiles". Does "read" mean **callers**, or something else (traders, verified members…)?
-13. **Profile art:** should entrants upload their own hero image and tagline (a new server feature reviewed by HardSmoke), or should we generate art for each kind?
-16. **Ads, where first:** which spots matter most: the pyramid faces, billboards along the route, the arena between rounds, profiles?
 
 ## Decided
 
@@ -33,4 +24,12 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 | 2026-10-17 | **Grand Hall decision 2, between battles** (owner liked both options): the hall shows **the next battle filling up**: a countdown over the clock, approved entrants already at their stations, and empty stations glowing "Apply for this battle". **The last battle's highlights replay on one big wall screen, clearly labelled REPLAY**, never the whole hall, so it can't be mistaken for a live battle. |
 | 2026-10-17 | **Grand Hall decision 3, the lock moment:** a **short, dramatic beat**. In the last 10 seconds the hall dims and a countdown fills the clock. At the lock: a deep sound if sound is on, and every sealed call flips at once to green Up or red Down around the clock and on the stations. About 3 seconds, then back to normal. The camera never moves on its own for it; reduce motion gets the flip without the dimming. |
 | 2026-10-17 | **Grand Hall decision 4, moving between levels:** **scroll, plus a level switch.** Scrolling glides smoothly between the Grand Hall, the Helix and the Trade Floor like a quiet lift, with no spinning. A small side switch (Hall · Helix · Trade Floor), also in the Menu, jumps to any level in one tap. |
+| 2026-10-17 | **Ads, where first:** answered by the owner's "placement is up to you, tasteful, not annoying". The spots are in BLUEPRINT.md section 7, and will be revised with the Grand Hall and Helix layout. |
+| 2026-10-17 | **Small questions, decided by Claude as recommended** (the owner asked us to go with the recommendations): the first version has the world's places plus links out to the rest of the site; the display slot names `world-callers`, `world-bots`, `world-scripts` and `world-arena` stay; a public-safe mockup video is made only when the owner wants one for posting. |
+| 2026-10-17 | **Live site:** a tester confirmed **d3mon.co shows only the Under Construction page**, including at `/api/v1/bot/me`, so bots can't connect through d3mon.co yet. The real app runs on the Lightsail server at another address (the owner is finding which). The test copy at the owner's other domain runs older code without bots. The bot guide PDF (which says d3mon.co) needs the right address. Suggested fix: a beta address (e.g. `beta.d3mon.co`) pointed at the real app, keeping the construction page public until launch. |
+| 2026-10-17 | **The peak:** "the very section" taken as the very top. The owner has seen the Trade Floor at the peak in the previews and approved the layout. |
+| 2026-10-17 | **Streams:** bots and callers stream on **YouTube, Twitch, Kick, and X, Discord or others**. YouTube, Twitch and Kick play on the stream walls (Twitch with d3mon.co registered as the player's `parent`). X, Discord and others can't be embedded, so they show as a "Watch live" card that opens the stream. |
+| 2026-10-17 | **Rich profiles** are for **Bots, Chart Scripts and Callers** ("read" meant callers). |
+| 2026-10-17 | **Profile art, both and standard** (owner wants both options and a standard look). Every rich profile uses **one D3MON template**: the same layout, line-art frame, type and HUD. The hero image inside it is our **generated engraved line-art emblem** in the kind's colour by default, or the **owner's own image once HardSmoke approves it**. Uploads get the D3MON treatment automatically (tinted to the kind's colour, the line-art frame and glow on top), so every profile stays on-brand. Uploads are a later server feature; ask before building. |
+| 2026-10-17 | **Profile image style (owner: "the option for them to use their own also if they insist"):** owners choose **"D3MON style"** (default: tinted to their kind's colour, with the line-art frame and glow) or **"Use my image as-is"** (shown exactly as uploaded). Either way the profile layout and frame stay standard, and HardSmoke approves every upload. |
 

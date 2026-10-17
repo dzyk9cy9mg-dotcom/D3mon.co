@@ -1,9 +1,9 @@
 // /board: the live battle board. Rows are entrants (lineup order), columns are rounds. Calls arrive
-// sealed, are revealed when the round locks, and are scored when the result comes in.
+// sealed during the round, are revealed when the round's calls close, and are scored when the result comes in.
 // Thin client over GET /api/v1/battles/:id/board and the battle's live feed.
 (function () {
   "use strict";
-  const { api, follow, esc, when, syncClock, serverNow, nextRound, mmss } = window.Arena;
+  const { api, follow, esc, when, syncClock, serverNow, nextRound, openRound, mmss } = window.Arena;
   const $ = id => document.getElementById(id);
   const S = { battles: [], id: null, board: null, es: null };
 
@@ -16,7 +16,7 @@
   function cell(c) {
     if (!c) return `<td class="bc empty-c">–</td>`;
     const t = `${c.name}: sent ${new Date(c.receivedAt).toLocaleTimeString()}${c.via === "button" ? "" : " by bot key"}`;
-    if (c.sealed) return `<td class="bc sealed" title="${esc(t)}. Sealed until the round starts.">●</td>`;
+    if (c.sealed) return `<td class="bc sealed" title="${esc(t)}. Sealed until the calls close.">●</td>`;
     const mark = c.correct === true ? ' <span class="ok">✓</span>' : c.correct === false ? ' <span class="no">✗</span>' : "";
     return `<td class="bc ${esc(c.direction)}" title="${esc(t)}${c.verification ? ` · ${esc(c.verification)}` : ""}">${c.direction === "up" ? "▲" : "▼"}${mark}</td>`;
   }
@@ -25,7 +25,7 @@
     const b = S.board;
     $("boardBox").hidden = !b;
     if (!b) return;
-    $("boardTitle").textContent = `${b.title} · ${b.status}`;
+    $("boardTitle").textContent = `${b.title} · ${b.status} · calls close ${b.callWindowMin ? `${b.callWindowMin} min into each round` : "when each round starts"}`;
     $("boardHead").innerHTML = `<tr><th>Entrant</th>${b.rounds.map(r => `<th class="${r.locked && !r.over ? "now" : ""}" title="${esc(when(r.round))}">${r.index + 1}<br><span class="tag">${esc(fmtTime(r.round))}</span></th>`).join("")}<th>Right</th><th>Wrong</th></tr>
       <tr class="resrow"><th>Result</th>${b.rounds.map(r => `<th>${r.result ? `${r.result === "up" ? "▲" : "▼"} <span class="tag">${r.verification === "verified" ? "Kalshi" : "host"}</span>` : r.over ? '<span class="tag">pending</span>' : ""}</th>`).join("")}<th></th><th></th></tr>`;
     $("boardRows").innerHTML = b.entrants.map(e => `<tr><td><b>${esc(e.name)}</b>${e.inLineup ? "" : ' <span class="tag">left</span>'}</td>${b.rounds.map(r => cell(r.calls.find(c => c.entrantId === e.entrantId))).join("")}<td>${e.right}</td><td>${e.wrong}</td></tr>`).join("")
@@ -55,8 +55,8 @@
   // The countdown to the next lock, and a reload at each round start (the board reveals calls then).
   let lastRound = null;
   setInterval(() => {
-    const r = nextRound();
-    $("clock").textContent = `${fmtTime(r)} · in ${mmss(r - serverNow())}`;
+    const { closesAt: r, open } = openRound(S.board ? S.board.callWindowMin : undefined);
+    $("clock").textContent = `${open ? "calls close" : "next calls close"} ${fmtTime(r)} · in ${mmss(r - serverNow())}`;
     if (lastRound !== null && r !== lastRound) setTimeout(() => load().catch(() => {}), 500);
     lastRound = r;
   }, 1000);

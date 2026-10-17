@@ -25,7 +25,11 @@ On macOS or Linux, run this in a terminal. Replace `d3b_YOUR_KEY` with your key:
 curl https://YOUR-D3MON-SITE/api/v1/bot/me -H "Authorization: Bearer d3b_YOUR_KEY"
 ```
 
-**If it works**, you'll see your bot's name and `"nextRound"`, the time the next round starts.
+**If it works**, you'll see your bot's name and:
+
+- `"openRound"`: the round your bot can call right now;
+- `"callsCloseAt"`: when calls for that round close;
+- `"callsOpenNow"`: `true` while that round is in progress and still taking calls.
 
 **If you see `bad_key`**, the key was copied wrong or has been revoked.
 
@@ -38,7 +42,7 @@ curl -X POST https://YOUR-D3MON-SITE/api/v1/bot/calls \
   -d '{"schema":"d3mon.call/v1","market":"KXBTC15M","direction":"up"}'
 ```
 
-**If it works**, you'll see `"ok":true`, the `round` your call is for, and the time the server received it. Use `"direction":"down"` for down.
+**If it works**, you'll see `"ok":true`, the `round` your call is for, the time the server received it, and `locksAt`, when that round's calls close. Use `"direction":"down"` for down.
 
 The same call from Python, with no extra packages:
 
@@ -57,10 +61,10 @@ print(urllib.request.urlopen(req).read().decode())
 ## 4. The rules
 
 - **Rounds:** they're Kalshi's BTC 15-minute rounds, starting at :00, :15, :30 and :45 each hour.
-- **Which round:** a call goes to the **next round** that hasn't started yet. To call a later one, add `"round":"2026-10-15T19:00:00Z"`, which is the round's start time in UTC.
-- **The lock:** calls must arrive **before the round starts**. The server's clock decides, not yours. After that the round is locked, and you'll get `round_locked`.
-- **Changing your mind:** you can change your call any time before the lock, and the last one counts. Sending the same call twice is harmless.
-- **Sealed calls:** until the round starts, others can see that your bot has called, but not which way. Then everyone sees it.
+- **Call during the round:** send your call while the round is in progress. Leave out `"round"` and the call goes to the round that's open now. You can also name a round with `"round":"2026-10-15T19:00:00Z"`, which is the round's start time in UTC.
+- **When calls close:** calls for a round close **5 minutes into the round**, unless your battle sets another time (HardSmoke chooses it per battle, from "before the round starts" up to 14 minutes in). The server's clock decides, not yours. After the close you'll get `round_locked`, with the time the next round starts. **Your call is never moved to another round on its own.**
+- **One call per round, and it's final:** your first call for a round counts. Sending the same call again is harmless (`"unchanged":true`). A different call for the same round gets `already_called`.
+- **Sealed calls:** until the calls close, others can see that your bot has called and when, but not which way. Then everyone sees it.
 - **Results:** when the round's result is in, your call is marked right or wrong.
 - **Watching:** your recent calls are on `/my`. If you're in a battle, they're also on **`/board`**.
 
@@ -218,7 +222,8 @@ Bots and scripts can also add up to 20 stats of their own, such as an average ed
 | You see | What it means |
 | --- | --- |
 | `bad_key` | Wrong, mistyped or revoked key |
-| `round_locked` | Too late: that round has started. Your next call goes to the following round |
+| `round_locked` | Too late: calls for that round have closed. The message says when the next round starts |
+| `already_called` | Your bot already called this round. One call per round, and the first one counts |
 | `entrant_suspended` | Your bot has been paused. Ask HardSmoke |
 | `looks_like_secret` | Something in your request looked like a password or key. Remove it |
 | `invalid_argument` | A field is missing or wrong. The message says which one |

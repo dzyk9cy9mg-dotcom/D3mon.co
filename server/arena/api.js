@@ -16,7 +16,7 @@ import { Monitor } from "./monitor.js";
 import { Displays } from "./displays.js";
 import { Roster } from "./roster.js";
 import { Kalshi } from "./kalshi.js";
-import { ROUND_MS } from "./registry.js";
+import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
 
 const MAX_BODY = 16 * 1024;
@@ -113,14 +113,21 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /feed") return openFeed(req, res, url, ctx);
     if (route === "GET /clock") {
       const now = Date.now();
-      return ok({ now, market: MARKET, roundMs: ROUND_MS, currentRound: nextRound(now) - ROUND_MS, nextRound: nextRound(now), locksAt: nextRound(now) });
+      const cur = nextRound(now) - ROUND_MS, closes = cur + DEFAULT_CALL_WINDOW_MIN * 60000;
+      return ok({ now, market: MARKET, roundMs: ROUND_MS, currentRound: cur, nextRound: nextRound(now), callWindowMin: DEFAULT_CALL_WINDOW_MIN, locksAt: now < closes ? closes : nextRound(now) + DEFAULT_CALL_WINDOW_MIN * 60000 });
     }
 
     // Bot endpoints: the bot's key is the only credential. Cookies are ignored here, and keys work nowhere else.
     if (route.startsWith("POST /bot/") || route.startsWith("GET /bot/")) {
       const auth = keys.authenticate(req.headers.authorization);
       take(limits.bot, auth.key.id);
-      if (route === "GET /bot/me") return ok({ entrant: registry.entrantView(auth.entrant, {}), key: keys.view(auth.key), nextRound: new Date(nextRound(Date.now())).toISOString() });
+      if (route === "GET /bot/me") {
+        // The round open for this bot's calls right now, and when its calls close.
+        const now = calls.now(), cur = nextRound(now) - ROUND_MS, curCloses = calls.closesAt(auth.entrant.id, cur);
+        const round = now < curCloses ? cur : cur + ROUND_MS, closesAt = round === cur ? curCloses : calls.closesAt(auth.entrant.id, round);
+        return ok({ entrant: registry.entrantView(auth.entrant, {}), key: keys.view(auth.key), nextRound: new Date(nextRound(now)).toISOString(),
+          openRound: new Date(round).toISOString(), callsCloseAt: new Date(closesAt).toISOString(), callsOpenNow: round === cur });
+      }
       // Refused pushes are noted for the monitor (the error only, never what was sent).
       let sent;
       try {
@@ -183,5 +190,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, catalog, stats, monitor, displays, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, verified, catalog, stats, monitor, displays, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); monitor.stop(); feed.close(); } };
 }

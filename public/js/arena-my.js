@@ -3,7 +3,7 @@
 // Thin client over /api/v1 (entrants, keys, calls, clock) and the live feed.
 (function () {
   "use strict";
-  const { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, mmss, statValue, verifTag } = window.Arena;
+  const { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, openRound, mmss, statValue, verifTag } = window.Arena;
   const $ = id => document.getElementById(id);
   const S = { entrants: [], keys: {}, calls: {}, stats: {}, token: null, busy: false };
   const SHOWS = { hidden: "Hidden", private: "Private (only you)", members: "Members only", public: "Public" };
@@ -20,20 +20,20 @@
     const list = (S.calls[e.id] || []).slice(0, 12);
     if (!list.length) return `<p class="empty">No calls yet.</p>`;
     return `<div class="tablewrap"><table class="mgrid"><thead><tr><th>Round</th><th>Call</th><th>Sent</th><th>Result</th></tr></thead><tbody>${list.map(c => {
-      const res = c.result ? `${dirText(c.result)} · ${c.correct ? "✓ right" : "✗ wrong"} <span class="tag">${esc(c.verification)}</span>` : c.locked ? `<span class="tag">waiting for the result</span>` : `<span class="tag">locks ${esc(fmtTime(c.round))}</span>`;
+      const res = c.result ? `${dirText(c.result)} · ${c.correct ? "✓ right" : "✗ wrong"} <span class="tag">${esc(c.verification)}</span>` : c.locked ? `<span class="tag">waiting for the result</span>` : `<span class="tag">sealed until ${esc(fmtTime(c.locksAt || c.round))}</span>`;
       return `<tr><td>${esc(when(c.round))}</td><td>${esc(dirText(c.direction))}</td><td>${esc(new Date(c.receivedAt).toLocaleTimeString())}${c.via === "button" ? "" : ' <span class="tag">bot key</span>'}</td><td>${res}</td></tr>`;
     }).join("")}</tbody></table></div>`;
   }
 
   function callerBox(e) {
-    const round = nextRound(), mine = callFor(e.id, round);
+    const { round, closesAt, open } = openRound(), mine = callFor(e.id, round);
     return `<div class="callbox">
-      <div class="meta">Next round <b>${esc(fmtTime(round))}–${esc(fmtTime(round + 15 * 60000))}</b> · locks in <b class="lock" data-lock="${round}">${mmss(round - serverNow())}</b></div>
-      <div class="bigcall seg2" role="group" aria-label="Your call for the next round">
-        <button type="button" class="up" data-callbtn="${esc(e.id)}|up" aria-pressed="${mine?.direction === "up"}">▲ UP</button>
-        <button type="button" class="down" data-callbtn="${esc(e.id)}|down" aria-pressed="${mine?.direction === "down"}">▼ DOWN</button>
+      <div class="meta">${open ? "Round" : "Next round"} <b>${esc(fmtTime(round))}–${esc(fmtTime(round + 15 * 60000))}</b> · calls close in <b class="lock" data-lock="${closesAt}">${mmss(closesAt - serverNow())}</b></div>
+      <div class="bigcall seg2" role="group" aria-label="Your call for this round">
+        <button type="button" class="up" data-callbtn="${esc(e.id)}|up|${round}" aria-pressed="${mine?.direction === "up"}" ${mine ? "disabled" : ""}>▲ UP</button>
+        <button type="button" class="down" data-callbtn="${esc(e.id)}|down|${round}" aria-pressed="${mine?.direction === "down"}" ${mine ? "disabled" : ""}>▼ DOWN</button>
       </div>
-      <div class="meta">${mine ? `Your call: <b>${dirText(mine.direction)}</b>, sent ${esc(new Date(mine.receivedAt).toLocaleTimeString())}. You can change it until the lock. Others see that you've called, but not which way, until then.` : "No call yet for this round."}</div>
+      <div class="meta">${mine ? `Your call: <b>${dirText(mine.direction)}</b>, sent ${esc(new Date(mine.receivedAt).toLocaleTimeString())}. It's final: one call per round. Others see that you've called, but not which way, until the calls close.` : "No call yet for this round. One call per round, and it's final."}</div>
     </div>`;
   }
 
@@ -47,7 +47,7 @@
         ${k.active ? `<button class="btn ghost sm" type="button" data-revoke="${esc(e.id)}|${esc(k.id)}" style="margin-left:auto">Revoke</button>` : ""}</div></div>`).join("") : `<p class="empty">No keys yet.</p>`}</div>
       <form class="row" data-newkey="${esc(e.id)}" style="margin-top:10px"><div class="field"><label for="kl-${esc(e.id)}">Label (optional)</label><input id="kl-${esc(e.id)}" maxlength="40" placeholder="e.g. production server"></div><button class="btn" type="submit">Make a new key</button></form>
       <details style="margin-top:12px"><summary class="tag">How to send a call</summary>
-        <p class="tag">Send each call before the round starts. The latest call before the lock counts. Leave out "round" to call the next round.</p>
+        <p class="tag">Send one call per round, during the round, before its calls close (5 minutes in unless the battle says otherwise). It's final. Leave out "round" to call the round that's open now.</p>
         <pre class="code">curl -X POST ${esc(base)} \\
   -H "Authorization: Bearer d3b_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
@@ -165,10 +165,11 @@
     const d = b.dataset;
     if (d.callbtn) {
       if (S.busy) return;
-      const [id, direction] = d.callbtn.split("|");
+      const [id, direction, round] = d.callbtn.split("|");
       S.busy = true;
       try {
-        const r = await api("POST", `entrants/${id}/call`, { direction });
+        // The round on screen, so a click at the very end of a window never lands on another round.
+        const r = await api("POST", `entrants/${id}/call`, { direction, round: new Date(+round).toISOString() });
         msg(r.unchanged ? "That's already your call." : `Called ${dirText(direction)} for ${fmtTime(r.call.round)}.`, true);
         await loadEntrant(S.entrants.find(x => x.id === id)); render();
       } catch (e) { msg(e.message); } finally { S.busy = false; }
@@ -254,7 +255,7 @@
   let lastRound = null;
   setInterval(() => {
     document.querySelectorAll("[data-lock]").forEach(el => (el.textContent = mmss(+el.dataset.lock - serverNow())));
-    const r = nextRound();
+    const r = openRound().round;
     if (lastRound !== null && r !== lastRound) Promise.all(S.entrants.map(loadEntrant)).then(refresh).catch(() => {});
     lastRound = r;
   }, 1000);

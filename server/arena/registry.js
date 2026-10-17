@@ -12,6 +12,9 @@ import { isAdmin } from "../rules.js";
 export const BATTLES = "arena_battles", APPS = "arena_apps", ENTRANTS = "arena_entrants";
 export const KINDS = ["bot", "caller", "script"];
 export const ROUND_MS = 15 * 60000; // Kalshi BTC 15-minute rounds
+// Calls are made during a round, until this many minutes in (0 = before the round starts). Each battle can set its own.
+export const DEFAULT_CALL_WINDOW_MIN = 5;
+export const callWindowMs = b => (b && Number.isInteger(b.callWindowMin) ? b.callWindowMin : DEFAULT_CALL_WINDOW_MIN) * 60000;
 const BATTLE_STATUS = ["draft", "open", "closed", "live", "final"];
 const LIVE_APP = new Set(["pending", "approved"]);
 const ID = { type: "string", pattern: /^[A-Za-z0-9]{8,40}$/, max: 40 };
@@ -24,6 +27,7 @@ const BATTLE_FIELDS = {
   kinds: { type: "array", of: { type: "enum", values: KINDS }, min: 1, max: 3, unique: true, default: KINDS },
   status: { type: "enum", values: BATTLE_STATUS, default: "draft" },
   onMainPage: { type: "boolean" }, // show this battle's lineup on the current main page (one battle at a time)
+  callWindowMin: { type: "integer", min: 0, max: 14, default: DEFAULT_CALL_WINDOW_MIN }, // calls close this many minutes into each round
 };
 
 const APP_FIELDS = {
@@ -93,7 +97,7 @@ export class Registry {
   battleView(b, ctx) {
     const entrants = (b.entrants || []).map(id => this.#get(ENTRANTS, id)).filter(Boolean).map(e => this.entrantView(e, ctx));
     const out = { id: b.id, title: b.title, market: b.market, startsAt: b.startsAt, rounds: b.rounds, roundMs: b.roundMs,
-      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, status: b.status, onMainPage: !!b.onMainPage, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
+      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, status: b.status, onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
     if (isAdmin(ctx)) {
       out.applications = {};
       for (const a of this.#all(APPS, [["battleId", "==", b.id]])) out.applications[a.status] = (out.applications[a.status] || 0) + 1;

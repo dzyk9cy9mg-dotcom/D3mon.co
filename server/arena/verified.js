@@ -30,7 +30,7 @@ export const VERIFIED = [
   ["v_up_down", "Win rate on up / down calls", "histogram", "percent", "%", "Win rate on each direction, with how many of each"],
   ["v_hours", "Best hours", "histogram", "percent", "%", "Win rate by hour of the day the round started (UTC)"],
   ["v_days", "Best days", "histogram", "percent", "%", "Win rate by day of the week (UTC)"],
-  ["v_lead", "Average lead time", "duration", "duration", "", "How long before the round started the call was made"],
+  ["v_lead", "Average lead time", "duration", "duration", "", "How long before the calls closed the call was made"],
   ["v_crowd", "Against the crowd", "percent", "percent", "%", "Win rate when going against most others who called that round"],
   ["v_calls", "Calls made", "integer", "plain", "", "Rounds called, including ones not scored yet"],
 ].map(([key, label, type, format, unit, description], i) => ({ key, label, type, format, unit, description, category: CATEGORY, order: i + 1 }));
@@ -53,14 +53,15 @@ export class Verified {
     Object.assign(this, { calls, metrics, registry });
   }
 
-  // The latest call per round (the one that counts) for locked rounds, scored where a result exists.
+  // The latest call per round (the one that counts) once its calls have closed (never while it's still
+  // sealed, or a stat could give its direction away), scored where a result exists.
   #history(entrantId) {
     const latest = new Map();
     for (const l of this.calls.byEntrant.get(entrantId) || []) latest.set(`${l.market}|${l.round}`, l);
     const now = this.calls.now();
-    return [...latest.values()].filter(l => l.round <= now).sort((a, b) => a.round - b.round).map(l => {
+    return [...latest.values()].filter(l => (Number.isFinite(l.closesAt) ? l.closesAt : l.round) <= now).sort((a, b) => a.round - b.round).map(l => {
       const r = this.metrics.result(l.market, l.round);
-      return { line: l, round: l.round, at: l.at, dir: l.dir, result: r ? r.result : null, source: r ? (r.source === "kalshi" ? "kalshi" : "host") : null };
+      return { line: l, round: l.round, at: l.at, closesAt: Number.isFinite(l.closesAt) ? l.closesAt : l.round, dir: l.dir, result: r ? r.result : null, source: r ? (r.source === "kalshi" ? "kalshi" : "host") : null };
     });
   }
 
@@ -130,7 +131,7 @@ export class Verified {
     }
 
     const crowd = scored.map(x => ({ x, c: this.#crowd(entrantId, x.line.market, x.round) })).filter(({ x, c }) => c && c !== x.dir).map(({ x }) => x);
-    const leads = h.map(x => x.round - x.at).filter(v => v >= 0);
+    const leads = h.map(x => x.closesAt - x.at).filter(v => v >= 0);
 
     return {
       v_win_rate: { value: rate(wins, scored.length), n: scored.length, ...verif(scored) },

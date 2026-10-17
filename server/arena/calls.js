@@ -1,24 +1,32 @@
 // Calls (step 4): a bot's up/down call for a Kalshi BTC 15-minute round, sent with its key, or a
-// caller's, made with the Up/Down buttons. The server stamps each call with its own clock and only
-// accepts it before the round starts; at the start the round locks and nothing more can change.
+// caller's, made with the Up/Down buttons. Bots call DURING the round, like Kalshi traders, so a
+// call is accepted from before the round starts until its calls close: a few minutes into the round
+// (callWindowMin, set per battle, 5 by default; 0 means before the round starts). The server stamps
+// each call with its own clock, and the same clock decides whether calls are still open.
 //
-// Sealed until the lock: everyone sees that a call arrived and when, but its direction is shown only
-// to the entrant's owner and admins until the round starts, so nobody can copy a rival's call. At the
-// start the directions are revealed (round.locked), and once the round has a result each call is
+// One call per entrant per round, final when made: a retry of the same call changes nothing, a
+// different one is refused ("already_called"). A call is never moved to another round on its own.
+//
+// Sealed until the calls close: everyone sees that a call arrived and when, but its direction is
+// shown only to the entrant's owner and admins until then, so nobody can copy a rival's call. At the
+// close the directions are revealed (round.locked), and once the round has a result each call is
 // scored (round.scored): "verified" when Kalshi settled it, "recorded by host" when HardSmoke did.
 //
 // Ledger line: { t: "call", entrantId, market, round, dir, via: "bot-key" | "button", keyId?,
-//                battleIds: battles the entrant was in for that round when it called }
-// The latest call before the lock counts; earlier ones stay in the ledger.
+//                battleIds: battles the entrant was in for that round when it called,
+//                closesAt: when calls for that round closed for this entrant (older lines: the round start) }
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
-import { ROUND_MS } from "./registry.js";
+import { ROUND_MS, callWindowMs, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 
 export const MARKET = "KXBTC15M";
 const MAX_AHEAD_MS = 24 * 3600 * 1000; // calls can be made up to a day ahead
 const DIRS = ["up", "down"];
 const iso = ms => new Date(ms).toISOString();
 export const nextRound = now => Math.floor(now / ROUND_MS) * ROUND_MS + ROUND_MS;
+export const currentRound = now => Math.floor(now / ROUND_MS) * ROUND_MS;
+const closesAtOf = l => (Number.isFinite(l.closesAt) ? l.closesAt : l.round);
+const MIN_MS = 60000;
 
 const BOT_CALL = {
   schema: { type: "enum", values: ["d3mon.call/v1"], required: true },
@@ -70,10 +78,10 @@ export class Calls {
     return !!(e && ctx.uid && e.ownerId === ctx.uid);
   }
 
-  // One call as this reader may see it: sealed (no direction) before the lock unless it's theirs.
+  // One call as this reader may see it: sealed (no direction) until its calls close, unless it's theirs.
   view(l, ctx) {
-    const now = this.now(), locked = now >= l.round, e = this.registry.entrantById(l.entrantId);
-    const out = { id: l.id, entrantId: l.entrantId, name: e ? e.name : null, market: l.market, round: l.round, receivedAt: l.at, via: l.via, locked };
+    const now = this.now(), locksAt = closesAtOf(l), locked = now >= locksAt, e = this.registry.entrantById(l.entrantId);
+    const out = { id: l.id, entrantId: l.entrantId, name: e ? e.name : null, market: l.market, round: l.round, receivedAt: l.at, intoRoundMs: l.at - l.round, via: l.via, locksAt, locked };
     if (locked || this.#canSeeDirection(ctx, l.entrantId)) out.direction = l.dir;
     else out.sealed = true;
     const r = locked ? this.metrics.result(l.market, l.round) : null;
@@ -104,9 +112,10 @@ export class Calls {
       for (const l of this.byRound.get(`${b.market}|${round}`) || []) if ((l.battleIds || []).includes(b.id) && !ids.includes(l.entrantId)) ids.push(l.entrantId);
       return round;
     }).map((round, index) => {
-      const r = now >= round ? this.metrics.result(b.market, round) : null;
+      const locksAt = round + callWindowMs(b);
+      const r = now >= locksAt ? this.metrics.result(b.market, round) : null;
       return {
-        round, index, locksAt: round, endsAt: round + b.roundMs, locked: now >= round, over: now >= round + b.roundMs,
+        round, index, locksAt, endsAt: round + b.roundMs, locked: now >= locksAt, over: now >= round + b.roundMs,
         result: r ? r.result : null, verification: r ? (r.source === "kalshi" ? "verified" : "recorded by host") : null,
         calls: ids.map(id => this.latest(id, b.market, round, b.id)).filter(Boolean).map(l => this.view(l, ctx)),
       };
@@ -116,30 +125,46 @@ export class Calls {
       return { entrantId: e.id, name: e.name, slug: e.slug, kind: e.kind, inLineup: (b.entrants || []).includes(e.id),
         called: mine.length, right: mine.filter(c => c.correct === true).length, wrong: mine.filter(c => c.correct === false).length };
     });
-    return { battleId: b.id, title: b.title, status: b.status, market: b.market, roundMs: b.roundMs, now, rounds, entrants };
+    return { battleId: b.id, title: b.title, status: b.status, market: b.market, roundMs: b.roundMs, callWindowMin: callWindowMs(b) / MIN_MS, now, rounds, entrants };
   }
 
   // ---------- making calls ----------
-  #round(raw, now) {
-    let round;
-    if (raw === undefined || raw === "") round = nextRound(now);
-    else {
-      round = Date.parse(raw);
-      if (!Number.isFinite(round) || round % ROUND_MS) throw new ApiError(400, "invalid_argument", `"round" is a round's start time, on a quarter hour, like "${iso(nextRound(now))}".`, "round");
-    }
-    if (round <= now) throw new ApiError(409, "round_locked", `That round locked at ${iso(round)}. Calls must arrive before a round starts. The next round starts at ${iso(nextRound(now))}.`, "round");
-    if (round > now + MAX_AHEAD_MS) throw new ApiError(400, "invalid_argument", "Calls can be made up to 24 hours ahead.", "round");
-    return round;
+  // When calls for a round close for this entrant: the strictest window of the battles it's in then.
+  closesAt(entrantId, round) {
+    const bs = this.registry.battlesFor(entrantId, round);
+    return round + (bs.length ? Math.min(...bs.map(callWindowMs)) : DEFAULT_CALL_WINDOW_MIN * MIN_MS);
   }
 
-  // #round has checked the lock just before this, and nothing here waits, so no call can slip past it.
-  #place(e, { round, dir, via, keyId }, by) {
+  // The round a call is for, and when its calls close. Without "round": the round now open for calls
+  // (the current one while its calls are open; the next one where calls close at the start).
+  #target(e, raw, now) {
+    let round;
+    if (raw === undefined || raw === "") {
+      round = currentRound(now);
+      if (this.closesAt(e.id, round) <= round) round += ROUND_MS; // a "before the round" battle: call the next one
+    } else {
+      round = Date.parse(raw);
+      if (!Number.isFinite(round) || round % ROUND_MS) throw new ApiError(400, "invalid_argument", `"round" is a round's start time, on a quarter hour, like "${iso(currentRound(now))}".`, "round");
+      if (round > now + MAX_AHEAD_MS) throw new ApiError(400, "invalid_argument", "Calls can be made up to 24 hours ahead.", "round");
+    }
+    const closesAt = this.closesAt(e.id, round);
+    if (now >= closesAt) {
+      const next = currentRound(now) + ROUND_MS;
+      throw new ApiError(409, "round_locked", `Calls for the round that started at ${iso(round)} closed at ${iso(closesAt)}. The next round starts at ${iso(next)}.`, "round");
+    }
+    return { round, closesAt };
+  }
+
+  // #target has checked the clock just before this, and nothing here waits, so no call can slip past it.
+  #place(e, { raw, dir, via, keyId }, by) {
+    const now = this.now(), { round, closesAt } = this.#target(e, raw, now);
     const prev = this.latest(e.id, MARKET, round);
     if (prev && prev.dir === dir) return { line: prev, unchanged: true }; // a retry, or the same call again
+    if (prev) throw new ApiError(409, "already_called", `Already called ${prev.dir} for the round that started at ${iso(round)}, at ${iso(prev.at)}. One call per round, and it's final.`, "direction");
     const battleIds = this.registry.battlesFor(e.id, round).map(b => b.id);
-    const line = { t: "call", entrantId: e.id, market: MARKET, round, dir, via, battleIds };
+    const line = { t: "call", entrantId: e.id, market: MARKET, round, dir, via, battleIds, closesAt };
     if (keyId) line.keyId = keyId;
-    const [saved] = this.ledger.append([line], by, this.now()); // stamped by the same clock that checked the lock
+    const [saved] = this.ledger.append([line], by, now); // stamped by the same clock that checked the window
     this.#received(saved, e);
     return { line: saved, unchanged: false };
   }
@@ -147,9 +172,8 @@ export class Calls {
   // POST /api/v1/bot/calls, authenticated with the bot's key (auth = { key, entrant }).
   fromBot(auth, body) {
     const f = check(body, BOT_CALL);
-    const round = this.#round(f.round, this.now());
-    const { line, unchanged } = this.#place(auth.entrant, { round, dir: f.direction, via: "bot-key", keyId: auth.key.id }, auth.key.ownerId);
-    return { ok: true, unchanged, call: { id: line.id, round: iso(line.round), direction: line.dir, receivedAt: iso(line.at), locksAt: iso(line.round) } };
+    const { line, unchanged } = this.#place(auth.entrant, { raw: f.round, dir: f.direction, via: "bot-key", keyId: auth.key.id }, auth.key.ownerId);
+    return { ok: true, unchanged, call: { id: line.id, round: iso(line.round), direction: line.dir, receivedAt: iso(line.at), locksAt: iso(closesAtOf(line)) } };
   }
 
   // POST /api/v1/entrants/:id/call, for a caller pressing Up or Down. Same lock as the bots.
@@ -161,8 +185,7 @@ export class Calls {
     if (e.kind !== "caller") throw new ApiError(409, "use_bot_key", "Bots and scripts send their calls with their API key. The buttons are for callers.");
     if (e.status !== "active") throw new ApiError(409, "entrant_suspended", `${e.name} is suspended.`);
     const f = check(body, BUTTON_CALL);
-    const round = this.#round(f.round, this.now());
-    const { line, unchanged } = this.#place(e, { round, dir: f.direction, via: "button" }, ctx.uid);
+    const { line, unchanged } = this.#place(e, { raw: f.round, dir: f.direction, via: "button" }, ctx.uid);
     return { unchanged, call: this.view(line, ctx) };
   }
 
@@ -173,22 +196,30 @@ export class Calls {
     for (const id of l.battleIds) this.feed.publish(`battle:${id}`, "call.received", event);
   }
 
-  // At each round's start, reveal every call for it.
-  lockRound(round) {
-    const lines = this.byRound.get(`${MARKET}|${round}`) || [];
-    const latestBy = new Map();
-    for (const l of lines) latestBy.set(l.entrantId, l);
-    const battles = new Map(); // battleId -> calls
-    for (const l of latestBy.values()) {
-      this.feed.publish(`entrant:${l.entrantId}`, "round.locked", ctx => ({ round, market: MARKET, calls: [this.view(l, ctx)] }));
-      for (const id of l.battleIds || []) {
-        if (!battles.has(id)) battles.set(id, []);
-        battles.get(id).push(l);
+  // Reveal every call whose calls closed in (from, to]: the lock moment of each round, per entrant.
+  lockDue(from, to) {
+    const groups = new Map(); // round -> the counting calls that just locked
+    for (let r = currentRound(from) - ROUND_MS; r <= to; r += ROUND_MS) {
+      const latestBy = new Map();
+      for (const l of this.byRound.get(`${MARKET}|${r}`) || []) latestBy.set(l.entrantId, l);
+      for (const l of latestBy.values()) {
+        const c = closesAtOf(l);
+        if (c > from && c <= to) { if (!groups.has(r)) groups.set(r, []); groups.get(r).push(l); }
       }
     }
-    for (const [id, ls] of battles) {
-      const kept = ls.filter(l => this.latest(l.entrantId, MARKET, round, id) === l);
-      this.feed.publish(`battle:${id}`, "round.locked", ctx => ({ battleId: id, round, market: MARKET, calls: kept.map(l => this.view(l, ctx)) }));
+    for (const [round, lines] of groups) {
+      const battles = new Map(); // battleId -> calls
+      for (const l of lines) {
+        this.feed.publish(`entrant:${l.entrantId}`, "round.locked", ctx => ({ round, market: MARKET, calls: [this.view(l, ctx)] }));
+        for (const id of l.battleIds || []) {
+          if (!battles.has(id)) battles.set(id, []);
+          battles.get(id).push(l);
+        }
+      }
+      for (const [id, ls] of battles) {
+        const kept = ls.filter(l => this.latest(l.entrantId, MARKET, round, id) === l);
+        this.feed.publish(`battle:${id}`, "round.locked", ctx => ({ battleId: id, round, market: MARKET, calls: kept.map(l => this.view(l, ctx)) }));
+      }
     }
   }
 
@@ -210,19 +241,19 @@ export class Calls {
     }
   }
 
-  // Wakes at every round start to lock it. Timers drift, so each wake re-reads the clock.
+  // Wakes at every minute boundary (calls close on whole minutes) to reveal what just locked.
+  // Timers drift, so each wake re-reads the clock and covers everything since the last wake.
   start() {
+    const wait = now => Math.max(50, (Math.floor(now / MIN_MS) + 1) * MIN_MS - now + 20);
     const tick = () => {
-      const now = this.now(), round = Math.floor(now / ROUND_MS) * ROUND_MS;
-      if (round !== this.lastLocked) {
-        this.lastLocked = round;
-        try { this.lockRound(round); } catch (e) { console.error(e); }
-      }
-      this.timer = setTimeout(tick, Math.max(50, nextRound(now) - now + 20));
+      const now = this.now();
+      try { this.lockDue(this.lastLock, now); } catch (e) { console.error(e); }
+      this.lastLock = now;
+      this.timer = setTimeout(tick, wait(now));
       this.timer.unref?.();
     };
-    this.lastLocked = Math.floor(this.now() / ROUND_MS) * ROUND_MS; // the current round locked before we started
-    this.timer = setTimeout(tick, Math.max(50, nextRound(this.now()) - this.now() + 20));
+    this.lastLock = this.now();
+    this.timer = setTimeout(tick, wait(this.lastLock));
     this.timer.unref?.();
   }
 

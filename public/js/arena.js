@@ -40,14 +40,23 @@
 
   // The server's clock decides when rounds lock. Pages count down by it, not by this computer's clock.
   let offset = 0;
+  let callWindowMin = 5; // the server's default: calls close this many minutes into a round
   async function syncClock() {
     const t0 = Date.now(), c = await api("GET", "clock"), t1 = Date.now();
     offset = c.now - (t0 + t1) / 2;
+    if (Number.isInteger(c.callWindowMin)) callWindowMin = c.callWindowMin;
     return c;
   }
   const serverNow = () => Date.now() + offset;
   const ROUND_MS = 15 * 60000;
   const nextRound = (now = serverNow()) => Math.floor(now / ROUND_MS) * ROUND_MS + ROUND_MS;
+  // The round open for calls: the current one until its calls close (win minutes in), else the next.
+  // open = calls for the current round are still being taken.
+  const openRound = (win = callWindowMin, now = serverNow()) => {
+    const cur = Math.floor(now / ROUND_MS) * ROUND_MS;
+    if (win > 0 && now < cur + win * 60000) return { round: cur, closesAt: cur + win * 60000, open: true };
+    return { round: cur + ROUND_MS, closesAt: cur + ROUND_MS + win * 60000, open: false };
+  };
   const mmss = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 
   // One stat from a d3mon.statcard/v2 card (or the owner's settings) as HTML, by its type and format.
@@ -122,5 +131,5 @@
 
   const verifTag = st => st.verification ? `<span class="vbadge ${esc(st.verification.replace(/\s+/g, "-"))}" title="${st.sources ? esc(`Kalshi: ${st.sources.kalshi}, host: ${st.sources.host}`) : ""}">${esc(st.verification)}</span>` : "";
 
-  window.Arena = { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, mmss, ROUND_MS, statValue, statText, verifTag, wide };
+  window.Arena = { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, openRound, mmss, ROUND_MS, statValue, statText, verifTag, wide };
 })();
