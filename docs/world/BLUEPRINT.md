@@ -130,7 +130,7 @@ The cinematic style from `inspiration/06`:
   - "I am **NAME.**" in the kind's colour, with HUD labels and the tagline in a glass card;
   - then verified stats, self-reported stats, battle history, recent calls (after their lock), their stream and trailer, and their Discord.
 - **Simple profiles for members:** the same frame and type, with avatar, member-since date and activity.
-- **One standard template for every rich profile:** the same layout, line-art frame, type and HUD. The hero image inside is our generated engraved line-art emblem in the kind's colour by default, or the owner's own image once HardSmoke approves it (a later server feature; we'll ask first). Uploads get the D3MON treatment automatically (tinted to the kind's colour, the line-art frame and glow on top), so every profile stays on-brand.
+- **One standard template for every rich profile:** the same layout, line-art frame, type and HUD. The hero image inside is our generated engraved line-art emblem in the kind's colour by default, or the owner's own image once HardSmoke approves it (a later server feature; we'll ask first). Uploads get the D3MON treatment automatically (tinted to the kind's colour, the line-art frame and glow on top), so every profile stays on-brand. **Owners who insist can choose "Use my image as-is"** (no tint); the layout and frame still stay standard, and HardSmoke still approves it.
 
 ## 8. Advertising: tasteful by design
 
