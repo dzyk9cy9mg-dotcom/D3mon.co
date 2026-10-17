@@ -25,7 +25,7 @@
     const es = new EventSource(`api/v1/feed?topics=${encodeURIComponent(topics.join(","))}`);
     es.addEventListener("hello", () => onState && onState(true));
     es.onerror = () => onState && onState(false);
-    for (const type of ["battle.updated", "application.created", "application.updated", "entrant.updated", "round.metrics", "call.received", "round.locked", "round.scored", "stats.updated", "catalog.updated", "monitor.updated", "display.updated"]) {
+    for (const type of ["battle.updated", "application.created", "application.updated", "entrant.updated", "round.metrics", "call.received", "round.locked", "round.scored", "stats.updated", "catalog.updated", "monitor.updated", "display.updated", "tournament.updated"]) {
       es.addEventListener(type, e => { try { onEvent(type, JSON.parse(e.data).data); } catch (x) {} });
     }
     return es;
@@ -133,7 +133,7 @@
 
   // The menu bar on every Arena page: the few places people need, and an Admin menu only admins see.
   // Links only: each page checks roles on the server. Its sections become the 3D site's rooms.
-  const MENU = [["./", "Home"], ["my", "My bots"], ["apply", "Apply"]];
+  const MENU = [["./", "Home"], ["tournaments", "Tournaments"], ["my", "My bots"], ["apply", "Apply"]];
   const ADMIN_MENU = [
     ["Bots and stats", [["applications", "Applications"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Display slots"]]],
     ["Old battle show", [["metrics", "Round metrics"], ["board", "Battle board"]]],

@@ -357,6 +357,25 @@ describe("tournaments: standings", () => {
     assert.equal(rows.find(x => x.entrant.name === "Bravo").correct, 2, "leaving keeps the rounds played");
   });
 
+  test("previous and next tournaments, and a live nudge when standings change", async () => {
+    arena().tournaments.now = () => H0 + 3600000 + MIN;
+    const t = (await get(hs, "hourly-2026-10-10T12")).json.tournament;
+    assert.equal(t.previous, "hourly-2026-10-10T11");
+    assert.equal(t.next, "hourly-2026-10-10T13");
+    const d = (await get(hs, "daily-2026-10-10")).json.tournament;
+    assert.equal(d.previous, "daily-2026-10-09");
+    assert.equal(d.next, null, "a live tournament has no next yet");
+    const ac = new AbortController();
+    const res = await fetch(`${srv.base}/api/v1/feed?topics=tournaments`, { signal: ac.signal });
+    const it = readEvents(res.body);
+    assert.equal((await it.next()).value.event, "hello");
+    settle(5, "up");
+    let e;
+    do e = (await it.next()).value; while (e.event !== "tournament.updated");
+    ac.abort();
+    assert.deepEqual(JSON.parse(e.data).data.reason, ["score"]);
+  });
+
   test("unknown and future tournaments are 404", async () => {
     for (const id of ["hourly-2026-10-10", "daily-2026-13-01", "weekly-2026-10-06", "yearly-2026", "daily-2099-01-01"]) assert.equal((await get(hs, id)).status, 404, id);
   });
