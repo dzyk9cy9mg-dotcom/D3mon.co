@@ -174,3 +174,19 @@
 .arena .dsp-chosen{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .arena .dsp-chosen span{border:1px solid var(--acc);padding:2px 6px;font:12px var(--mono)}
 .arena .dsp-chosen button{background:none;border:0;color:var(--ink-2);cursor:pointer;padding:0 2px}
+/* The Arena menu bar (js/arena.js) */
+.anav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.anav .acct-brand{font-size:22px}
+.anav-links{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.anav-links a,.anav-admin summary{font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2,var(--ink));text-decoration:none;padding:6px 10px;border:1px solid transparent;cursor:pointer}
+.anav-links a:hover,.anav-admin summary:hover{color:var(--ink);border-color:var(--line)}
+.anav-links a[aria-current="page"],.anav-admin.here summary{color:var(--acc);border-color:var(--acc)}
+.anav-admin{position:relative}
+.anav-admin summary{list-style:none}
+.anav-admin summary::-webkit-details-marker{display:none}
+.anav-admin summary::after{content:" ▾"}
+.anav-drop{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:200px;display:grid;gap:2px;padding:10px;background:var(--bg);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.anav-drop b{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 2px}
+.anav-drop b:first-child{margin-top:0}
+.anav-drop a{display:block}
+@media (max-width:560px){.anav{position:relative;justify-content:center}.anav-links{justify-content:center}.anav-admin{position:static}.anav-drop{left:0;right:0;top:100%}}

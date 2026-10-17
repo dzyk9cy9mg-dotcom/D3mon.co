@@ -131,5 +131,29 @@
 
   const verifTag = st => st.verification ? `<span class="vbadge ${esc(st.verification.replace(/\s+/g, "-"))}" title="${st.sources ? esc(`Kalshi: ${st.sources.kalshi}, host: ${st.sources.host}`) : ""}">${esc(st.verification)}</span>` : "";
 
+  // The menu bar on every Arena page: the few places people need, and an Admin menu only admins see.
+  // Links only: each page checks roles on the server. Its sections become the 3D site's rooms.
+  const MENU = [["./", "Home"], ["my", "My bots"], ["apply", "Apply"]];
+  const ADMIN_MENU = [
+    ["Bots and stats", [["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Display slots"]]],
+    ["Old battle show", [["applications", "Applications"], ["metrics", "Round metrics"], ["board", "Battle board"]]],
+  ];
+  function menuBar() {
+    const main = document.querySelector("main.arena"), brand = main && main.querySelector(":scope > .acct-brand");
+    if (!brand) return;
+    const here = location.pathname.split("/").pop() || "./";
+    const link = ([href, text]) => `<a href="${href}"${href === here ? ' aria-current="page"' : ""}>${esc(text)}</a>`;
+    const nav = document.createElement("nav");
+    nav.className = "anav";
+    nav.setAttribute("aria-label", "D3MON.CO");
+    nav.innerHTML = `<a class="acct-brand" href="./">D<span>3</span>MON.CO</a><div class="anav-links">${MENU.map(link).join("")}
+      <details class="anav-admin" hidden><summary>Admin</summary><div class="anav-drop">${ADMIN_MENU.map(([g, ls]) => `<b>${esc(g)}</b>${ls.map(link).join("")}`).join("")}</div></details></div>`;
+    brand.replaceWith(nav);
+    if (ADMIN_MENU.some(([, ls]) => ls.some(([href]) => href === here))) nav.querySelector(".anav-admin").classList.add("here");
+    session().then(me => { if (me && (me.role === "admin" || me.role === "owner")) nav.querySelector(".anav-admin").hidden = false; });
+    document.addEventListener("click", e => { const d = nav.querySelector(".anav-admin"); if (d.open && !d.contains(e.target)) d.open = false; });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", menuBar); else menuBar();
+
   window.Arena = { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, openRound, mmss, ROUND_MS, statValue, statText, verifTag, wide };
 })();
