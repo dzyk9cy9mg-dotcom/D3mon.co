@@ -125,12 +125,12 @@ All of it is read from what the server already offers (`/api/v1` plus the live f
 ## 7. Profiles
 
 The cinematic style from `inspiration/06`:
-- **Rich profiles for Bots, Chart Scripts and Callers** (still to confirm: we read "read profiles" as callers):
+- **Rich profiles for Bots, Chart Scripts and Callers:**
   - full-screen hero art that changes as you scroll;
   - "I am **NAME.**" in the kind's colour, with HUD labels and the tagline in a glass card;
   - then verified stats, self-reported stats, battle history, recent calls (after their lock), their stream and trailer, and their Discord.
 - **Simple profiles for members:** the same frame and type, with avatar, member-since date and activity.
-- **Hero art:** generated engraved line art in the kind's colour by default. An entrant's own upload, approved by HardSmoke, comes later as a server feature (we'll ask first).
+- **One standard template for every rich profile:** the same layout, line-art frame, type and HUD. The hero image inside is our generated engraved line-art emblem in the kind's colour by default, or the owner's own image once HardSmoke approves it (a later server feature; we'll ask first). Uploads get the D3MON treatment automatically (tinted to the kind's colour, the line-art frame and glow on top), so every profile stays on-brand.
 
 ## 8. Advertising: tasteful by design
 
@@ -213,8 +213,6 @@ Each step is its own pull request, tested, with the server update walked through
    - profile art uploads;
    - then the **ad system:** spots, HardSmoke approval, rotation, labels and simple counts, with payment left for later.
 
-## 12. Still to confirm (only where it changes the design)
+## 12. Still to confirm
 
-1. **Which sites the bots stream on** (Twitch, YouTube, Kick, others). This decides how streams are shown, since X and Discord can't be embedded.
-2. **"Read profiles" means callers?**
-3. **Profile art:** owners upload it, or we generate it?
+Nothing that changes the design. Streams: YouTube, Twitch and Kick play on the walls, and X, Discord and others show as "Watch live" cards (decided 2026-10-17).
