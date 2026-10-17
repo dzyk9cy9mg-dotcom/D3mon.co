@@ -20,8 +20,9 @@
       : t.kind === "daily" ? fmt(t.startsAt, { weekday: "long", month: "long", day: "numeric" })
       : t.kind === "weekly" ? `${fmt(t.startsAt, day)} – ${fmt(t.endsAt - 1, day)}`
       : fmt(t.startsAt, { month: "long", year: "numeric" });
-    const state = t.status === "live" ? `Live · ends in <b data-ends="${t.endsAt}">${left(t.endsAt - Date.now())}</b>` : "<b>Final</b>";
-    return `${esc(span)} · ${state} · ${t.settledRounds} of ${t.rounds} rounds scored`;
+    const state = t.status === "live" ? `Live · ends in <b data-ends="${t.endsAt}">${left(t.endsAt - Date.now())}</b>`
+      : t.status === "scoring" ? "<b>Ended</b> · waiting for Kalshi to score the last rounds" : "<b>Final</b>";
+    return `${esc(span)} · ${state} · ${t.settledRounds} of ${t.rounds} rounds scored${t.corrected ? `<br><span class="tag">${esc(t.correctedNote)}</span>` : ""}`;
   }
 
   function render() {

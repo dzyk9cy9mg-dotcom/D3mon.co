@@ -321,7 +321,7 @@ describe("tournaments: standings", () => {
     const r = await new Client(srv.base).get("/api/v1/tournaments/hourly-2026-10-10T12"); // public
     assert.equal(r.status, 200);
     const t = r.json.tournament;
-    assert.equal(t.status, "final");
+    assert.equal(t.status, "scoring", "ended, not saved yet: R(3) has no Kalshi result");
     assert.equal(t.settledRounds, 3, "R(3) only has a result entered by hand");
     assert.match(t.notice, /D3MON never trades/);
     const rows = Object.fromEntries(t.standings.map(x => [x.entrant.name, x]));
@@ -374,6 +374,36 @@ describe("tournaments: standings", () => {
     do e = (await it.next()).value; while (e.event !== "tournament.updated");
     ac.abort();
     assert.deepEqual(JSON.parse(e.data).data.reason, ["score"]);
+  });
+
+  test("final standings are saved once, and a later correction is flagged, not applied", async () => {
+    const T = arena().tournaments, id = "hourly-2026-10-10T12";
+    const end = H0 + 3600000;
+    // R(3) never gets a Kalshi result, so saving waits for the 30-minute grace time.
+    assert.deepEqual(T.finalizeDue(end + 5 * MIN).filter(x => x === id), []);
+    const before = (await get(hs, id)).json.tournament.standings;
+    const saved = T.finalizeDue(end + 31 * MIN);
+    assert.ok(saved.includes(id), JSON.stringify(saved));
+    assert.deepEqual(T.finalizeDue(end + 40 * MIN).filter(x => x === id), [], "saved only once");
+    assert.equal(arena().ledger.filter(l => l.t === "tournament_final" && l.tournamentId === id).length, 1);
+    arena().tournaments.now = () => end + 41 * MIN;
+    let t = (await get(hs, id)).json.tournament;
+    assert.equal(t.status, "final");
+    assert.ok(t.savedAt);
+    assert.equal(t.corrected, undefined);
+    assert.deepEqual(t.standings, before);
+    settle(1, "down"); // a late Kalshi correction
+    t = (await get(hs, id)).json.tournament;
+    assert.deepEqual(t.standings, before, "the saved standings stand");
+    assert.equal(t.corrected, true);
+    settle(1, "up"); // corrected back
+    assert.equal((await get(hs, id)).json.tournament.corrected, undefined);
+  });
+
+  test("a tournament is saved as soon as Kalshi has settled every round", () => {
+    const T = arena().tournaments, id = "hourly-2026-10-10T13", H1 = H0 + 3600000;
+    for (let n = 4; n < 8; n++) settle(n, "up");
+    assert.ok(T.finalizeDue(H1 + 3600000 + MIN).includes(id), "no grace wait when everything is settled");
   });
 
   test("unknown and future tournaments are 404", async () => {
