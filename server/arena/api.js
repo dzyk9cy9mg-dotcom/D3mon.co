@@ -60,7 +60,7 @@ export function createArena({ store, accounts, cfg }) {
   const kalshi = new Kalshi({ ledger, metrics, registry, calls, feed, ...(cfg.kalshiUrl ? { base: cfg.kalshiUrl } : {}) });
   if (cfg.kalshi !== false) kalshi.start();
   const monitor = new Monitor({ store, registry, stats, catalog, calls, ledger, kalshi, feed, userName });
-  const tournaments = new Tournaments({ ledger, registry, feed });
+  const tournaments = new Tournaments({ ledger, registry, feed, calls, metrics });
   const displays = new Displays({ store, registry, stats, catalog, feed });
   displays.seed();
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
@@ -144,6 +144,8 @@ export function createArena({ store, accounts, cfg }) {
     }
 
     if (route === "GET /rounds") return ok(roundsView(url));
+    if (route === "GET /tournaments") return ok(tournaments.current());
+    if ((m = route.match(/^GET \/tournaments\/([A-Za-z0-9-]{6,40})$/))) return ok({ tournament: tournaments.standings(m[1]) });
     if (route === "GET /kalshi") {
       if (!isAdmin(ctx)) throw new ApiError(ctx.uid ? 403 : 401, "not_granted", "Only HardSmoke can see the Kalshi status.");
       return ok({ kalshi: kalshi.status() });
