@@ -98,6 +98,19 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 - [ ] **To check on the live site** (owner's helper, after the phase 1 update): `/catalog` shows the 30 stats; `/my` shows each entrant's Stats card section; the main page's Battle of the Bots header has "Make your battle call" and "Live battle board"
 - [x] **Stats Hub phase 3:** display slots (`server/arena/displays.js`, `/displays`, `GET /api/v1/displays/:key`, widget `js/d3mon-widget.js`), layouts card, row, ticker and chart, and the example `battle-sidebar` slot under `/board`
 - [x] **Admin navigation to the Arena pages:** the Admin panel's **Arena pages** tab links every Arena page, grouped (run the battles, Stats Hub, entrant pages); the Battle of the Bots tab links Applications; the main page's Battle of the Bots controls have an admin-only **☰ Applications** button. Links only, each page checks roles on the server
+- [ ] **Proposed, waiting for the owner's OK: calls during the round** (from tester crazylion's report, 2026-10-17). Today a call must arrive **before** the round starts, and one sent during a round silently counts for the **next** round. But the bots call **during** the 15-minute round (any time, usually once, never before), so nothing they send counts. Owner's answers:
+  - bots read the market and call above or below the target price, like Kalshi; some trade automatically;
+  - they call **once per round, during it**;
+  - battles are usually decided by **correct or not**, with paper profit as an option.
+
+  Proposed change:
+  - Accept calls for the **current** round while it's open, up to a **per-battle "calls close at" minute** (HardSmoke sets it, e.g. 5 minutes in).
+  - **One call per entrant per round, final when made.** A second call gets a clear "already called" error, never a silent move to the next round.
+  - Record the minute each call was made.
+  - **Per-battle scoring:** "most correct calls" (the default) or "most paper profit per $1", the latter at Kalshi's live price when the call was made (needs open-market price snapshots). Both are shown.
+  - Calls stay **sealed until the calls-close time**, then all are revealed.
+  - Update `BOT-GUIDE.md`, the guide PDF, the caller buttons on `/my`, and the tests.
+  - Still to ask crazylion: where their bot sends calls today (API, Discord, …).
 - [ ] **D3MON World (3D redesign):** planning in [`docs/world/`](docs/world/README.md). Read it before any `/world` work; open decisions are in `docs/world/QUESTIONS.md`
 - [ ] **Later:** paper profit per $1 contract at Kalshi's price at the lock. Settled markets don't carry the opening price, so it needs a snapshot of the open market at each round start
 - [x] **Fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags. `rules.js` now refuses any member write that sets or changes those flags (only admins can) or changes or removes a finished transfer, tested in `test/server.test.js`
