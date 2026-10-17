@@ -5,7 +5,7 @@
   "use strict";
   const { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, openRound, mmss, statValue, verifTag } = window.Arena;
   const $ = id => document.getElementById(id);
-  const S = { entrants: [], keys: {}, calls: {}, stats: {}, token: null, busy: false };
+  const S = { entrants: [], keys: {}, calls: {}, stats: {}, tour: {}, token: null, busy: false };
   const SHOWS = { hidden: "Hidden", private: "Private (only you)", members: "Members only", public: "Public" };
 
   function msg(text, ok) {
@@ -53,6 +53,19 @@
   -H "Content-Type: application/json" \\
   -d '{"schema":"d3mon.call/v1","market":"KXBTC15M","direction":"up"}'</pre>
       </details>`;
+  }
+
+  // The "Join tournaments" switch. It counts from the next round; leaving keeps the rounds already played.
+  function tourBox(e) {
+    const t = S.tour[e.id];
+    if (!t || !t.eligible) return "";
+    const pending = t.on !== t.playingNow;
+    const state = t.on ? (pending ? `Joined. Counts from the round at <b>${esc(fmtTime(t.from))}</b>.` : "<b>In the tournaments.</b> Your bot's calls count every round.")
+      : (pending ? `Leaving at <b>${esc(fmtTime(t.from))}</b>. Rounds already played still count.` : "Not in the tournaments.");
+    return `<h3 class="sub">Tournaments</h3>
+      <div class="callbox"><div class="meta">Hourly, daily, weekly and monthly tournaments run all the time, scored by Kalshi. ${state}</div>
+      <div class="actions"><button class="btn${t.on ? " ghost" : ""} sm" type="button" data-tour="${esc(e.id)}|${t.on ? "off" : "on"}">${t.on ? "Leave tournaments" : "Join tournaments"}</button></div>
+      <div class="meta">For entertainment. Not financial advice. D3MON never trades.</div></div>`;
   }
 
   // The owner's stat settings: who sees each stat, and its label, description and order. Grouped as in
@@ -141,13 +154,16 @@
     $("entrants").innerHTML = S.entrants.map(e => `<section class="panel" data-ent="${esc(e.id)}">
       <h2>${esc(e.name)} <span class="st">${esc(kindName(e.kind))}</span>${e.status !== "active" ? ` <span class="st rejected">${esc(e.status)}</span>` : ""}</h2>
       ${e.kind === "caller" ? callerBox(e) : keysBox(e)}
+      ${tourBox(e)}
       <h3 class="sub">Recent calls</h3>${callsTable(e)}
       ${statsBox(e)}
     </section>`).join("");
   }
 
   async function loadEntrant(e) {
-    const [c, k, st] = await Promise.all([api("GET", `entrants/${e.id}/calls?limit=12`), e.kind === "caller" ? null : api("GET", `entrants/${e.id}/keys`), api("GET", `entrants/${e.id}/stat-settings`)]);
+    const [c, k, st, t] = await Promise.all([api("GET", `entrants/${e.id}/calls?limit=12`), e.kind === "caller" ? null : api("GET", `entrants/${e.id}/keys`), api("GET", `entrants/${e.id}/stat-settings`),
+      e.kind === "caller" ? null : api("GET", `entrants/${e.id}/tournaments`)]);
+    if (t) S.tour[e.id] = t.tournaments;
     S.calls[e.id] = c.calls;
     if (k) S.keys[e.id] = k.keys;
     S.stats[e.id] = st;
@@ -173,6 +189,15 @@
         msg(r.unchanged ? "That's already your call." : `Called ${dirText(direction)} for ${fmtTime(r.call.round)}.`, true);
         await loadEntrant(S.entrants.find(x => x.id === id)); render();
       } catch (e) { msg(e.message); } finally { S.busy = false; }
+      return;
+    }
+    if (d.tour) {
+      const [id, to] = d.tour.split("|");
+      try {
+        S.tour[id] = (await api("PUT", `entrants/${id}/tournaments`, { on: to === "on" })).tournaments;
+        msg(to === "on" ? `Joined. Counts from the round at ${fmtTime(S.tour[id].from)}.` : "Left the tournaments. Rounds already played still count.", true);
+        render();
+      } catch (e) { msg(e.message); }
       return;
     }
     if (d.revoke) {
