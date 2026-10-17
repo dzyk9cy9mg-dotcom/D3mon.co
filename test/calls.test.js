@@ -191,21 +191,29 @@ describe("bot keys and calls", () => {
       realTime();
     });
 
-    test("calls are sealed until the calls close: only the owner and admins see the direction", async () => {
+    test("a caller's call is sealed until the calls close: only the caller and admins see the direction", async () => {
       at(R(6) + MIN);
-      await asBot(token, "POST", "/api/v1/bot/calls", CALL);
-      const seen = async c => (await c.get(`/api/v1/battles/${battle.id}/board`)).json.rounds[6].calls.find(x => x.entrantId === bot);
+      await freya.post(`/api/v1/entrants/${caller}/call`, { direction: "up" });
+      const seen = async c => (await c.get(`/api/v1/battles/${battle.id}/board`)).json.rounds[6].calls.find(x => x.entrantId === caller);
       at(R(6) + 4 * MIN);
-      for (const c of [guest, loki]) {
+      for (const c of [guest, loki, odin]) {
         const v = await seen(c);
         assert.deepEqual([v.sealed, v.direction, typeof v.receivedAt], [true, undefined, "number"], "who called and when is public");
       }
-      assert.equal((await seen(odin)).direction, "up");
+      assert.equal((await seen(freya)).direction, "up");
       assert.equal((await seen(hs)).direction, "up");
-      const card = (await guest.get(`/api/v1/entrants/${bot}/calls`)).json.calls.find(c => c.round === R(6));
-      assert.equal(card.direction, undefined, "sealed in the entrant's history too");
+      const card = (await guest.get(`/api/v1/entrants/${caller}/calls`)).json.calls.find(c => c.round === R(6));
+      assert.equal(card.direction, undefined, "sealed in the caller's history too");
       at(R(6) + 5 * MIN);
       assert.equal((await seen(guest)).direction, "up", "revealed at the close");
+      realTime();
+    });
+
+    test("a bot's call is shown the moment it's made", async () => {
+      at(R(6) + MIN);
+      await asBot(token, "POST", "/api/v1/bot/calls", CALL);
+      const v = (await guest.get(`/api/v1/battles/${battle.id}/board`)).json.rounds[6].calls.find(x => x.entrantId === bot);
+      assert.deepEqual([v.direction, v.sealed, v.locked], ["up", undefined, false], "visible to everyone before the close");
       realTime();
     });
 
@@ -254,21 +262,24 @@ describe("bot keys and calls", () => {
   });
 
   describe("live", () => {
-    test("arrivals are announced sealed; the close reveals every call to everyone", async () => {
+    test("a caller's arrival is announced sealed, a bot's in full; the close reveals every call to everyone", async () => {
       const gf = await feed(srv.base, guest, `battle:${battle.id}`);
-      const of = await feed(srv.base, odin, `battle:${battle.id}`);
-      at(R(7) + 2 * MIN);
-      await asBot(token, "POST", "/api/v1/bot/calls", { ...CALL, direction: "down" });
+      const of = await feed(srv.base, freya, `battle:${battle.id}`);
+      at(R(2) + 2 * MIN);
+      await freya.post(`/api/v1/entrants/${caller}/call`, { direction: "down" });
       const g = await gf.next(e => e.event === "call.received");
-      assert.deepEqual([g.data.entrantId, g.data.sealed, g.data.direction], [bot, true, undefined]);
-      assert.equal((await of.next(e => e.event === "call.received")).data.direction, "down", "the owner sees their own");
-      srv.app.arena.calls.lockDue(R(7) + 2 * MIN, R(7) + 4 * MIN);
+      assert.deepEqual([g.data.entrantId, g.data.sealed, g.data.direction], [caller, true, undefined]);
+      assert.equal((await of.next(e => e.event === "call.received")).data.direction, "down", "the caller sees their own");
+      await asBot(token, "POST", "/api/v1/bot/calls", { ...CALL, direction: "down" });
+      const gb = await gf.next(e => e.event === "call.received" && e.data.entrantId === bot);
+      assert.equal(gb.data.direction, "down", "a bot's call is public at once");
+      srv.app.arena.calls.lockDue(R(2) + 2 * MIN, R(2) + 4 * MIN);
       assert.equal(await gf.next(e => e.event === "round.locked", 300), null, "nothing locks before the close");
-      at(R(7) + 5 * MIN);
-      srv.app.arena.calls.lockDue(R(7) + 4 * MIN, R(7) + 5 * MIN);
+      at(R(2) + 5 * MIN);
+      srv.app.arena.calls.lockDue(R(2) + 4 * MIN, R(2) + 5 * MIN);
       const locked = await gf.next(e => e.event === "round.locked");
-      assert.equal(locked.data.round, R(7));
-      assert.deepEqual(locked.data.calls.map(c => [c.entrantId, c.direction]), [[bot, "down"]]);
+      assert.equal(locked.data.round, R(2));
+      assert.deepEqual(locked.data.calls.map(c => [c.entrantId, c.direction]).sort(), [[bot, "down"], [caller, "down"]].sort());
       realTime();
       gf.close(); of.close();
     });
