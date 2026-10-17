@@ -145,7 +145,10 @@ The owner wants a **tidy site with far fewer buttons**, using grouped menus, and
   - **Community:** chat, messages, coin;
   - **My D3MON:** profile, my bots and keys, settings;
   - **HardSmoke:** admin pages, shown to admins only.
-- **"Apply for a battle"** is the only highlighted button.
+- **Two distinct buttons (owner, 2026-10-17): one for applicants, one for admins.** Their exact look and position follow the final layout.
+  - **Applicants:** a proper, highlighted **"Apply for a battle"** button, described below.
+  - **Admins:** a **"HardSmoke" control button**, shown only to admins, in the top bar beside the account menu. It opens one admin hub with **Applications first**, then battles, metrics, the Stats Hub pages and the rest of the Admin panel. Today's stop-gap is the Admin panel's "Arena pages" tab and the "☰ Applications" button in Battle control (PR #12).
+- **"Apply for a battle"** is the only highlighted button for visitors.
   - It's always in the top bar, and also appears at the natural moments: beside the next battle in the Arena, on the astronaut's closing scene, and on empty entrant spots.
   - It changes to "Your application: pending / approved" once someone has applied.
 - **The Quality switch and the sound toggle** sit as two small icons in a corner, not in the menu bar.
