@@ -64,7 +64,7 @@
     $("fStatus").value = s ? s.status : "on"; $("fLayout").value = s ? s.layout : "card";
     $("fOrder").value = s ? s.order : "listed"; $("fLimit").value = s ? s.limit : 6;
     $("fMode").value = s ? s.bots.mode : "specific";
-    $("fBattle").innerHTML = `<option value="current">The battle on the main page (or a live one)</option><option value="page">The battle the page names</option>${S.battles.map(b => `<option value="${esc(b.id)}">${esc(b.title)} (${esc(b.status)})</option>`).join("")}`;
+    $("fBattle").innerHTML = `<option value="current">The battle on the main page (or a live one)</option><option value="page">The battle the page names</option>${S.battles.map(b => `<option value="${esc(b.id)}">${esc(b.title)} (${esc(b.state || b.status)})</option>`).join("")}`;
     $("fBattle").value = s && s.bots.battle ? s.bots.battle : "current";
     S.pickE = s && s.bots.entrants ? [...s.bots.entrants] : [];
     S.pickS = s ? [...s.stats] : [];

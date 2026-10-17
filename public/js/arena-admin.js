@@ -18,9 +18,9 @@
   function renderBattles() {
     $("battles").innerHTML = battles.length ? battles.map(b => {
       const counts = Object.entries(b.applications || {}).map(([k, n]) => `${n} ${k}`).join(" · ") || "no applications";
-      return `<div class="item"><div class="top"><span class="st ${esc(b.status)}">${esc(b.status)}</span><b>${esc(b.title)}</b>
+      return `<div class="item"><div class="top"><span class="st ${esc(b.state)}">${esc(b.state)}</span><b>${esc(b.title)}</b>
         <select data-bstatus="${esc(b.id)}" aria-label="Status of ${esc(b.title)}" style="width:auto;margin-left:auto">${STATUSES.map(s => `<option ${s === b.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
-        <div class="meta">${esc(when(b.startsAt))} · ${b.rounds} rounds · ${b.kinds.map(kindName).join(", ")} · ${esc(counts)}</div>
+        <div class="meta">${b.over && b.state === "over" ? `Over: its last round ended. Its status is still “${esc(b.status)}”. ` : ""}${esc(when(b.startsAt))} · ${b.rounds} rounds · ${b.kinds.map(kindName).join(", ")} · ${esc(counts)}</div>
         <label class="meta">Calls close <select data-bwin="${esc(b.id)}" aria-label="When calls close in ${esc(b.title)}" style="width:auto">${WINDOWS.map(([m, t]) => `<option value="${m}" ${m === b.callWindowMin ? "selected" : ""}>${t}</option>`).join("")}</select></label>
         <div class="meta">Lineup: ${b.entrants.length ? b.entrants.map(e => esc(e.name)).join(", ") : "nobody approved yet"}</div>
         ${b.status === "draft" ? "" : `<label class="checks"><input type="checkbox" data-mainpage="${esc(b.id)}" ${b.onMainPage ? "checked" : ""}> Show this lineup on the main page's Battle of the Bots roster${b.onMainPage ? " (on: lineup changes are copied there live)" : ""}</label>`}</div>`;
