@@ -252,3 +252,112 @@ describe("tournaments: joining without a battle", () => {
     assert.deepEqual((await odin.get(`/api/v1/entrants/${id}`)).json.entrant.battles, [battle.id]);
   });
 });
+
+// Tournaments step 3: standings, worked out from calls and Kalshi's results.
+describe("tournaments: standings", () => {
+  let srv, hs, owners, ids = {}, keys = {};
+  const H0 = Date.UTC(2026, 9, 10, 16); // noon Eastern on Saturday 2026-10-10: hourly-2026-10-10T12
+  const R = n => H0 + n * Q;
+  const arena = () => srv.app.arena;
+  const bot = (tok, body) => fetch(srv.base + "/api/v1/bot/calls", { method: "POST", headers: { authorization: `Bearer ${tok}`, "content-type": "application/json" }, body: JSON.stringify(body) }).then(async r => ({ status: r.status, json: await r.json() }));
+  const call = async (name, n, direction, min = 2) => {
+    arena().calls.now = () => R(n) + min * MIN;
+    const r = await bot(keys[name], { schema: "d3mon.call/v1", market: "KXBTC15M", direction });
+    assert.equal(r.status, 201, JSON.stringify(r.json));
+  };
+  const settle = (n, result, source = "kalshi") => arena().ledger.append([{ t: "score", market: "KXBTC15M", round: R(n), result, source }], null);
+  const get = (c, id) => c.get(`/api/v1/tournaments/${id}`);
+
+  before(async () => {
+    srv = await startServer();
+    hs = new Client(srv.base);
+    await hs.register("hardsmoke", "smoke-pass-1", "HardSmoke");
+    owners = {};
+    // A, B, G, H are bots; C is a script; E joins late; D is a caller (can't join).
+    for (const [name, kind] of [["Alpha", "bot"], ["Bravo", "bot"], ["Charlie", "script"], ["Delta", "caller"], ["Echo", "bot"], ["Golf", "bot"], ["Hotel", "bot"]]) {
+      const c = owners[name] = new Client(srv.base);
+      await c.register(name.toLowerCase(), `${name.toLowerCase()}-pass-1`, name);
+      const a = (await c.post("/api/v1/applications", { kind, name, creatorName: name })).json.application;
+      ids[name] = (await hs.post(`/api/v1/applications/${a.id}/review`, { decision: "approve" })).json.application.entrantId;
+      if (kind !== "caller") keys[name] = (await c.post(`/api/v1/entrants/${ids[name]}/keys`, {})).json.token;
+    }
+    arena().tournaments.now = () => H0 - 5 * MIN;
+    for (const name of ["Alpha", "Bravo", "Charlie", "Golf", "Hotel"]) assert.equal((await owners[name].req("PUT", `/api/v1/entrants/${ids[name]}/tournaments`, { on: true })).status, 200);
+    arena().tournaments.now = () => R(1) + 5 * MIN;
+    await owners.Echo.req("PUT", `/api/v1/entrants/${ids.Echo}/tournaments`, { on: true }); // counts from R(2)
+
+    for (const [n, d] of [[0, "up"], [1, "up"], [2, "down"], [3, "up"]]) await call("Alpha", n, d);
+    for (const [n, d] of [[0, "up"], [2, "down"], [3, "down"]]) await call("Bravo", n, d); // misses R(1)
+    for (const n of [0, 1, 2, 3]) await call("Charlie", n, "down");
+    for (const [n, d] of [[2, "up"], [3, "up"]]) await call("Echo", n, d);
+    for (const name of ["Golf", "Hotel"]) for (const [n, d] of [[0, "up"], [1, "down"], [2, "down"]]) await call(name, n, d, 1); // same calls at the same times, earlier than Bravo: only accuracy puts Bravo ahead
+    await call("Echo", 1, "up"); // made before Echo's tournament entry counts: ignored
+    // A caller's entry line can only come from outside the API; standings still leave callers out.
+    arena().ledger.append([{ t: "tournament_entry", entrantId: ids.Delta, on: true, from: H0 }], null);
+    settle(0, "up"); settle(1, "up"); settle(2, "down");
+    settle(3, "down", "host"); // entered by hand only: doesn't count
+    arena().calls.now = () => Date.now();
+  });
+  after(() => srv.stop());
+
+  test("the four current tournaments", async () => {
+    arena().tournaments.now = () => R(2) + 3 * MIN;
+    const r = await hs.get("/api/v1/tournaments");
+    assert.equal(r.status, 200);
+    assert.equal(r.json.timeZone, "America/New_York");
+    assert.match(r.json.notice, /Not financial advice/);
+    assert.deepEqual(r.json.tournaments.map(t => t.id), ["hourly-2026-10-10T12", "daily-2026-10-10", "weekly-2026-10-05", "monthly-2026-10"]);
+    const [hourly, daily, weekly, monthly] = r.json.tournaments;
+    assert.equal(hourly.startsAt, H0);
+    assert.equal(hourly.rounds, 4);
+    assert.equal(daily.rounds, 96);
+    assert.equal(weekly.rounds, 672);
+    assert.equal(monthly.rounds, 31 * 96);
+    assert.ok(r.json.tournaments.every(t => t.status === "live"));
+  });
+
+  test("standings: most correct, then accuracy, then the earlier call; Kalshi results only", async () => {
+    arena().tournaments.now = () => H0 + 3600000 + MIN; // the hour is over
+    const r = await new Client(srv.base).get("/api/v1/tournaments/hourly-2026-10-10T12"); // public
+    assert.equal(r.status, 200);
+    const t = r.json.tournament;
+    assert.equal(t.status, "final");
+    assert.equal(t.settledRounds, 3, "R(3) only has a result entered by hand");
+    assert.match(t.notice, /D3MON never trades/);
+    const rows = Object.fromEntries(t.standings.map(x => [x.entrant.name, x]));
+    assert.deepEqual(t.standings.map(x => [x.entrant.name, x.rank]), [["Alpha", 1], ["Bravo", 2], ["Golf", 3], ["Hotel", 3], ["Charlie", 5], ["Echo", 6]]);
+    assert.deepEqual({ ...rows.Alpha, entrant: undefined, avgLeadMs: undefined }, { entrant: undefined, played: 3, calls: 3, correct: 3, wrong: 0, missed: 0, accuracy: 1, avgLeadMs: undefined, rank: 1 });
+    assert.equal(rows.Alpha.avgLeadMs, 13 * MIN, "called 2 minutes in, calls close at the round's end");
+    assert.deepEqual([rows.Bravo.played, rows.Bravo.calls, rows.Bravo.missed, rows.Bravo.correct], [3, 2, 1, 2]);
+    assert.equal(rows.Golf.accuracy, 2 / 3);
+    assert.deepEqual([rows.Echo.played, rows.Echo.calls, rows.Echo.correct], [1, 1, 0], "only rounds after it joined");
+    assert.equal(rows.Delta, undefined, "callers can't join");
+    assert.deepEqual(Object.keys(rows.Alpha.entrant).sort(), ["creatorName", "id", "kind", "name", "slug"]);
+  });
+
+  test("the daily and longer tournaments add up the same rounds", async () => {
+    for (const id of ["daily-2026-10-10", "weekly-2026-10-05", "monthly-2026-10"]) {
+      const t = (await hs.get(`/api/v1/tournaments/${id}`)).json.tournament;
+      assert.equal(t.standings[0].entrant.name, "Alpha", id);
+      assert.equal(t.standings[0].correct, 3, id);
+      assert.equal(t.status, "live", id);
+    }
+  });
+
+  test("a Kalshi correction moves the standings; a suspended or departed bot keeps its rounds", async () => {
+    settle(2, "up"); // Kalshi corrects R(2)
+    let rows = (await get(hs, "hourly-2026-10-10T12")).json.tournament.standings;
+    assert.equal(rows.find(x => x.entrant.name === "Alpha").correct, 2);
+    assert.equal(rows.find(x => x.entrant.name === "Echo").correct, 1);
+    settle(2, "down");
+    arena().tournaments.now = () => R(3) + MIN;
+    await owners.Bravo.req("PUT", `/api/v1/entrants/${ids.Bravo}/tournaments`, { on: false }); // leaves from R(4)
+    arena().tournaments.now = () => H0 + 3600000 + MIN;
+    rows = (await get(hs, "hourly-2026-10-10T12")).json.tournament.standings;
+    assert.equal(rows.find(x => x.entrant.name === "Bravo").correct, 2, "leaving keeps the rounds played");
+  });
+
+  test("unknown and future tournaments are 404", async () => {
+    for (const id of ["hourly-2026-10-10", "daily-2026-13-01", "weekly-2026-10-06", "yearly-2026", "daily-2099-01-01"]) assert.equal((await get(hs, id)).status, 404, id);
+  });
+});

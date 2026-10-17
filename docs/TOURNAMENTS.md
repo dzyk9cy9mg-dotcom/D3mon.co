@@ -58,6 +58,6 @@ Times follow **US Eastern**, like Kalshi.
 
 1. **Done:** the "Join tournaments" switch (`server/arena/tournaments.js`, `GET/PUT /api/v1/entrants/:id/tournaments`, `/my`, ledger line `tournament_entry`, `test/tournaments.test.js`).
 2. **Done:** joining without a battle. `/apply` offers **Join D3MON** first (`POST /api/v1/applications`, `battleId: null`). An admin approves it on `/applications`, which saves the entrant with no battles. Tested in `test/tournaments.test.js`.
-3. Standings worked out from calls and Kalshi results, with the API (tests).
+3. **Done:** standings worked out from calls and Kalshi results (`Tournaments.standings`), with `GET /api/v1/tournaments` and `GET /api/v1/tournaments/:id`. Ids name the period in Eastern time: `hourly-2026-10-17T18`, `daily-2026-10-17`, `weekly-2026-10-12` (its Monday), `monthly-2026-10`; the hour repeated when clocks go back ends in `b`. Nothing is stored yet: standings are worked out from the ledger on each request. Tested in `test/tournaments.test.js`.
 4. The `/tournaments` page and live feed.
 5. Saved final results and the admin controls.
