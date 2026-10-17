@@ -42,3 +42,7 @@ Ads and trailers advertise the bots. Each one is **a billboard or a simple video
 
 **Clarified (2026-10-17): this is for all pages, not just the 3D world.** The owner finds the current pages look sloppy: the main page and the Arena pages (`/apply`, `/applications`, `/my`, `/board`, `/card`, `/metrics`, `/catalog`, `/monitor`, `/displays`) need reorganising and condensing. **The rule: every control that exists today must still be there**, just better organised: grouped, condensed, in menus where it makes sense. Before redesigning any page, list its controls first, and check off each one after.
 
+## The battle in a grand room (added 2026-10-17)
+
+The owner: **"I would like the battle to take place within the triangle as if it was a grand room. Keep that in mind with the helix."** The battle is the main event inside the pyramid: a grand hall, not a small arena squeezed under other things.
+

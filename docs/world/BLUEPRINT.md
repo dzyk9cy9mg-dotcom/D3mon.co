@@ -51,6 +51,15 @@ The **light column** in the centre is the fast lift: tap any level to rise or dr
 >   - vertical moves are slow lifts;
 >   - reduce motion gets instant cuts.
 >
+> **Concept pictures:** `blueprint/helix-1.png` (outside), `helix-2.png` (inside, all strands), `helix-3.png` (filtered to Bots, with a card).
+> **Fix for the build:** cards turn to face the viewer, so no text is ever seen mirrored from behind.
+>
+> **The grand battle hall (owner, 2026-10-17):** the battle takes place inside the pyramid **as a grand room**. Proposal, so the helix and the hall don't fight for the middle:
+> - **The lower half of the pyramid is the Grand Hall:** an open floor for the battle, with the round clock as its inlaid centre, the stadium tiers around it and the stream walls on the three inner faces. Nothing stands in the middle.
+> - **The Helix hangs from the peak like a great chandelier** over the upper half, ending above the hall. Visitors browse it by scrolling (it turns and rises), from a balcony level.
+> - **When a battle starts,** the battle's entrants **peel off their strands and descend** into the hall, taking their stations around the clock in their colours. When it ends, they rise back up into the helix. This is the signature moment that joins the two.
+> - **The Trade Floor stays at the peak,** above the helix.
+>
 > The ramp text below stays until the owner approves the change.
 
 ### Outside

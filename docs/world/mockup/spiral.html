@@ -1,0 +1,267 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>D3MON World layout preview</title>
+<style>
+  html,body{margin:0;height:100%;background:#05080C;overflow:hidden;color:#DCE7EE;font:500 15px/1.4 "Rajdhani",system-ui,sans-serif}
+  canvas{display:block}
+  .ui{position:fixed;inset:0;pointer-events:none}
+  .brand{position:absolute;left:28px;top:20px;font:800 17px Orbitron,system-ui,sans-serif;letter-spacing:.14em}
+  .brand small{display:block;font:12px "Share Tech Mono",monospace;letter-spacing:.14em;color:#587080;margin-top:4px}
+  .tag{position:absolute;right:28px;top:22px;font:12px "Share Tech Mono",monospace;color:#FFB547;border:1px solid #FFB54755;background:#FFB5470f;padding:5px 10px;letter-spacing:.1em}
+  .stage{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);text-align:center;width:90%}
+  .stage b{display:block;font:700 22px Orbitron,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 0 18px #4DA3FF66}
+  .stage span{display:block;margin-top:6px;font:14px "Share Tech Mono",monospace;letter-spacing:.16em;color:#8FA3B2;text-transform:uppercase}
+  .hub{position:absolute;left:50%;top:18%;transform:translateX(-50%);font:800 40px Orbitron,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;text-align:center}
+  .hub small{display:block;font:13px "Share Tech Mono",monospace;letter-spacing:.2em;color:#8FA3B2;margin-top:6px}
+  .mini{position:absolute;left:24px;bottom:24px;width:150px;height:150px}
+</style></head>
+<body>
+<div class="ui">
+  <div class="brand">D3MON WORLD<small>LAYOUT PREVIEW</small></div>
+  <div class="tag">ROUGH PREVIEW · SIMPLE SHAPES</div>
+  <div class="hub" id="hub"></div>
+  <div class="stage" id="stage"><b></b><span></span></div>
+  <svg class="mini" id="mini" viewBox="-60 -60 120 120"></svg>
+</div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1); document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene(); const BG = new THREE.Color("#05080C");
+scene.background = BG; scene.fog = new THREE.FogExp2(BG, 0.011);
+const camera = new THREE.PerspectiveCamera(60, W / H, 0.03, 600);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(W, H, { samples: 4, type: THREE.HalfFloatType }));
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), 0.5, 0.45, 0.3));
+composer.addPass(new OutputPass());
+
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const C = { callers: new THREE.Color("#FFB547"), bots: new THREE.Color("#4DA3FF"), scripts: new THREE.Color("#B98CFF"), peak: new THREE.Color("#EAF4FF"), up: new THREE.Color("#2EE59D"), dn: new THREE.Color("#FF4D6A"), gold: new THREE.Color("#FFD27A") };
+const add = THREE.AdditiveBlending;
+const R = 10, PH = R * Math.SQRT2;
+const at = (deg, r, y = 0) => new THREE.Vector3(r * Math.cos(deg * Math.PI / 180), y, r * Math.sin(deg * Math.PI / 180));
+const ANG = { callers: -90, bots: 150, scripts: 30 };
+const KINDS = ["callers", "bots", "scripts"];
+const V = { callers: at(-90, R), bots: at(150, R), scripts: at(30, R), peak: new THREE.Vector3(0, PH, 0) };
+
+const dotTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"); const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.25, "rgba(255,255,255,.6)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+const glow = (color, size, pos, op = 1) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex, color, blending: add, transparent: true, depthWrite: false, opacity: op })); s.scale.setScalar(size); s.position.copy(pos); scene.add(s); return s; };
+const lineMat = (color, op = 1) => new THREE.LineBasicMaterial({ color, transparent: true, opacity: op });
+
+// floor of light: the flower of life
+{
+  const pts = [], r = 2.2, seg = 40;
+  for (let row = -40; row <= 40; row++) for (let col = -40; col <= 40; col++) {
+    const cx = col * r + (row & 1 ? r / 2 : 0), cz = row * r * Math.sqrt(3) / 2;
+    if (cx * cx + cz * cz > 90 * 90) continue;
+    for (let i = 0; i < seg; i++) { const a = i / seg * Math.PI * 2, b = (i + 1) / seg * Math.PI * 2; pts.push(cx + r * Math.cos(a), 0, cz + r * Math.sin(a), cx + r * Math.cos(b), 0, cz + r * Math.sin(b)); }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+  const f = new THREE.LineSegments(g, lineMat("#2C5F8F", .35)); f.position.y = -0.05; scene.add(f);
+}
+
+// pyramid edges
+const edges = [["callers", "bots"], ["bots", "scripts"], ["scripts", "callers"], ["peak", "callers"], ["peak", "bots"], ["peak", "scripts"]];
+for (const [a, b] of edges) {
+  const A = V[a], B = V[b], geo = new THREE.TubeGeometry(new THREE.LineCurve3(A, B), 1, 0.07, 8, false);
+  const pos = geo.attributes.position, col = [], AB = B.clone().sub(A), L2 = AB.lengthSq(), v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const t = THREE.MathUtils.clamp(v.clone().sub(A).dot(AB) / L2, 0, 1); const c = C[a].clone().lerp(C[b], t).multiplyScalar(1.5); col.push(c.r, c.g, c.b); }
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  scene.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })));
+}
+for (const k of KINDS) { glow(C[k], 3.2, V[k], .7); glow(C[k], 1.1, V[k]); }
+glow(new THREE.Color("#CFE6FF"), 2.4, V.peak, .8);
+// glass faces
+const face = (A, B, P, color, op) => { const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute([...A.toArray(), ...B.toArray(), ...P.toArray()], 3)); scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: op, depthWrite: false }))); };
+face(V.bots, V.scripts, V.peak, "#0c1a2c", .22); face(V.scripts, V.callers, V.peak, "#1a1030", .22); face(V.callers, V.bots, V.peak, "#0c1a2c", .22);
+
+// ---- the triangular spiral ----
+const RAMP0 = 1.0, TRADE = PH * 0.62, TURNS = 3, RUNS = TURNS * 3;
+const INSET = 0.5;   // how far in from the walls the ramp runs
+function cornerAt(i, y) { const k = (1 - y / PH) * INSET; const c = V[KINDS[i % 3]]; return new THREE.Vector3(c.x * k, y, c.z * k); }
+const heightAt = s => RAMP0 + (TRADE - 0.4 - RAMP0) * (s / RUNS);
+const NODES = Array.from({ length: RUNS + 1 }, (_, i) => cornerAt(i, heightAt(i)));
+function pathAt(s) { s = THREE.MathUtils.clamp(s, 0, RUNS); const i = Math.min(RUNS - 1, Math.floor(s)), u = s - i; return NODES[i].clone().lerp(NODES[i + 1], u); }
+// ramp planks and rails
+{
+  const deck = new THREE.MeshBasicMaterial({ color: "#123a63", transparent: true, opacity: .45, side: THREE.DoubleSide, depthWrite: false });
+  for (let i = 0; i < RUNS; i++) {
+    const A = NODES[i], B = NODES[i + 1], dir = B.clone().sub(A), len = dir.length();
+    const side = new THREE.Vector3(-dir.z, 0, dir.x).normalize().multiplyScalar(0.55);
+    const g = new THREE.BufferGeometry(); const a1 = A.clone().add(side), a2 = A.clone().sub(side), b1 = B.clone().add(side), b2 = B.clone().sub(side);
+    g.setAttribute("position", new THREE.Float32BufferAttribute([...a1.toArray(), ...a2.toArray(), ...b1.toArray(), ...a2.toArray(), ...b2.toArray(), ...b1.toArray()], 3));
+    scene.add(new THREE.Mesh(g, deck));
+    const kc = C[KINDS[i % 3]].clone().lerp(C[KINDS[(i + 1) % 3]], .5);
+    for (const sgn of [1, -1]) {
+      const o = side.clone().multiplyScalar(sgn).add(new THREE.Vector3(0, .32, 0));
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([A.clone().add(o), B.clone().add(o)]), lineMat(kc.clone().multiplyScalar(1.4), .9)));
+    }
+    // rail posts
+    for (let p = 0; p <= 6; p++) { const q = A.clone().lerp(B, p / 6).add(side); scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([q, q.clone().add(new THREE.Vector3(0, .32, 0))]), lineMat("#9fd0ff", .35))); }
+  }
+}
+// hubs at every corner of every turn
+const chartCv = document.createElement("canvas"); chartCv.width = 256; chartCv.height = 160; const chartTex = new THREE.CanvasTexture(chartCv); chartTex.colorSpace = THREE.SRGBColorSpace;
+function drawChart(t) { const g = chartCv.getContext("2d"); g.clearRect(0, 0, 256, 160); g.fillStyle = "rgba(30,14,52,.7)"; g.fillRect(0, 0, 256, 160); g.strokeStyle = "#B98CFF"; g.lineWidth = 3; g.beginPath(); for (let i = 0; i <= 40; i++) { const x = 10 + i * 5.9, y = 95 - Math.sin(i * .3 + t) * 22 - i * .9 + Math.sin(i * 1.7) * 6; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); chartTex.needsUpdate = true; }
+const pods = [];
+NODES.forEach((N, i) => {
+  if (i === RUNS) return;
+  const kind = KINDS[i % 3], col = C[kind];
+  const landing = new THREE.Mesh(new THREE.CircleGeometry(1.15, 6), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .18, side: THREE.DoubleSide, depthWrite: false }));
+  landing.rotation.x = -Math.PI / 2; landing.position.copy(N).add(new THREE.Vector3(0, .01, 0)); scene.add(landing);
+  scene.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 6 }, (_, k) => N.clone().add(new THREE.Vector3(Math.cos(k / 6 * Math.PI * 2) * 1.15, .02, Math.sin(k / 6 * Math.PI * 2) * 1.15)))), lineMat(col, .9)));
+  // objects stand on the outer side of the landing, against the wall
+  const out = new THREE.Vector3(N.x, 0, N.z).normalize();
+  const tang = new THREE.Vector3(-out.z, 0, out.x);
+  for (let k = -1; k <= 1; k++) {
+    const P = N.clone().add(out.clone().multiplyScalar(.55)).add(tang.clone().multiplyScalar(k * .62));
+    if (kind === "callers") {          // glass booth with a hologram figure
+      const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.5, .8, .4)), lineMat(col, .9));
+      box.position.copy(P).add(new THREE.Vector3(0, .4, 0)); box.lookAt(0, box.position.y, 0); scene.add(box);
+      const fig = glow(col, .35, P.clone().add(new THREE.Vector3(0, .55, 0)), .9); const body = glow(col, .5, P.clone().add(new THREE.Vector3(0, .32, 0)), .5);
+    } else if (kind === "bots") {      // hexagon pod
+      const pod = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(.24, .24, .55, 6)), lineMat(col, 1));
+      pod.position.copy(P).add(new THREE.Vector3(0, .3, 0)); scene.add(pod); pods.push(pod);
+      glow(col, .45, pod.position, .8);
+    } else {                           // floating chart screen
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(.55, .36), new THREE.MeshBasicMaterial({ map: chartTex, transparent: true, side: THREE.DoubleSide, blending: add, depthWrite: false }));
+      m.position.copy(P).add(new THREE.Vector3(0, .55 + (k & 1) * .12, 0)); m.lookAt(0, m.position.y, 0); scene.add(m);
+    }
+  }
+  glow(col, 1.6, N.clone().add(new THREE.Vector3(0, .1, 0)), .35);
+});
+
+// the Arena on the floor
+const arena = { ents: [] };
+{
+  for (let i = 0; i < 96; i++) {
+    const a = i / 96 * Math.PI * 2, m = new THREE.Mesh(new THREE.BoxGeometry(.05, .02, .38), new THREE.MeshBasicMaterial({ color: (rnd() < .53 ? C.up : C.dn).clone().multiplyScalar(1.3), toneMapped: false }));
+    m.position.set(Math.cos(a) * 3.0, .02, Math.sin(a) * 3.0); m.rotation.y = -a + Math.PI / 2; scene.add(m);
+  }
+  glow(new THREE.Color("#ffffff"), 1.2, new THREE.Vector3(0, .7, 0)); glow(new THREE.Color("#7fbfff"), 3.4, new THREE.Vector3(0, .7, 0), .4);
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(.05, .1, TRADE - .7, 12, 1, true), new THREE.MeshBasicMaterial({ color: "#9fd0ff", transparent: true, opacity: .55, blending: add, toneMapped: false }));
+  col.position.set(0, .7 + (TRADE - .7) / 2, 0); scene.add(col); arena.col = col;
+  [["bots"], ["callers"], ["scripts"], ["bots"], ["callers"], ["scripts"]].forEach(([k], i) => arena.ents.push({ k, a0: i / 6 * Math.PI * 2, s: glow(C[k], .5, new THREE.Vector3()) }));
+  // stadium tiers: rings of member lights
+  for (let tier = 0; tier < 3; tier++) for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2, r = 3.7 + tier * .35; if (rnd() < .55) glow(new THREE.Color("#cfe6ff"), .12, new THREE.Vector3(Math.cos(a) * r, .1 + tier * .18, Math.sin(a) * r), .8); }
+}
+// stream walls: screens on the lower inner faces, one colour per kind
+const streamCv = document.createElement("canvas"); streamCv.width = 256; streamCv.height = 144; const streamTex = new THREE.CanvasTexture(streamCv); streamTex.colorSpace = THREE.SRGBColorSpace;
+function drawStream(t) { const g = streamCv.getContext("2d"); g.fillStyle = "#0b1726"; g.fillRect(0, 0, 256, 144); g.fillStyle = "rgba(77,163,255,.25)"; for (let i = 0; i < 6; i++) g.fillRect(20 + i * 38, 100 - (Math.sin(t * 2 + i) * .5 + .5) * 60, 22, 200); g.fillStyle = "#FF4D6A"; g.font = "16px monospace"; g.fillText("● LIVE", 12, 22); g.fillStyle = "#fff"; g.beginPath(); g.moveTo(118, 58); g.lineTo(118, 88); g.lineTo(142, 73); g.fill(); streamTex.needsUpdate = true; }
+for (const [a, b, ka] of [["callers", "bots", "callers"], ["bots", "scripts", "bots"], ["scripts", "callers", "scripts"]]) {
+  for (let j = 0; j < 3; j++) {
+    const y = 1.9 + (j % 2) * .9, k = 1 - y / PH;
+    const p = V[a].clone().lerp(V[b], .3 + j * .2).multiplyScalar(k * .93); p.y = y;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .8), new THREE.MeshBasicMaterial({ map: streamTex, transparent: true, opacity: .9, side: THREE.DoubleSide }));
+    m.position.copy(p); m.lookAt(0, y, 0); scene.add(m);
+    scene.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([[-.7, -.4], [.7, -.4], [.7, .4], [-.7, .4]].map(([x, z]) => m.localToWorld(new THREE.Vector3(x, z, 0)))), lineMat(C[ka], .9)));
+  }
+}
+// the Trade Floor and the golden crown
+{
+  const k = 1 - TRADE / PH, ring = KINDS.map(n => new THREE.Vector3(V[n].x * k, TRADE, V[n].z * k));
+  face(ring[0], ring[1], ring[2], "#5aa9ff", .12);
+  scene.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ring), lineMat("#cfe6ff", .9)));
+  const crown = new THREE.Group(); const pts = [];
+  for (let i = 0; i <= 12; i++) { const a = i / 12 * Math.PI * 2, r = i % 2 ? .45 : 1.0; pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)); }
+  crown.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat(C.gold, 1)));
+  const tri = KINDS.map(n => new THREE.Vector3(Math.cos(ANG[n] * Math.PI / 180) * .8, 0, Math.sin(ANG[n] * Math.PI / 180) * .8));
+  crown.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(tri), lineMat(C.gold, .9)));
+  crown.position.set(0, TRADE + 2.2, 0); scene.add(crown); arena.crown = crown;
+  glow(C.gold, 2.2, crown.position, .5);
+  for (const n of KINDS) { const m = new THREE.Mesh(new THREE.PlaneGeometry(.9, .5), new THREE.MeshBasicMaterial({ map: streamTex, transparent: true, side: THREE.DoubleSide })); const p = at(ANG[n] + 180, .95, TRADE + .55); m.position.copy(p); m.lookAt(0, p.y, 0); scene.add(m); }
+}
+
+// ---- camera ----
+const ease = x => x * x * (3 - 2 * x);
+const DUR = 25;
+const T_IN = [4.0, 7.5], T_RAMP = [7.5, 18.0], T_TOP = 18.0, T_OUT = 20.5;
+function cam(t) {
+  if (t < T_IN[0]) {                         // outside, slow orbit
+    const u = t / T_IN[0], a = 80 + u * 35;
+    camera.position.copy(at(a, 33 - u * 4, 8 - u * 1.5)); camera.lookAt(0, 5.5, 0); return;
+  }
+  if (t < T_IN[1]) {                         // fly in through the front face to above the Arena
+    const u = ease((t - T_IN[0]) / (T_IN[1] - T_IN[0]));
+    const from = at(115, 29, 6.5), to = pathAt(0).add(new THREE.Vector3(0, 1.4, 0)).add(new THREE.Vector3(-pathAt(0).x, 0, -pathAt(0).z).multiplyScalar(.35));
+    camera.position.copy(from.lerp(to, u));
+    const look = new THREE.Vector3(0, 5.5, 0).lerp(new THREE.Vector3(0, .5, 0).lerp(pathAt(.6), .5), u);
+    camera.lookAt(look); return;
+  }
+  if (t < T_TOP) {                           // climb the spiral
+    const u = (t - T_RAMP[0]) / (T_RAMP[1] - T_RAMP[0]), s = ease(u) * RUNS * .98;
+    const p = pathAt(s), inward = new THREE.Vector3(-p.x, 0, -p.z).multiplyScalar(.35);
+    const blend = Math.min(1, (t - T_RAMP[0]) / .8);
+    const pos = p.clone().add(new THREE.Vector3(0, 1.4 - .4 * blend, 0)).add(inward);
+    camera.position.copy(pos);
+    const ahead = pathAt(s + .55).add(new THREE.Vector3(0, .55, 0));
+    const arenaLook = new THREE.Vector3(0, .5, 0).lerp(pathAt(.6), .5);
+    camera.lookAt(arenaLook.lerp(ahead, blend)); return;
+  }
+  const last = pathAt(RUNS * .98).add(new THREE.Vector3(0, 1.0, 0));
+  const dest = new THREE.Vector3(0, TRADE + .55, .9);
+  if (t < T_OUT) {                                     // arrive on the Trade Floor, look up at the crown
+    const u = ease(Math.min(1, (t - T_TOP) / 2.0));
+    camera.position.copy(last.lerp(dest, u));
+    camera.lookAt(pathAt(RUNS).add(new THREE.Vector3(0, .5, 0)).lerp(new THREE.Vector3(0, TRADE + 1.6, -.6), u)); return;
+  }
+  const u = ease(Math.min(1, (t - T_OUT) / 3.2));    // pull back out to see the whole layout
+  camera.position.copy(dest.lerp(at(100, 27, 9), u));
+  camera.lookAt(new THREE.Vector3(0, TRADE + 1.6, -.6).lerp(new THREE.Vector3(0, 5.5, 0), u));
+}
+
+// ---- overlays ----
+const $ = id => document.getElementById(id);
+const mini = $("mini");
+{
+  const pt = v => `${(v.x * 5).toFixed(1)},${(v.z * 5).toFixed(1)}`;
+  const tri = KINDS.map(n => pt(V[n])).join(" ");
+  const sp = NODES.map(pt).join(" ");
+  mini.innerHTML = `<polygon points="${tri}" fill="none" stroke="#1A2A36" stroke-width="2"/>` +
+    KINDS.map(n => `<circle cx="${V[n].x * 5}" cy="${V[n].z * 5}" r="4.5" fill="${"#" + C[n].getHexString()}"/>`).join("") +
+    `<polyline points="${sp}" fill="none" stroke="#9fd0ff" stroke-opacity=".7" stroke-width="1.6"/><circle id="me" r="4" fill="#fff" stroke="#05080C" stroke-width="1.5"/>`;
+}
+const STAGES = [
+  [0, T_IN[0], "The pyramid", "Callers · Bots · Chart Scripts"],
+  [T_IN[0], T_RAMP[0], "Inside: the Arena", "battle floor · round clock · stream walls"],
+  [T_RAMP[0], T_TOP, "The triangular spiral", "every turn passes Callers, Bots and Chart Scripts"],
+  [T_TOP, T_OUT, "The Trade Floor", "the community at the peak"],
+  [T_OUT, 99, "The whole layout", "Arena → triangular spiral → Trade Floor"],
+];
+const NAMES = { callers: ["Callers", "#FFB547", "caller booths"], bots: ["Bots", "#4DA3FF", "bot pods"], scripts: ["Chart Scripts", "#B98CFF", "script screens"] };
+function overlays(t) {
+  const st = STAGES.find(s => t >= s[0] && t < s[1]);
+  const fadeIn = Math.min(1, (t - st[0]) / .5);
+  $("stage").style.opacity = fadeIn; $("stage").querySelector("b").textContent = st[2]; $("stage").querySelector("span").textContent = st[3];
+  let hub = "", op = 0;
+  if (t >= T_RAMP[0] && t < T_TOP) {
+    const s = ease((t - T_RAMP[0]) / (T_RAMP[1] - T_RAMP[0])) * RUNS * .98, i = Math.round(s), d = Math.abs(s - i);
+    if (i < RUNS && d < .35) { const k = KINDS[i % 3], [nm, c, what] = NAMES[k]; hub = `<span style="color:${c};text-shadow:0 0 22px ${c}">${nm}</span><small>TURN ${Math.floor(i / 3) + 1} · ${what}</small>`; op = 1 - d / .35; }
+  }
+  $("hub").innerHTML = hub; $("hub").style.opacity = op;
+  const me = mini.querySelector("#me"); const p = camera.position;
+  me.setAttribute("cx", (THREE.MathUtils.clamp(p.x, -11, 11) * 5).toFixed(1)); me.setAttribute("cy", (THREE.MathUtils.clamp(p.z, -11, 11) * 5).toFixed(1));
+  me.style.opacity = t < T_IN[0] ? .35 : 1;
+}
+
+window.frame = (t) => {
+  drawChart(t); drawStream(t);
+  pods.forEach((p, i) => p.rotation.y = t * .8 + i);
+  arena.ents.forEach((e, i) => { const a = e.a0 + t * .3; e.s.position.set(Math.cos(a) * 1.8, .7 + Math.sin(t + i) * .1, Math.sin(a) * 1.8); });
+  arena.crown.rotation.y = t * .25;
+  cam(t);
+  { const d = Math.hypot(camera.position.x, camera.position.z); arena.col.material.opacity = .5 * THREE.MathUtils.clamp((d - 1.2) / 5, 0.04, 1); }
+  overlays(t);
+  composer.render();
+};
+window.DURATION = DUR;
+window.ready = true;
+window.frame(0);
+</script>
+</body></html>
