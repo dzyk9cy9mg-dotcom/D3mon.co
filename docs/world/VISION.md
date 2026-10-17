@@ -34,3 +34,8 @@ Details are in [INSPIRATION.md](INSPIRATION.md) under "Profiles in the cinematic
 
 Ads and trailers advertise the bots. Each one is **a billboard or a simple video display placed somewhere** in the world, not only on the pyramid's outside faces. It needs its own design.
 
+## Clean and tidy navigation (added 2026-10-17)
+
+- **Simplify the website: not so many buttons.** The current page's header has a long row of buttons. The new site should feel clean and tidy.
+- **Grouped menus** (drop-downs or one menu) instead of a row of buttons.
+- **A clear, easy-to-find "Apply for a battle" button.** It needs a good, obvious home.

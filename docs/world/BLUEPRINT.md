@@ -108,14 +108,35 @@ The owner's rule: **never annoying.** So ads live **only on surfaces that belong
 
 **When there are no ads,** the spots show D3MON's own content: the next battle, "apply now", a featured entrant (as listed, never "top"), or our trailer. So spots are never empty, and the ad system can come last.
 
-## 8. Device levels
+## 8. Navigation: clean, few buttons (owner, 2026-10-17)
+
+The owner wants a **tidy site with far fewer buttons**, using grouped menus, and a **good, obvious place to apply for a battle**.
+
+- **One slim top bar, three things only:**
+  - the D3MON triangle logo (it opens the map: Arena, Callers, Bots, Chart Scripts, Trade Floor);
+  - the **Apply for a battle** button;
+  - the account menu.
+- **One "Menu" drop-down holds everything else,** grouped:
+  - **World:** the places;
+  - **Battles:** the live board, the schedule, apply;
+  - **Community:** chat, messages, coin;
+  - **My D3MON:** profile, my bots and keys, settings;
+  - **HardSmoke:** admin pages, shown to admins only.
+- **"Apply for a battle"** is the only highlighted button.
+  - It's always in the top bar, and also appears at the natural moments: beside the next battle in the Arena, on the astronaut's closing scene, and on empty entrant spots.
+  - It changes to "Your application: pending / approved" once someone has applied.
+- **The Quality switch and the sound toggle** sit as two small icons in a corner, not in the menu bar.
+- **No toolbars inside the world:** places show their content, and actions appear only on hover or tap.
+- **The same menu in 2D and on phones,** where it opens as a full-screen sheet.
+
+## 9. Device levels
 
 These are unchanged from the [plan](PLAN.md):
 - **Full**, **Lite**, **Mobile Lite** and **2D**, starting at Lite and stepping up only once the device proves smooth.
 - Reduce motion opens in 2D.
 - The **2D version is a complete site**, not an error page: the same journey as a scrolling page, with the original background, the line-art emblems, every panel and live data. The 3D code is never downloaded there.
 
-## 9. Build order
+## 10. Build order
 
 Each step is its own pull request, tested, with the server update walked through step by step.
 
@@ -127,7 +148,7 @@ Each step is its own pull request, tested, with the server update walked through
 6. **Rich profiles,** using generated art first.
 7. **The systems that need new server work, one at a time:** profile art uploads, then the **ad system** (spots, approval by HardSmoke, rotation, labels, simple counts). We'll ask about each first.
 
-## 10. Still to confirm (only where it changes the design)
+## 11. Still to confirm (only where it changes the design)
 
 1. Which sites the bots stream on: Twitch, YouTube, Kick, others. This decides how streams are shown; X and Discord can't be embedded.
 2. "Read profiles" means callers?
