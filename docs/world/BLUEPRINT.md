@@ -128,6 +128,7 @@ The owner wants a **tidy site with far fewer buttons**, using grouped menus, and
 - **The Quality switch and the sound toggle** sit as two small icons in a corner, not in the menu bar.
 - **No toolbars inside the world:** places show their content, and actions appear only on hover or tap.
 - **The same menu in 2D and on phones,** where it opens as a full-screen sheet.
+- **All pages, not only the world:** the existing pages get the same tidy-up: the same top bar and menu, sections grouped, rarely used controls folded into menus or "More" panels. **Every existing control stays.** A control inventory per page is made first and checked off after each redesign.
 
 ## 9. Device levels
 

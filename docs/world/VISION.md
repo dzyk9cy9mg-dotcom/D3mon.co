@@ -39,3 +39,6 @@ Ads and trailers advertise the bots. Each one is **a billboard or a simple video
 - **Simplify the website: not so many buttons.** The current page's header has a long row of buttons. The new site should feel clean and tidy.
 - **Grouped menus** (drop-downs or one menu) instead of a row of buttons.
 - **A clear, easy-to-find "Apply for a battle" button.** It needs a good, obvious home.
+
+**Clarified (2026-10-17): this is for all pages, not just the 3D world.** The owner finds the current pages look sloppy: the main page and the Arena pages (`/apply`, `/applications`, `/my`, `/board`, `/card`, `/metrics`, `/catalog`, `/monitor`, `/displays`) need reorganising and condensing. **The rule: every control that exists today must still be there**, just better organised: grouped, condensed, in menus where it makes sense. Before redesigning any page, list its controls first, and check off each one after.
+
