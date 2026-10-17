@@ -48,7 +48,7 @@ describe("bot keys and calls", () => {
     await odin.register("odin", "odin-pass-12", "Odin");
     await freya.register("freya", "freya-pass-1", "Freya");
     await loki.register("loki", "loki-pass-12", "Loki");
-    battle = (await hs.post("/api/v1/battles", { title: "Night one", startsAt: P, rounds: 8, status: "open" })).json.battle;
+    battle = (await hs.post("/api/v1/battles", { title: "Night one", startsAt: P, rounds: 8, status: "open", callWindowMin: 5 })).json.battle;
     const approve = async (c, body) => {
       const a = (await c.post(`/api/v1/battles/${battle.id}/applications`, body)).json.application;
       return (await hs.post(`/api/v1/applications/${a.id}/review`, { decision: "approve" })).json.application.entrantId;
@@ -128,7 +128,7 @@ describe("bot keys and calls", () => {
       const r = await asBot(token, "POST", "/api/v1/bot/calls", CALL);
       assert.equal(r.status, 201);
       assert.equal(r.json.call.round, new Date(R(4)).toISOString(), "the current round, not the next one");
-      assert.equal(r.json.call.locksAt, new Date(R(4) + 5 * MIN).toISOString(), "calls close 5 minutes in by default");
+      assert.equal(r.json.call.locksAt, new Date(R(4) + 5 * MIN).toISOString(), "this battle closes calls 5 minutes in");
       assert.equal(r.json.call.receivedAt, new Date(R(4) + 2 * MIN).toISOString());
       assert.equal((await asBot(token, "POST", "/api/v1/bot/calls", CALL)).json.unchanged, true, "a retry adds nothing");
       const changed = await asBot(token, "POST", "/api/v1/bot/calls", { ...CALL, direction: "down" });
@@ -181,7 +181,7 @@ describe("bot keys and calls", () => {
       assert.equal((await guest.get(`/api/v1/battles/${battle.id}/board`)).json.rounds[1].locksAt, R(1) + 2 * MIN);
       at(R(6) + 2 * MIN);
       assert.equal((await freya.post(`/api/v1/entrants/${caller}/call`, { direction: "up" })).json.error.code, "round_locked", "closed at 2 minutes");
-      for (const bad of [-1, 15, 2.5, "5"]) assert.equal((await hs.req("PATCH", `/api/v1/battles/${battle.id}`, { callWindowMin: bad })).status, 400, String(bad));
+      for (const bad of [-1, 16, 2.5, "5"]) assert.equal((await hs.req("PATCH", `/api/v1/battles/${battle.id}`, { callWindowMin: bad })).status, 400, String(bad));
       await hs.req("PATCH", `/api/v1/battles/${battle.id}`, { callWindowMin: 0 });
       at(R(6) + 10 * MIN);
       const pre = await freya.post(`/api/v1/entrants/${caller}/call`, { direction: "down" });
@@ -235,6 +235,22 @@ describe("bot keys and calls", () => {
       assert.ok(!ids.includes(thorBot), "not in Night one");
       assert.deepEqual((await guest.get(`/api/v1/battles/${b2.id}/board`)).json.rounds[6].calls.map(c => c.entrantId), [thorBot]);
     });
+  });
+
+  test("by default calls are open the whole round, until it ends", async () => {
+    const b3 = (await hs.post("/api/v1/battles", { title: "All round", startsAt: P, rounds: 8, status: "open" })).json.battle;
+    assert.equal(b3.callWindowMin, 15);
+    const other = new Client(srv.base);
+    await other.register("baldr", "baldr-pass-12", "Baldr");
+    const a = (await other.post(`/api/v1/battles/${b3.id}/applications`, { kind: "bot", name: "Ringhorn", creatorName: "Baldr" })).json.application;
+    const id = (await hs.post(`/api/v1/applications/${a.id}/review`, { decision: "approve" })).json.application.entrantId;
+    const t = (await other.post(`/api/v1/entrants/${id}/keys`, {})).json.token;
+    at(R(5) + 15 * MIN - 1000);
+    const ok = await asBot(t, "POST", "/api/v1/bot/calls", CALL);
+    assert.deepEqual([ok.status, ok.json.call.round, ok.json.call.locksAt], [201, new Date(R(5)).toISOString(), new Date(R(6)).toISOString()], "one second before the round ends");
+    at(R(6) + 14 * MIN);
+    assert.equal((await asBot(t, "POST", "/api/v1/bot/calls", CALL)).json.call.round, new Date(R(6)).toISOString(), "14 minutes in, still this round");
+    realTime();
   });
 
   describe("live", () => {

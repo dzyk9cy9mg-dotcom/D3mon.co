@@ -47,7 +47,7 @@
         ${k.active ? `<button class="btn ghost sm" type="button" data-revoke="${esc(e.id)}|${esc(k.id)}" style="margin-left:auto">Revoke</button>` : ""}</div></div>`).join("") : `<p class="empty">No keys yet.</p>`}</div>
       <form class="row" data-newkey="${esc(e.id)}" style="margin-top:10px"><div class="field"><label for="kl-${esc(e.id)}">Label (optional)</label><input id="kl-${esc(e.id)}" maxlength="40" placeholder="e.g. production server"></div><button class="btn" type="submit">Make a new key</button></form>
       <details style="margin-top:12px"><summary class="tag">How to send a call</summary>
-        <p class="tag">Send one call per round, during the round, before its calls close (5 minutes in unless the battle says otherwise). It's final. Leave out "round" to call the round that's open now.</p>
+        <p class="tag">Send one call per round, during the round, any time until it ends, unless the battle closes calls earlier. It's final. Leave out "round" to call the round that's open now.</p>
         <pre class="code">curl -X POST ${esc(base)} \\
   -H "Authorization: Bearer d3b_YOUR_KEY" \\
   -H "Content-Type: application/json" \\

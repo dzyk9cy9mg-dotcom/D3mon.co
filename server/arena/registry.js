@@ -12,8 +12,9 @@ import { isAdmin } from "../rules.js";
 export const BATTLES = "arena_battles", APPS = "arena_apps", ENTRANTS = "arena_entrants";
 export const KINDS = ["bot", "caller", "script"];
 export const ROUND_MS = 15 * 60000; // Kalshi BTC 15-minute rounds
-// Calls are made during a round, until this many minutes in (0 = before the round starts). Each battle can set its own.
-export const DEFAULT_CALL_WINDOW_MIN = 5;
+// Calls are made during a round, until this many minutes in: 15 = any time until the round ends (the default),
+// 0 = before the round starts. Each battle can set its own.
+export const DEFAULT_CALL_WINDOW_MIN = 15;
 export const callWindowMs = b => (b && Number.isInteger(b.callWindowMin) ? b.callWindowMin : DEFAULT_CALL_WINDOW_MIN) * 60000;
 const BATTLE_STATUS = ["draft", "open", "closed", "live", "final"];
 const LIVE_APP = new Set(["pending", "approved"]);
@@ -27,7 +28,7 @@ const BATTLE_FIELDS = {
   kinds: { type: "array", of: { type: "enum", values: KINDS }, min: 1, max: 3, unique: true, default: KINDS },
   status: { type: "enum", values: BATTLE_STATUS, default: "draft" },
   onMainPage: { type: "boolean" }, // show this battle's lineup on the current main page (one battle at a time)
-  callWindowMin: { type: "integer", min: 0, max: 14, default: DEFAULT_CALL_WINDOW_MIN }, // calls close this many minutes into each round
+  callWindowMin: { type: "integer", min: 0, max: 15, default: DEFAULT_CALL_WINDOW_MIN }, // calls close this many minutes into each round (15 = at its end)
 };
 
 const APP_FIELDS = {

@@ -1,7 +1,7 @@
 // Calls (step 4): a bot's up/down call for a Kalshi BTC 15-minute round, sent with its key, or a
 // caller's, made with the Up/Down buttons. Bots call DURING the round, like Kalshi traders, so a
-// call is accepted from before the round starts until its calls close: a few minutes into the round
-// (callWindowMin, set per battle, 5 by default; 0 means before the round starts). The server stamps
+// call is accepted from before the round starts until its calls close: by default any time until the
+// round ends (callWindowMin 15), or earlier where a battle sets it (0 means before the round starts). The server stamps
 // each call with its own clock, and the same clock decides whether calls are still open.
 //
 // One call per entrant per round, final when made: a retry of the same call changes nothing, a

@@ -25,7 +25,7 @@
     const b = S.board;
     $("boardBox").hidden = !b;
     if (!b) return;
-    $("boardTitle").textContent = `${b.title} · ${b.status} · calls close ${b.callWindowMin ? `${b.callWindowMin} min into each round` : "when each round starts"}`;
+    $("boardTitle").textContent = `${b.title} · ${b.status} · calls ${b.callWindowMin >= 15 ? "open the whole round" : b.callWindowMin ? `close ${b.callWindowMin} min into each round` : "close when each round starts"}`;
     $("boardHead").innerHTML = `<tr><th>Entrant</th>${b.rounds.map(r => `<th class="${r.locked && !r.over ? "now" : ""}" title="${esc(when(r.round))}">${r.index + 1}<br><span class="tag">${esc(fmtTime(r.round))}</span></th>`).join("")}<th>Right</th><th>Wrong</th></tr>
       <tr class="resrow"><th>Result</th>${b.rounds.map(r => `<th>${r.result ? `${r.result === "up" ? "▲" : "▼"} <span class="tag">${r.verification === "verified" ? "Kalshi" : "host"}</span>` : r.over ? '<span class="tag">pending</span>' : ""}</th>`).join("")}<th></th><th></th></tr>`;
     $("boardRows").innerHTML = b.entrants.map(e => `<tr><td><b>${esc(e.name)}</b>${e.inLineup ? "" : ' <span class="tag">left</span>'}</td>${b.rounds.map(r => cell(r.calls.find(c => c.entrantId === e.entrantId))).join("")}<td>${e.right}</td><td>${e.wrong}</td></tr>`).join("")

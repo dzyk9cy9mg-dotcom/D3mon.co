@@ -6,7 +6,7 @@
   const $ = id => document.getElementById(id);
   const STATUSES = ["draft", "open", "closed", "live", "final"];
   // When calls close in each round: minutes in, or 0 for "before the round starts".
-  const WINDOWS = [[0, "before the round starts"], [1, "1 minute in"], [2, "2 minutes in"], [3, "3 minutes in"], [5, "5 minutes in"], [7, "7 minutes in"], [10, "10 minutes in"], [14, "14 minutes in"]];
+  const WINDOWS = [[0, "before the round starts"], [1, "1 minute in"], [2, "2 minutes in"], [3, "3 minutes in"], [5, "5 minutes in"], [7, "7 minutes in"], [10, "10 minutes in"], [14, "14 minutes in"], [15, "any time during the round"]];
   let battles = [], apps = [], entrants = [];
 
   function msg(text, ok) {
