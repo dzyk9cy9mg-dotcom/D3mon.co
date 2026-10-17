@@ -135,8 +135,8 @@
   // Links only: each page checks roles on the server. Its sections become the 3D site's rooms.
   const MENU = [["./", "Home"], ["my", "My bots"], ["apply", "Apply"]];
   const ADMIN_MENU = [
-    ["Bots and stats", [["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Display slots"]]],
-    ["Old battle show", [["applications", "Applications"], ["metrics", "Round metrics"], ["board", "Battle board"]]],
+    ["Bots and stats", [["applications", "Applications"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Display slots"]]],
+    ["Old battle show", [["metrics", "Round metrics"], ["board", "Battle board"]]],
   ];
   function menuBar() {
     const main = document.querySelector("main.arena"), brand = main && main.querySelector(":scope > .acct-brand");

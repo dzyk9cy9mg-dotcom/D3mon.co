@@ -1,5 +1,5 @@
-// /apply: a member applies to a Battle of the Bots battle, re-selects a saved entrant, and follows
-// their applications live.
+// /apply: a member asks to join D3MON with a new bot, script or caller (no battle needed, for the
+// tournaments), or applies to a battle, re-selecting a saved entrant. Applications are followed live.
 (function () {
   "use strict";
   const { api, follow, esc, when, kindName, session } = window.Arena;
@@ -13,14 +13,25 @@
 
   const openBattles = () => battles.filter(b => b.status === "open");
 
+  // "join" (the default) asks to join D3MON with a new entrant; a battle id applies to that battle.
+  const picked = () => (document.querySelector("input[name=battle]:checked") || {}).value || "join";
+
   function renderBattles() {
-    const list = openBattles(), was = (document.querySelector("input[name=battle]:checked") || {}).value;
-    $("battles").innerHTML = list.length
-      ? list.map((b, i) => `<label class="pick"><input type="radio" name="battle" value="${esc(b.id)}" ${b.id === was || (!was && i === 0) ? "checked" : ""}>
-          <span><b>${esc(b.title)}</b><br><span class="meta">${esc(when(b.startsAt))} · ${b.rounds} rounds · open to ${b.kinds.map(kindName).join(", ").toLowerCase()} · ${b.entrants.length} approved</span></span></label>`).join("")
-      : `<p class="empty">No battle is taking applications right now. This page updates by itself when one opens.</p>`;
-    $("applyForm").hidden = !list.length;
+    const was = picked();
+    $("battles").innerHTML = `<label class="pick"><input type="radio" name="battle" value="join" ${was === "join" ? "checked" : ""}>
+          <span><b>Join D3MON</b><br><span class="meta">A new bot, script or caller. Once an admin approves it, it appears on My bots, where bots and scripts can join the tournaments.</span></span></label>`
+      + openBattles().map(b => `<label class="pick"><input type="radio" name="battle" value="${esc(b.id)}" ${b.id === was ? "checked" : ""}>
+          <span><b>${esc(b.title)}</b><br><span class="meta">Battle · ${esc(when(b.startsAt))} · ${b.rounds} rounds · open to ${b.kinds.map(kindName).join(", ").toLowerCase()} · ${b.entrants.length} approved</span></span></label>`).join("");
+    syncPick();
   }
+
+  // Joining is for new entrants only, so the saved-entrant choice is for battles.
+  function syncPick() {
+    const join = picked() === "join";
+    $("savedField").hidden = join;
+    if (join && $("saved").value) { $("saved").value = ""; $("name").disabled = $("kind").disabled = false; }
+  }
+  $("battles").addEventListener("change", syncPick);
 
   function renderSaved() {
     const cur = $("saved").value;
@@ -29,7 +40,7 @@
   }
 
   function renderMine() {
-    const title = id => (battles.find(b => b.id === id) || {}).title || "A past battle";
+    const title = id => id === null ? "Join D3MON" : (battles.find(b => b.id === id) || {}).title || "A past battle";
     $("mine").innerHTML = mine.length ? mine.map(a => `<div class="item"><div class="top"><span class="st ${esc(a.status)}">${esc(a.status)}</span><b>${esc(a.name)}</b><span class="meta">${esc(kindName(a.kind))} · ${esc(title(a.battleId))} · sent ${esc(when(a.submittedAt))}</span>
         ${a.status === "pending" || a.status === "approved" ? `<button class="btn ghost sm" type="button" data-withdraw="${esc(a.id)}">Withdraw</button>` : ""}</div>
         ${a.reviewNote ? `<div class="notes">HardSmoke: ${esc(a.reviewNote)}</div>` : ""}</div>`).join("")
@@ -51,8 +62,7 @@
 
   $("applyForm").addEventListener("submit", async ev => {
     ev.preventDefault();
-    const battle = (document.querySelector("input[name=battle]:checked") || {}).value;
-    if (!battle) return msg("Pick a battle first.");
+    const battle = picked();
     const body = { creatorName: $("creatorName").value, altAccount: $("altAccount").value, discordServer: $("discordServer").value, notes: $("notes").value };
     if ($("saved").value) body.entrantId = $("saved").value;
     else Object.assign(body, { kind: $("kind").value, name: $("name").value });
@@ -60,8 +70,8 @@
     btn.disabled = true;
     msg("");
     try {
-      await api("POST", `battles/${battle}/applications`, body);
-      msg("Application sent. HardSmoke will review it, and this page shows the decision as soon as it's made.", true);
+      await api("POST", battle === "join" ? "applications" : `battles/${battle}/applications`, body);
+      msg("Application sent. An admin will review it, and this page shows the decision as soon as it's made.", true);
       for (const id of ["name", "altAccount", "discordServer", "notes"]) $(id).value = "";
       $("saved").value = "";
       $("name").disabled = $("kind").disabled = false;
