@@ -11,7 +11,8 @@
     $("msg").classList.toggle("ok", !!ok);
   }
 
-  const openBattles = () => battles.filter(b => b.status === "open");
+  // Only battles still to come: once its start time has passed, a battle isn't offered here.
+  const openBattles = () => battles.filter(b => b.status === "open" && b.startsAt > Date.now());
 
   // "join" (the default) asks to join D3MON with a new entrant; a battle id applies to that battle.
   const picked = () => (document.querySelector("input[name=battle]:checked") || {}).value || "join";

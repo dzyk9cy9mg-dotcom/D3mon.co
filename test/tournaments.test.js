@@ -203,6 +203,14 @@ describe("tournaments: joining without a battle", () => {
     assert.equal((await join(freya, { kind: "script", name: "Brisingamen", creatorName: "Freya" })).status, 201, "a withdrawn name can apply again");
   });
 
+  test("a battle that's over takes no applications", async () => {
+    const Q = 15 * 60000;
+    const past = (await hs.post("/api/v1/battles", { title: "Last week", startsAt: Math.floor(Date.now() / Q) * Q - 3 * Q, rounds: 2, status: "open" })).json.battle;
+    const r = await odin.post(`/api/v1/battles/${past.id}/applications`, { kind: "bot", name: "Late Bot", creatorName: "Odin" });
+    assert.equal(r.status, 409);
+    assert.equal(r.json.error.message, "This battle is over.");
+  });
+
   test("a joined entrant can still be entered in a battle", async () => {
     const Q = 15 * 60000;
     const battle = (await hs.post("/api/v1/battles", { title: "Special event", startsAt: Math.floor(Date.now() / Q) * Q + Q, status: "open" })).json.battle;
