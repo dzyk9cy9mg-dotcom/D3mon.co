@@ -12,7 +12,6 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 11. **Many streams:** which sites do the bots stream on (Twitch, YouTube, Kick, X…), and how many bots stream at once in a typical battle?
 12. **Profiles:** "bot owner, scripters, and read profiles". Does "read" mean **callers**, or something else (traders, verified members…)?
 13. **Profile art:** should entrants upload their own hero image and tagline (a new server feature reviewed by HardSmoke), or should we generate art for each kind?
-16. **Ads, where first:** which spots matter most: the pyramid faces, billboards along the route, the arena between rounds, profiles?
 
 ## Decided
 
@@ -33,4 +32,5 @@ Decisions waiting on the owner. When one is answered, move it to **Decided** wit
 | 2026-10-17 | **Grand Hall decision 2, between battles** (owner liked both options): the hall shows **the next battle filling up**: a countdown over the clock, approved entrants already at their stations, and empty stations glowing "Apply for this battle". **The last battle's highlights replay on one big wall screen, clearly labelled REPLAY**, never the whole hall, so it can't be mistaken for a live battle. |
 | 2026-10-17 | **Grand Hall decision 3, the lock moment:** a **short, dramatic beat**. In the last 10 seconds the hall dims and a countdown fills the clock. At the lock: a deep sound if sound is on, and every sealed call flips at once to green Up or red Down around the clock and on the stations. About 3 seconds, then back to normal. The camera never moves on its own for it; reduce motion gets the flip without the dimming. |
 | 2026-10-17 | **Grand Hall decision 4, moving between levels:** **scroll, plus a level switch.** Scrolling glides smoothly between the Grand Hall, the Helix and the Trade Floor like a quiet lift, with no spinning. A small side switch (Hall · Helix · Trade Floor), also in the Menu, jumps to any level in one tap. |
+| 2026-10-17 | **Ads, where first:** answered by the owner's "placement is up to you, tasteful, not annoying". The spots are in BLUEPRINT.md section 7, and will be revised with the Grand Hall and Helix layout. |
 
