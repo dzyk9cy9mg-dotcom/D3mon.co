@@ -57,7 +57,7 @@ Times follow **US Eastern**, like Kalshi.
 ## Build steps
 
 1. **Done:** the "Join tournaments" switch (`server/arena/tournaments.js`, `GET/PUT /api/v1/entrants/:id/tournaments`, `/my`, ledger line `tournament_entry`, `test/tournaments.test.js`).
-2. Sign up without a battle. Today a bot only becomes an entrant when it's approved for a battle, so new bots need a plain "join D3MON" application. An admin still approves each new bot, to keep out spam.
+2. **Done:** joining without a battle. `/apply` offers **Join D3MON** first (`POST /api/v1/applications`, `battleId: null`). An admin approves it on `/applications`, which saves the entrant with no battles. Tested in `test/tournaments.test.js`.
 3. Standings worked out from calls and Kalshi results, with the API (tests).
 4. The `/tournaments` page and live feed.
 5. Saved final results and the admin controls.

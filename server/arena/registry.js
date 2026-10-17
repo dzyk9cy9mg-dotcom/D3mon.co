@@ -41,6 +41,10 @@ const APP_FIELDS = {
   entrantId: ID,
 };
 
+// Joining D3MON without a battle (tournaments step 2): a new bot, script or caller, approved by an admin.
+const { entrantId: _, ...JOIN_FIELDS } = APP_FIELDS;
+const MAX_PENDING_JOINS = 10;
+
 const REVIEW_FIELDS = {
   decision: { type: "enum", values: ["approve", "reject", "reopen"], required: true },
   note: { type: "string", max: 500, multiline: true },
@@ -194,6 +198,34 @@ export class Registry {
     return a;
   }
 
+  // An application with no battle: it saves a new entrant once an admin approves it, so a bot can
+  // join the tournaments without a hosted battle. battleId is null on these.
+  join(ctx, body) {
+    this.#requireMember(ctx);
+    const f = check(body, JOIN_FIELDS);
+    if (!f.kind) throw new ApiError(400, "invalid_argument", `"kind" is required.`, "kind");
+    if (!f.name) throw new ApiError(400, "invalid_argument", `"name" is required.`, "name");
+    const slug = slugify(f.name);
+    if (!slug) throw new ApiError(400, "invalid_argument", "The name needs at least one letter or number.", "name");
+    const taken = this.entrantBySlug(slug);
+    if (taken && taken.ownerId !== ctx.uid) throw new ApiError(409, "name_taken", `"${taken.name}" is already taken. Pick a different name.`, "name");
+    if (taken) throw new ApiError(409, "already_joined", `${taken.name} has already joined. You'll find it on My bots.`, "name");
+    const joins = this.#all(APPS, [["battleId", "==", null]]);
+    if (joins.some(a => a.slug === slug && a.status === "pending")) throw new ApiError(409, "already_applied", `${f.name} already has an application waiting.`, "name");
+    if (joins.filter(a => a.applicantId === ctx.uid && a.status === "pending").length >= MAX_PENDING_JOINS)
+      throw new ApiError(429, "resource_exhausted", "You have too many applications waiting. Wait for a decision first.");
+    const now = Date.now();
+    const a = {
+      id: this.store.newId(APPS), battleId: null, kind: f.kind, name: f.name, slug,
+      creatorName: f.creatorName, altAccount: f.altAccount ?? "", discordServer: f.discordServer ?? "", notes: f.notes ?? "",
+      entrantId: null, applicantId: ctx.uid, status: "pending", submittedAt: now, reviewedAt: null, reviewedBy: null, reviewNote: "",
+      history: [{ at: now, by: ctx.uid, action: "submitted", note: "" }],
+    };
+    this.#save(APPS, a, ctx.uid);
+    this.#appChanged(a, "application.created");
+    return a;
+  }
+
   listApps(ctx, { battleId, status } = {}) {
     this.#requireMember(ctx);
     const where = [];
@@ -226,9 +258,9 @@ export class Registry {
     const f = check(body, REVIEW_FIELDS);
     const a = this.#get(APPS, id);
     if (!a) throw new ApiError(404, "not_found", "No such application.");
-    const b = this.#get(BATTLES, a.battleId);
-    if (!b) throw new ApiError(404, "not_found", "That application's battle no longer exists.");
-    if (b.status === "final") throw new ApiError(409, "battle_final", "This battle is final.");
+    const b = a.battleId === null ? null : this.#get(BATTLES, a.battleId);
+    if (a.battleId !== null && !b) throw new ApiError(404, "not_found", "That application's battle no longer exists.");
+    if (b && b.status === "final") throw new ApiError(409, "battle_final", "This battle is final.");
     const note = f.note ?? "";
     if (f.decision === "reject") {
       if (a.status !== "pending") throw new ApiError(409, "bad_state", `Only pending applications can be rejected (this one is ${a.status}).`);
@@ -241,23 +273,25 @@ export class Registry {
     }
     // approve
     if (a.status !== "pending") throw new ApiError(409, "bad_state", `Only pending applications can be approved (this one is ${a.status}).`);
-    if (!b.kinds.includes(a.kind)) throw new ApiError(409, "kind_not_allowed", `This battle is for ${b.kinds.join(", ")} entrants.`);
+    if (b && !b.kinds.includes(a.kind)) throw new ApiError(409, "kind_not_allowed", `This battle is for ${b.kinds.join(", ")} entrants.`);
     let e = a.entrantId ? this.#get(ENTRANTS, a.entrantId) : this.entrantBySlug(a.slug);
     if (e && e.ownerId !== a.applicantId) throw new ApiError(409, "name_taken", `"${e.name}" belongs to another member's saved entrant. Reject this one or ask them to rename.`);
     if (e && e.status !== "active") throw new ApiError(409, "entrant_suspended", `${e.name} is suspended.`);
-    if (e && (b.entrants || []).includes(e.id)) throw new ApiError(409, "already_entered", `${e.name} is already in this battle.`);
+    if (e && e.kind !== a.kind) throw new ApiError(409, "name_taken", `"${e.name}" is already saved as a ${e.kind}.`);
+    if (e && b && (b.entrants || []).includes(e.id)) throw new ApiError(409, "already_entered", `${e.name} is already in this battle.`);
     const now = Date.now();
     const details = { creatorName: a.creatorName, altAccount: a.altAccount, discordServer: a.discordServer, notes: a.notes };
+    const battles = b ? [b.id] : [];
     e = e
-      ? { ...e, ...details, battles: [...new Set([...(e.battles || []), b.id])], updatedAt: now }
+      ? { ...e, ...details, battles: [...new Set([...(e.battles || []), ...battles])], updatedAt: now }
       : { id: this.store.newId(ENTRANTS), kind: a.kind, name: a.name, slug: a.slug, ...details, ownerId: a.applicantId, status: "active",
-          approvedAt: now, approvedBy: ctx.uid, fromApplication: a.id, battles: [b.id], createdAt: now, updatedAt: now };
+          approvedAt: now, approvedBy: ctx.uid, fromApplication: a.id, battles, createdAt: now, updatedAt: now };
     this.#save(ENTRANTS, e, ctx.uid);
-    const nb = { ...b, entrants: [...(b.entrants || []), e.id], updatedAt: now };
-    this.#save(BATTLES, nb, ctx.uid);
+    const nb = b && { ...b, entrants: [...(b.entrants || []), e.id], updatedAt: now };
+    if (nb) this.#save(BATTLES, nb, ctx.uid);
     const done = this.#transition({ ...a, entrantId: e.id }, ctx.uid, "approved", "approved", note);
     this.#entrantChanged(e);
-    this.#battleChanged(nb);
+    if (nb) this.#battleChanged(nb);
     return done;
   }
 

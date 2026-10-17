@@ -13,7 +13,7 @@
     $("msg").textContent = text || "";
     $("msg").classList.toggle("ok", !!ok);
   }
-  const battleTitle = id => (battles.find(b => b.id === id) || {}).title || "(unknown battle)";
+  const battleTitle = id => id === null ? "Join D3MON (no battle)" : (battles.find(b => b.id === id) || {}).title || "(unknown battle)";
 
   function renderBattles() {
     $("battles").innerHTML = battles.length ? battles.map(b => {
@@ -26,13 +26,13 @@
         ${b.status === "draft" ? "" : `<label class="checks"><input type="checkbox" data-mainpage="${esc(b.id)}" ${b.onMainPage ? "checked" : ""}> Show this lineup on the main page's Battle of the Bots roster${b.onMainPage ? " (on: lineup changes are copied there live)" : ""}</label>`}</div>`;
     }).join("") : `<p class="empty">No battles yet. Create the first one above.</p>`;
     const cur = $("fBattle").value;
-    $("fBattle").innerHTML = `<option value="">All battles</option>` + battles.map(b => `<option value="${esc(b.id)}">${esc(b.title)}</option>`).join("");
-    $("fBattle").value = battles.some(b => b.id === cur) ? cur : "";
+    $("fBattle").innerHTML = `<option value="">Everything</option><option value="join">Join D3MON (no battle)</option>` + battles.map(b => `<option value="${esc(b.id)}">${esc(b.title)}</option>`).join("");
+    $("fBattle").value = cur === "join" || battles.some(b => b.id === cur) ? cur : "";
   }
 
   function renderLog() {
     const fb = $("fBattle").value, fs = $("fStatus").value;
-    const list = apps.filter(a => (!fb || a.battleId === fb) && (!fs || a.status === fs));
+    const list = apps.filter(a => (!fb || (fb === "join" ? a.battleId === null : a.battleId === fb)) && (!fs || a.status === fs));
     $("log").innerHTML = list.length ? list.map(a => {
       const acts = a.status === "pending"
         ? `<button class="btn sm" type="button" data-review="${esc(a.id)}|approve">Approve</button><button class="btn ghost sm" type="button" data-review="${esc(a.id)}|reject">Reject</button>`
@@ -94,7 +94,7 @@
     const [id, decision] = b.dataset.review.split("|");
     const note = (document.querySelector(`[data-note="${CSS.escape(id)}"]`) || {}).value || "";
     b.disabled = true;
-    try { await api("POST", `applications/${id}/review`, { decision, note }); msg(decision === "approve" ? "Approved and added to the lineup." : decision === "reject" ? "Rejected." : "Reopened.", true); await load(); }
+    try { await api("POST", `applications/${id}/review`, { decision, note }); msg(decision === "approve" ? (apps.find(a => a.id === id)?.battleId === null ? "Approved. It now appears on its owner's My bots." : "Approved and added to the lineup.") : decision === "reject" ? "Rejected." : "Reopened.", true); await load(); }
     catch (e) { msg(e.message); b.disabled = false; }
   });
 

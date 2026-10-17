@@ -130,3 +130,86 @@ describe("tournaments: the join switch", () => {
     for (let n = 0; n < 12; n++) assert.equal(fresh.inAt(bot, T0 + n * Q), t.inAt(bot, T0 + n * Q), `round ${n}`);
   });
 });
+
+// Tournaments step 2: joining D3MON without a battle. An admin approves each new entrant.
+describe("tournaments: joining without a battle", () => {
+  let srv, hs, odin, freya, guest;
+  const join = (c, body) => c.post("/api/v1/applications", body);
+  const review = (c, id, decision, note) => c.post(`/api/v1/applications/${id}/review`, { decision, ...(note ? { note } : {}) });
+
+  before(async () => {
+    srv = await startServer();
+    [hs, odin, freya, guest] = Array.from({ length: 4 }, () => new Client(srv.base));
+    await hs.register("hardsmoke", "smoke-pass-1", "HardSmoke");
+    await odin.register("odin", "odin-pass-12", "Odin");
+    await freya.register("freya", "freya-pass-1", "Freya");
+  });
+  after(() => srv.stop());
+
+  test("a member applies to join with a new bot", async () => {
+    assert.equal((await join(guest, { kind: "bot", name: "Sleipnir", creatorName: "Odin" })).status, 401);
+    assert.equal((await join(odin, { name: "Sleipnir", creatorName: "Odin" })).json.error.field, "kind");
+    assert.equal((await join(odin, { kind: "bot", creatorName: "Odin" })).json.error.field, "name");
+    assert.equal((await join(odin, { kind: "bot", name: "Sleipnir", creatorName: "Odin", entrantId: "abcdefgh12" })).status, 400, "joining is for new entrants only");
+    assert.equal((await join(odin, { kind: "bot", name: "Sleipnir", creatorName: "Odin", notes: "my key is sk-ant-abcdefghijklmnopqrstuvwxyz0123" })).status, 400, "credentials are refused");
+    const r = await join(odin, { kind: "bot", name: "Sleipnir", creatorName: "Odin", discordServer: "Asgard" });
+    assert.equal(r.status, 201);
+    assert.equal(r.json.application.battleId, null);
+    assert.equal(r.json.application.status, "pending");
+    assert.equal((await join(odin, { kind: "bot", name: "sleipnir!", creatorName: "Odin" })).json.error.code, "already_applied");
+    assert.equal((await join(freya, { kind: "bot", name: "Sleipnir", creatorName: "Freya" })).json.error.code, "already_applied");
+  });
+
+  test("only admins see every application and decide", async () => {
+    const mine = (await odin.get("/api/v1/applications")).json.applications;
+    assert.equal(mine.length, 1);
+    assert.equal((await freya.get("/api/v1/applications")).json.applications.length, 0);
+    const all = (await hs.get("/api/v1/applications")).json.applications;
+    assert.equal(all.length, 1);
+    assert.equal((await review(odin, mine[0].id, "approve")).status, 403, "you can't approve your own");
+  });
+
+  test("approval saves the entrant, ready for keys and tournaments", async () => {
+    const app = (await hs.get("/api/v1/applications")).json.applications[0];
+    const r = await review(hs, app.id, "approve", "Welcome");
+    assert.equal(r.status, 200);
+    assert.equal(r.json.application.status, "approved");
+    const id = r.json.application.entrantId;
+    assert.ok(id);
+    const e = (await odin.get("/api/v1/entrants?mine=1")).json.entrants.find(x => x.id === id);
+    assert.equal(e.name, "Sleipnir");
+    assert.deepEqual(e.battles, []);
+    assert.equal(e.discordServer, "Asgard");
+    assert.equal((await odin.post(`/api/v1/entrants/${id}/keys`, { label: "server" })).status, 201);
+    assert.equal((await odin.req("PUT", `/api/v1/entrants/${id}/tournaments`, { on: true })).status, 200);
+    assert.equal((await review(hs, app.id, "approve")).json.error.code, "bad_state", "approved once");
+  });
+
+  test("a name already joined can't be used again", async () => {
+    assert.equal((await join(odin, { kind: "bot", name: "Sleipnir", creatorName: "Odin" })).json.error.code, "already_joined");
+    assert.equal((await join(freya, { kind: "script", name: "Sleipnir", creatorName: "Freya" })).json.error.code, "name_taken");
+  });
+
+  test("rejecting, reopening and withdrawing work as for battles", async () => {
+    const a = (await join(freya, { kind: "script", name: "Brisingamen", creatorName: "Freya" })).json.application;
+    const rj = await review(hs, a.id, "reject", "Tell us more");
+    assert.equal(rj.json.application.status, "rejected");
+    assert.equal(rj.json.application.reviewNote, "Tell us more");
+    assert.equal((await review(hs, a.id, "reopen")).json.application.status, "pending");
+    const w = await freya.post(`/api/v1/applications/${a.id}/withdraw`, {});
+    assert.equal(w.json.application.status, "withdrawn");
+    assert.deepEqual(w.json.application.history.map(h => h.action), ["submitted", "rejected", "reopened", "withdrawn"]);
+    assert.equal((await freya.get("/api/v1/entrants?mine=1")).json.entrants.length, 0, "no entrant without approval");
+    assert.equal((await join(freya, { kind: "script", name: "Brisingamen", creatorName: "Freya" })).status, 201, "a withdrawn name can apply again");
+  });
+
+  test("a joined entrant can still be entered in a battle", async () => {
+    const Q = 15 * 60000;
+    const battle = (await hs.post("/api/v1/battles", { title: "Special event", startsAt: Math.floor(Date.now() / Q) * Q + Q, status: "open" })).json.battle;
+    const id = (await odin.get("/api/v1/entrants?mine=1")).json.entrants[0].id;
+    const a = (await odin.post(`/api/v1/battles/${battle.id}/applications`, { entrantId: id, creatorName: "Odin" })).json.application;
+    const r = await review(hs, a.id, "approve");
+    assert.equal(r.json.application.entrantId, id);
+    assert.deepEqual((await odin.get(`/api/v1/entrants/${id}`)).json.entrant.battles, [battle.id]);
+  });
+});
