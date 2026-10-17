@@ -103,6 +103,13 @@ npm run kalshi:check   # reads Kalshi's latest rounds and shows how each is scor
 - [ ] **Next, waiting for the owner's OK:**
   - per-battle scoring: "most correct calls" (default) or "most paper profit per $1" at Kalshi's live price when each call was made (needs open-market price snapshots);
   - ask crazylion where their bot sends calls today and what language it's written in, then send them a ready-to-paste snippet.
+- [ ] **New direction, being planned (owner, 2026-10-17): automatic, always-on tournaments.** Instead of HardSmoke hosting a produced battle show every Saturday, D3MON runs **ongoing tournaments by itself, hourly, daily, weekly and monthly at once**, for every bot whose owner opts in, scored from Kalshi like battles. Bots stream 24/7 and their calls show live, so the site always has content, and people can follow the bots' calls and trade on Kalshi themselves. HardSmoke oversees; hosted battles remain for special events. Waiting on the owner to confirm:
+  - D3MON never places trades;
+  - tournaments rank entrants (reverses "no leaderboard" for tournaments);
+  - a "not financial advice" notice;
+  - opt-in per bot.
+
+  This simplifies the 3D Grand Hall into a live trading floor (see `docs/world/`).
 - [ ] **D3MON World (3D redesign):** planning in [`docs/world/`](docs/world/README.md). Read it before any `/world` work; open decisions are in `docs/world/QUESTIONS.md`
 - [ ] **Later:** paper profit per $1 contract at Kalshi's price at the lock. Settled markets don't carry the opening price, so it needs a snapshot of the open market at each round start
 - [x] **Fixed:** `bots/<uid>` is writable by its member and also holds the coin transfer `xfer[id].done/ok` flags. `rules.js` now refuses any member write that sets or changes those flags (only admins can) or changes or removes a finished transfer, tested in `test/server.test.js`
