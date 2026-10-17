@@ -158,6 +158,7 @@ export class Registry {
     this.#requireMember(ctx);
     const b = this.battleFor(ctx, battleId);
     if (b.status !== "open") throw new ApiError(409, "applications_closed", "This battle isn't taking applications.");
+    if (Date.now() >= b.startsAt + b.rounds * b.roundMs) throw new ApiError(409, "applications_closed", "This battle is over.");
     const f = check(body, APP_FIELDS);
     let kind = f.kind, name = f.name, entrantId = null;
     if (f.entrantId) {
