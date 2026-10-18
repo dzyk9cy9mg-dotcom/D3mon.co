@@ -1,28 +1,20 @@
 // /world in 3D: the outside (docs/world/BLUEPRINT.md, step 3). Loaded by world.js only on devices that get
-// the 3D version; the 2D version never downloads it. Scrolling through the Outside place drives the whole
-// opening, like the award sites we studied (docs/world/INSPIRATION.md):
-//   0.00  arrival: the D3MON skull in engraved line art, inside a mandala of turning rings (from 08)
-//   0.10  the skull dissolves into particles that swirl out into the rings (the particle morph, from 07)
-//   0.20  the rings lock into a stargate and its swirl opens; the particles are pulled in (the Lusion portal, 05)
-//   0.27  we dive through the gate, and the pyramid is revealed below: from above it's the D3MON logo
-//   0.36  the triangle rises into the glowing pyramid; a beam of light climbs from its capstone (from 04)
-//   0.56  the opening shot, with "CALLERS · BOTS · CHART SCRIPTS" sliding past (kinetic type, from 09)
-//   0.78  the smaller stargate on the front face opens, and takes us into the Grand Hall
+// the 3D version; the 2D version never downloads it. Scrolling through the Outside place drives the camera:
+//   0.00  overhead, the pyramid flat on the floor: seen from above it's the D3MON logo
+//   0.35  the triangle has risen into the pyramid, particles lifting with it
+//   0.70  the opening shot, low and in front
+//   1.00  at the stargate on the front face: its rings lock, the event horizon fills, and we pass through
+// The look follows the owner's concept board (docs/world/inspiration/05-grand-hall-concepts.webp): clear glass
+// walls, and inside them the trading floor: a glass walkway ring, a ring of up and down ticks, the calls
+// streaming into a bright core, the golden beam up to the capstone, and glass screens with charts.
 // Comfort: the camera never spins or rolls; it only glides and tilts. Reduce motion cuts between the shots.
 import * as THREE from "../vendor/three-0.169.0.module.min.js";
-import { EffectComposer } from "../vendor/three-addons-0.169.0/postprocessing/EffectComposer.js";
-import { RenderPass } from "../vendor/three-addons-0.169.0/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "../vendor/three-addons-0.169.0/postprocessing/UnrealBloomPass.js";
-import { OutputPass } from "../vendor/three-addons-0.169.0/postprocessing/OutputPass.js";
 
 const C = { callers: 0xffb547, bots: 0x4da3ff, scripts: 0xb98cff, ink: 0xdce7ee, bg: 0x05080c };
 const R = 3.1, H = 4.3; // base radius and height of the pyramid
-const GATE_Y = 19; // the arrival stargate floats high above the pyramid, facing up
 const CORNERS = { callers: new THREE.Vector3(0, 0, -R), bots: new THREE.Vector3(-R * Math.sin(Math.PI / 3), 0, R / 2), scripts: new THREE.Vector3(R * Math.sin(Math.PI / 3), 0, R / 2) };
 const smooth = t => t * t * (3 - 2 * t);
 const clamp01 = v => Math.min(1, Math.max(0, v));
-const span = (p, a, b) => clamp01((p - a) / (b - a));
-const bell = (p, a, b, c, d) => (p < b ? smooth(span(p, a, b)) : 1 - smooth(span(p, c, d)));
 
 export function start({ level = "lite", reducedMotion = false, showFps = false, onSlow = () => {} } = {}) {
   const full = level === "full", phone = level === "mobile-lite";
@@ -39,19 +31,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   document.body.dataset.three = "on";
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(C.bg); // drawn by the scene, so the glow pass keeps it the true D3MON black
   scene.fog = new THREE.FogExp2(C.bg, 0.045);
   const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 200);
-
-  // The glow that makes lines of light look like light. Phones skip it to stay smooth.
-  let composer = null, bloom = null;
-  if (!phone) {
-    composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), full ? 0.75 : 0.65, 0.32, 0.42);
-    composer.addPass(bloom);
-    composer.addPass(new OutputPass());
-  }
 
   // ---------- light ----------
   scene.add(new THREE.AmbientLight(0x223344, 1.2));
@@ -62,235 +43,230 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   }
 
   // ---------- floor: the flower of life, fading out into the dark ----------
-  const floorTex = canvasTex(512, g => {
-    g.strokeStyle = "rgba(77,163,255,0.55)"; g.lineWidth = 1.2;
-    const r = 128;
+  const floorTex = (() => {
+    const s = 512, cv = document.createElement("canvas");
+    cv.width = cv.height = s;
+    const g = cv.getContext("2d");
+    g.strokeStyle = "rgba(77,163,255,0.55)";
+    g.lineWidth = 1.2;
+    const r = s / 4;
     for (let row = -1; row <= 5; row++) for (let col = -1; col <= 5; col++) {
-      const x = col * r + (row % 2 ? r / 2 : 0), y = (row * r * Math.sqrt(3)) / 2;
+      const x = col * r + (row % 2 ? r / 2 : 0), y = row * r * Math.sqrt(3) / 2;
       g.beginPath(); g.arc(x, y, r / 2, 0, Math.PI * 2); g.stroke();
     }
-  });
-  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(36, 36); floorTex.anisotropy = 4;
-  const floorFade = canvasTex(256, g => {
-    const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(36, 36);
+    t.anisotropy = 4;
+    return t;
+  })();
+  const floorFade = (() => {
+    const s = 256, cv = document.createElement("canvas");
+    cv.width = cv.height = s;
+    const g = cv.getContext("2d"), grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
     grd.addColorStop(0, "#fff"); grd.addColorStop(0.35, "#888"); grd.addColorStop(1, "#000");
-    g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
-  });
+    g.fillStyle = grd; g.fillRect(0, 0, s, s);
+    return new THREE.CanvasTexture(cv);
+  })();
   const floor = new THREE.Mesh(new THREE.CircleGeometry(100, 96), new THREE.MeshBasicMaterial({ map: floorTex, alphaMap: floorFade, transparent: true, opacity: 0.3, depthWrite: false }));
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
-
-  // No stars: the owner doesn't like them (2026-10-18). The sky is the plain D3MON black.
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshBasicMaterial({ color: C.bots, transparent: true, opacity: 0.06, depthWrite: false, blending: THREE.AdditiveBlending }));
+  glow.rotation.x = -Math.PI / 2; glow.position.y = 0.01;
+  scene.add(glow);
 
   // ---------- the pyramid ----------
-  const apex = new THREE.Vector3(0, H, 0), keys = Object.keys(CORNERS);
-  const edges = [];
+  const pyr = new THREE.Group();
+  scene.add(pyr);
+  const apex = new THREE.Vector3(0, H, 0);
+  const edgeMat = (color, o) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false });
+  const edges = []; // { a, b, color } in pyramid space (y scaled by the rise)
+  const keys = Object.keys(CORNERS);
   keys.forEach((k, i) => {
     edges.push({ a: CORNERS[k], b: apex, color: C[k] });
     const k2 = keys[(i + 1) % 3], mid = CORNERS[k].clone().lerp(CORNERS[k2], 0.5);
     edges.push({ a: CORNERS[k], b: mid, color: C[k] }, { a: mid, b: CORNERS[k2], color: C[k2] });
   });
   const edgeMeshes = [];
-  for (const e of edges) for (const [r, o] of [[0.022, 1], [0.09, 0.14]]) {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 8, 1, true), glowMat(e.color, o));
-    m.userData = e;
-    scene.add(m);
-    edgeMeshes.push(m);
+  for (const e of edges) {
+    for (const [r, o] of [[0.022, 0.95], [0.09, 0.16]]) {
+      const len = e.a.distanceTo(e.b), m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 8, 1, true), edgeMat(e.color, o));
+      m.userData = e;
+      pyr.add(m);
+      edgeMeshes.push(m);
+    }
   }
+  // Dark glass faces.
+  const faceGeo = new THREE.BufferGeometry();
   const fv = [];
-  keys.forEach((k, i) => fv.push(...CORNERS[k].toArray(), ...CORNERS[keys[(i + 1) % 3]].toArray(), ...apex.toArray()));
-  const faceGeo = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(fv, 3));
+  keys.forEach((k, i) => { const k2 = keys[(i + 1) % 3]; fv.push(...CORNERS[k].toArray(), ...CORNERS[k2].toArray(), ...apex.toArray()); });
+  faceGeo.setAttribute("position", new THREE.Float32BufferAttribute(fv, 3));
   faceGeo.computeVertexNormals();
-  const faces = new THREE.Mesh(faceGeo, new THREE.MeshStandardMaterial({ color: 0x0b1824, metalness: 0.4, roughness: 0.25, transparent: true, opacity: 0.62, side: THREE.DoubleSide, depthWrite: false }));
-  scene.add(faces);
+  const faces = new THREE.Mesh(faceGeo, new THREE.MeshStandardMaterial({ color: 0x2a4a66, metalness: 0.6, roughness: 0.15, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
+  pyr.add(faces);
+  // The glass is made of panels: faint seams across each face.
+  const seams = [];
+  keys.forEach((k, i) => {
+    const A = CORNERS[k], B = CORNERS[keys[(i + 1) % 3]];
+    for (let t = 1; t < 5; t++) { const f = t / 5; seams.push(...A.clone().lerp(apex, f).toArray(), ...B.clone().lerp(apex, f).toArray()); }
+    for (let t = 1; t < 4; t++) seams.push(...A.clone().lerp(B, t / 4).toArray(), ...apex.toArray());
+  });
+  const seamLines = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(seams, 3)),
+    new THREE.LineBasicMaterial({ color: 0x9fc4e6, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false }));
+  pyr.add(seamLines);
+  // The crystal capstone.
   const cap = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), new THREE.MeshBasicMaterial({ color: 0xcfe6ff }));
   const capGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: 0x9fd0ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
   capGlow.scale.setScalar(2.2);
   scene.add(cap, capGlow);
-  // The beam of light from the capstone into the sky (from the 10118 video).
-  const beam = new THREE.Group();
-  for (const [r, o] of [[0.03, 0.9], [0.16, 0.18], [0.45, 0.05]]) beam.add(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 40, 12, 1, true), glowMat(0xbfdcff, o)));
-  scene.add(beam);
-  // Moving light (the end of the 10118 video, owner 2026-10-18): a beam in each colour rising from its corner,
-  // with pulses of light running up it, and thin arcs that sweep up and around the pyramid like comets.
-  const lights = [];
-  keys.forEach((k, i) => {
-    const pos = CORNERS[k].clone().multiplyScalar(1.28);
-    for (const [r, o] of [[0.025, 1], [0.14, 0.22]]) {
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 34, 10, 1, true), movingLight(C[k], o, "beam", 0.5 + i * 0.17));
-      m.position.copy(pos).setY(17);
-      scene.add(m);
-      lights.push(m);
-    }
-    const pts = [];
-    for (let s = 0; s <= 80; s++) {
-      const t = s / 80, a = (i / 3) * Math.PI * 2 + t * Math.PI * 3, rad = R * 1.35 * (1 - t * 0.85);
-      pts.push(new THREE.Vector3(Math.cos(a) * rad, 0.2 + t * 11, Math.sin(a) * rad));
-    }
-    const arc = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.018, 5, false), movingLight(C[k], 1, "arc", i / 3));
-    scene.add(arc);
-    lights.push(arc);
-  });
-  // Many coming together (owner, 2026-10-18: "many of them, like many people coming together, and energy
-  // coming together"). Hundreds of little lights in the three colours, and white for the people, drift in
-  // from all around on slightly wandering paths, gather in the centre, rise up the core together and feed
-  // the beam into the sky. Each one loops: in across the floor, up the core, and in again from somewhere new.
-  const swarmN = full ? 2600 : phone ? 520 : 1500;
-  const swPos = new Float32Array(swarmN * 3), swCol = new Float32Array(swarmN * 3), sw = [];
-  const tints = [C.callers, C.bots, C.scripts].map(c => new THREE.Color(c)), people = new THREE.Color(0xeef4ff);
-  const newPath = (o, first) => {
-    const corner = Math.floor(Math.random() * 3);
-    // Most come from the direction of a corner, the rest from anywhere around.
-    const base = Math.atan2(CORNERS[keys[corner]].z, CORNERS[keys[corner]].x), anywhere = Math.random() < 0.35;
-    o.a = anywhere ? Math.random() * Math.PI * 2 : base + (Math.random() - 0.5) * 0.9;
-    o.r0 = 4.5 + Math.random() * 9;
-    o.wob = (Math.random() - 0.5) * 1.6; o.freq = 1 + Math.random() * 2.5; o.ph = Math.random() * 6.28;
-    o.speed = 0.06 + Math.random() * 0.08; o.t = first ? Math.random() : 0; // t: 0..1 across the floor, 1..2 up the core
-    o.col = Math.random() < 0.3 ? people : tints[corner];
-    return o;
-  };
-  for (let i = 0; i < swarmN; i++) {
-    const o = newPath({}, true);
-    sw.push(o);
-    swCol.set([o.col.r, o.col.g, o.col.b], i * 3);
+
+  // ---------- inside: the trading floor ----------
+  const hall = new THREE.Group();
+  scene.add(hall);
+  const glass = new THREE.MeshStandardMaterial({ color: 0x8fc4ff, metalness: 0.3, roughness: 0.1, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
+  const walk = new THREE.Mesh(new THREE.RingGeometry(1.2, 1.5, 96), glass);
+  walk.rotation.x = -Math.PI / 2; walk.position.y = 0.12;
+  hall.add(walk);
+  for (const r of [1.2, 1.5]) { // the walkway's glowing rims and railings
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(r, 0.008, 6, 128), edgeMat(0x9fd0ff, 0.9));
+    rim.rotation.x = Math.PI / 2; rim.position.y = 0.12; hall.add(rim);
+    const rail = rim.clone(); rail.position.y = 0.34; rail.material = edgeMat(0x9fd0ff, 0.6); hall.add(rail);
   }
-  const swGeo = geo(swPos).setAttribute("color", new THREE.BufferAttribute(swCol, 3));
-  const swarm = new THREE.Points(swGeo, new THREE.PointsMaterial({ size: full ? 0.12 : 0.14, vertexColors: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, map: radial() }));
-  const swarmHalo = new THREE.Points(swGeo, new THREE.PointsMaterial({ size: 0.42, vertexColors: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, map: radial() }));
-  scene.add(swarm, swarmHalo);
-  // The core: energy rising from the floor's centre up through the pyramid into the capstone.
-  for (const [r, o] of [[0.03, 1], [0.12, 0.3]]) {
-    const core = new THREE.Mesh(new THREE.CylinderGeometry(r, r, H, 10, 1, true), movingLight(0xdfeaff, o, "beam", 0.9));
-    core.userData.core = true;
-    scene.add(core);
-    lights.push(core);
+  const postGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.22, 4), postMat = edgeMat(0x9fd0ff, 0.55);
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    for (const r of [1.2, 1.5]) { const m = new THREE.Mesh(postGeo, postMat); m.position.set(Math.cos(a) * r, 0.23, Math.sin(a) * r); hall.add(m); }
+  }
+  // A ring of ticks, green for up and red for down, like the board's calls.
+  const tickGeo = new THREE.BoxGeometry(0.03, 0.02, 0.2), ticks = [];
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * Math.PI * 2, up = Math.random() < 0.55;
+    const m = new THREE.Mesh(tickGeo, edgeMat(up ? 0x37e08a : 0xff4d5e, 0.85));
+    m.position.set(Math.cos(a) * 0.95, 0.03, Math.sin(a) * 0.95); m.rotation.y = -a;
+    hall.add(m); ticks.push(m);
+  }
+  // The calls stream into the bright core.
+  const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: 0xfff2d6, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+  core.position.y = 0.15; core.scale.setScalar(1.8);
+  hall.add(core);
+  const spokes = [], nodes = [];
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + 0.3, r = 0.55 + (i % 3) * 0.12, color = C[keys[i % 3]];
+    const end = new THREE.Vector3(Math.cos(a) * r, 0.15, Math.sin(a) * r);
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.15, 0), end]), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const node = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+    node.position.copy(end); node.scale.setScalar(0.24);
+    hall.add(line, node); spokes.push(line); nodes.push(node);
+  }
+  // The golden beam from the core up to the capstone.
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 8, 1, true), edgeMat(C.callers, 0.95));
+  const beamGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1, 12, 1, true), edgeMat(C.callers, 0.18));
+  scene.add(beam, beamGlow);
+  // Glass screens with charts, standing around the walkway and facing the core.
+  const screens = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + Math.PI / 6, color = C[keys[i % 3]];
+    const panel = new THREE.Group();
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.56), new THREE.MeshBasicMaterial({ map: chartTex(i, color), transparent: true, opacity: 1, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+    panel.add(face);
+    const frameGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.9, 0.56));
+    panel.add(new THREE.LineSegments(frameGeo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })));
+    panel.position.set(Math.cos(a) * 1.8, 0.85, Math.sin(a) * 1.8);
+    panel.lookAt(0, 0.85, 0);
+    hall.add(panel); screens.push(panel);
   }
 
-  // ---------- the corner landmarks: Callers spire, Bots crystal, Scripts dome ----------
+  // ---------- the three corner landmarks: Callers spire, Bots crystal, Scripts dome ----------
   const marks = new THREE.Group();
   scene.add(marks);
   const out = k => CORNERS[k].clone().multiplyScalar(1.28);
   const spire = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.3, 6), new THREE.MeshBasicMaterial({ color: C.callers, wireframe: true }));
   spire.position.copy(out("callers")).setY(0.65);
-  const spireRings = [0.35, 0.55].map((r, i) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.008, 6, 48), glowMat(C.callers, 0.7)); m.rotation.x = Math.PI / 2; m.position.copy(out("callers")).setY(0.3 + i * 0.5); return m; });
+  const rings = [0.35, 0.55].map((r, i) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.008, 6, 48), edgeMat(C.callers, 0.7)); m.rotation.x = Math.PI / 2; m.position.copy(out("callers")).setY(0.3 + i * 0.5); return m; });
   const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.42), new THREE.MeshBasicMaterial({ color: C.bots, wireframe: true }));
   crystal.position.copy(out("bots")).setY(0.7);
   const dome = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: C.scripts, wireframe: true }));
   dome.position.copy(out("scripts"));
-  marks.add(spire, ...spireRings, crystal, dome);
+  marks.add(spire, ...rings, crystal, dome);
   for (const k of keys) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: C[k], transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: C[k], transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
     s.scale.setScalar(2.4); s.position.copy(out(k)).setY(0.4);
     marks.add(s);
   }
 
-  // ---------- particles flowing along the edges ----------
-  const flowN = full ? 420 : phone ? 90 : 220;
+  // ---------- particles flowing along the edges, and lifting during the rise ----------
+  const flowN = full ? 420 : phone ? 90 : 200;
   const flowPos = new Float32Array(flowN * 3), flowCol = new Float32Array(flowN * 3), flowT = new Float32Array(flowN), flowE = new Uint8Array(flowN);
   for (let i = 0; i < flowN; i++) {
     flowE[i] = i % edges.length; flowT[i] = Math.random();
     const c = new THREE.Color(edges[flowE[i]].color);
     flowCol.set([c.r, c.g, c.b], i * 3);
   }
-  const flowGeo = geo(flowPos).setAttribute("color", new THREE.BufferAttribute(flowCol, 3));
-  scene.add(new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: 0.08, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, map: radial() })));
+  const flowGeo = new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(flowPos, 3)).setAttribute("color", new THREE.BufferAttribute(flowCol, 3));
+  const flow = new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: full ? 0.07 : 0.09, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, map: radial(), alphaTest: 0.01 }));
+  scene.add(flow);
 
-  // ---------- the arrival: the skull mandala that becomes a stargate ----------
-  const arrival = new THREE.Group();
-  arrival.position.set(0, GATE_Y, 0);
-  arrival.rotation.x = -Math.PI / 2; // faces up, at the camera; its top points away from the pyramid's front
-  scene.add(arrival);
-  const skullSegs = skull();
-  const skullLines = new THREE.LineSegments(geo(new Float32Array(skullSegs.lines)), lineMat(C.ink, 0.95));
-  const skullEngr = new THREE.LineSegments(geo(new Float32Array(skullSegs.engraving)), lineMat(0x9fc4e6, 0.5));
-  const skullAccent = new THREE.LineSegments(geo(new Float32Array(skullSegs.accent)), lineMat(C.bots, 0.95));
-  const web = new THREE.LineSegments(geo(new Float32Array(skullSegs.web)), lineMat(C.scripts, 0.55));
-  const skullG = new THREE.Group();
-  skullG.add(skullLines, skullEngr, skullAccent, web);
-  arrival.add(skullG);
-  const eyes = [-1, 1].map(s => { const e = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: C.callers, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); e.position.set(s * 0.27, 0.07, 0.01); e.scale.setScalar(0.32); skullG.add(e); return e; });
-  const arrivalRings = buildGate(arrival, full, 2.45);
-  const arrivalBack = new THREE.Mesh(new THREE.CircleGeometry(2.2, 64), new THREE.MeshBasicMaterial({ color: C.bg, transparent: true, opacity: 1, depthWrite: false }));
-  arrivalBack.position.z = -0.02; // hides the pyramid below until the gate opens
-  arrival.add(arrivalBack);
-  const arrivalSwirl = new THREE.Mesh(new THREE.CircleGeometry(1.75, 96), swirlMat());
-  arrivalSwirl.position.z = -0.01;
-  arrival.add(arrivalSwirl);
-  // The particle morph: points sampled along the skull fly out on a spiral to the rings, then are pulled into the swirl.
-  const morphN = full ? 1600 : phone ? 500 : 900;
-  const mStart = sampleSegments(skullSegs.lines.concat(skullSegs.accent), morphN);
-  const mPos = new Float32Array(morphN * 3), mCol = new Float32Array(morphN * 3), mRing = new Float32Array(morphN), mAng = new Float32Array(morphN), mDelay = new Float32Array(morphN);
-  const ringRadii = [1.82, 2.0, 2.2], ringCols = [C.callers, C.bots, C.scripts].map(c => new THREE.Color(c));
-  for (let i = 0; i < morphN; i++) {
-    const k = i % 3; mRing[i] = ringRadii[k] + (Math.random() - 0.5) * 0.05; mAng[i] = Math.random() * Math.PI * 2; mDelay[i] = Math.random() * 0.35;
-    const c = new THREE.Color(C.ink).lerp(ringCols[k], 0.6); mCol.set([c.r, c.g, c.b], i * 3);
-  }
-  const morphGeo = geo(mPos).setAttribute("color", new THREE.BufferAttribute(mCol, 3));
-  const morph = new THREE.Points(morphGeo, new THREE.PointsMaterial({ size: 0.045, vertexColors: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, map: radial() }));
-  arrival.add(morph);
-
-  // ---------- the smaller stargate on the front face, into the Grand Hall ----------
+  // ---------- the stargate on the front face ----------
   const front = { a: CORNERS.bots, b: CORNERS.scripts };
-  const gateCentre = new THREE.Vector3(0, H * 0.3, 0).add(front.a.clone().add(front.b).multiplyScalar(0.35));
+  const gateCentre = new THREE.Vector3(0, H * 0.3, 0).add(front.a.clone().add(front.b).multiplyScalar(0.5 * 0.7));
   const faceNormal = new THREE.Vector3().subVectors(front.b, front.a).cross(new THREE.Vector3().subVectors(apex, front.a)).normalize();
   const gate = new THREE.Group();
-  gate.position.copy(gateCentre).addScaledVector(faceNormal, 0.16);
+  gate.position.copy(gateCentre).addScaledVector(faceNormal, 0.04);
   gate.lookAt(gateCentre.clone().add(faceNormal));
   scene.add(gate);
-  const gateRings = buildGate(gate, full, 1, 0.9);
-  const gateSwirl = new THREE.Mesh(new THREE.CircleGeometry(0.62, 64), swirlMat());
-  gate.add(gateSwirl);
-
-  // ---------- page overlays: the burst of light, and the sliding words ----------
+  const gateRings = buildGate(gate, full);
+  const horizon = new THREE.Mesh(new THREE.CircleGeometry(0.62, 64), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 }, uOpen: { value: 0 } },
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `uniform float uTime; uniform float uOpen; varying vec2 vUv;
+      void main(){
+        vec2 p = vUv - 0.5; float r = length(p) * 2.0; float a = atan(p.y, p.x);
+        float w = sin(r * 18.0 - uTime * 2.2 + sin(a * 3.0 + uTime) * 0.6) * 0.5 + 0.5;
+        vec3 amber = vec3(1.0, 0.71, 0.28), blue = vec3(0.30, 0.64, 1.0), violet = vec3(0.73, 0.55, 1.0);
+        vec3 col = mix(mix(blue, violet, 0.5 + 0.5 * sin(a + uTime * 0.3)), amber, w * 0.35);
+        float edge = smoothstep(1.0, 0.82, r);
+        float alpha = edge * uOpen * (0.35 + 0.65 * w * (1.0 - r * 0.5));
+        gl_FragColor = vec4(col * (0.6 + 0.8 * (1.0 - r)), alpha);
+      }`,
+  }));
+  gate.add(horizon);
   const flash = document.createElement("div");
   flash.className = "w3d-flash";
-  const words = document.createElement("div");
-  words.className = "w3d-words";
-  words.setAttribute("aria-hidden", "true");
-  words.innerHTML = `<span class="c-cal">Callers</span><i>·</i><span class="c-bot">Bots</span><i>·</i><span class="c-scr">Chart Scripts</span>`;
-  document.body.append(flash, words);
+  document.body.append(flash);
 
   // ---------- the camera path ----------
   const shots = [
-    { at: 0, pos: new THREE.Vector3(0, GATE_Y + 7, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
-    { at: 0.22, pos: new THREE.Vector3(0, GATE_Y + 4.2, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
-    { at: 0.36, pos: new THREE.Vector3(0, 15.5, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
-    { at: 0.56, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
-    { at: 0.78, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0, pos: new THREE.Vector3(0, 15.5, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
+    { at: 0.35, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.7, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
     { at: 1, pos: gateCentre.clone().addScaledVector(faceNormal, 1.3), look: gateCentre.clone(), up: new THREE.Vector3(0, 1, 0) },
   ];
-  const STOPS = shots.map(s => s.at);
   function shotAt(p) {
     let i = 0;
     while (i < shots.length - 2 && p > shots[i + 1].at) i++;
-    const s0 = shots[i], s1 = shots[i + 1], t = smooth(span(p, s0.at, s1.at));
+    const s0 = shots[i], s1 = shots[i + 1], t = smooth(clamp01((p - s0.at) / (s1.at - s0.at)));
     return { pos: s0.pos.clone().lerp(s1.pos, t), look: s0.look.clone().lerp(s1.look, t), up: s0.up.clone().lerp(s1.up, t).normalize() };
   }
 
   // ---------- scroll ----------
   const outside = document.getElementById("outside");
-  let target = 0, shown = 0, past = false;
+  let target = 0, shown = 0;
   function readScroll() {
-    const r = outside.getBoundingClientRect(), len = Math.max(1, r.height - innerHeight);
-    const raw = clamp01(-r.top / len);
-    document.body.style.setProperty("--w3d-p", String(raw));
-    // Reduce motion cuts between the shots instead of flying.
-    target = reducedMotion ? STOPS.reduce((a, b) => (Math.abs(b - raw) < Math.abs(a - raw) ? b : a)) : raw;
-    past = r.bottom < innerHeight * 0.6;
+    const r = outside.getBoundingClientRect(), span = Math.max(1, r.height - innerHeight);
+    target = clamp01(-r.top / span);
+    if (reducedMotion) target = target < 0.2 ? 0 : target < 0.85 ? 0.7 : 1; // cut between shots, no flying
+    document.body.style.setProperty("--w3d-p", String(clamp01(-r.top / span)));
+    const past = r.bottom < innerHeight * 0.6;
     document.body.classList.toggle("w3d-past", past);
   }
   addEventListener("scroll", readScroll, { passive: true });
   function resize() {
     const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false);
-    composer?.setSize(w, h);
-    bloom?.resolution.set(w / 2, h / 2);
     camera.aspect = w / h;
     camera.fov = w < h ? 60 : 45; // portrait screens see the same pyramid
     camera.updateProjectionMatrix();
-    // The arrival mandala always fits the screen's narrow side.
-    const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 7 * Math.min(1, camera.aspect);
-    arrival.scale.setScalar(Math.min(1.15, (half * 0.92) / 2.5));
   }
   addEventListener("resize", resize);
   resize(); readScroll(); shown = target;
@@ -304,116 +280,71 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   function frame(now) {
     raf = requestAnimationFrame(frame);
     if (document.hidden) return;
+    const past = document.body.classList.contains("w3d-past");
     if (now - last < (past ? 1000 / 15 : minFrame)) return; // behind the other places it only needs a slow idle
     const dt = Math.min(0.1, (now - last) / 1000);
     frames.push(now - last); last = now;
     const time = clock.getElapsedTime();
-    shown += (target - shown) * (reducedMotion ? 1 : Math.min(1, dt * 2.4)); // weighted, like the award sites' smooth scroll
+    shown += (target - shown) * (reducedMotion ? 1 : Math.min(1, dt * 3.2));
     const p = shown;
 
-    // --- the arrival: the skull, the morph, the gate ---
-    const dissolve = smooth(span(p, 0.1, 0.16)), fly = span(p, 0.1, 0.22), suck = smooth(span(p, 0.22, 0.31));
-    const lockA = smooth(span(p, 0.17, 0.24)), openA = smooth(span(p, 0.2, 0.28));
-    skullG.visible = dissolve < 1;
-    for (const m of [skullLines, skullEngr, skullAccent, web]) m.material.opacity = m.material.userData.o0 * (1 - dissolve);
-    skullG.scale.setScalar(1 + 0.012 * Math.sin(time * 1.3) + dissolve * 0.15);
-    eyes.forEach(e => { e.material.opacity = (0.55 + 0.4 * Math.sin(time * 2.2) ** 2) * (1 - dissolve); });
-    morph.visible = fly > 0 && suck < 1;
-    if (morph.visible) {
-      morph.material.opacity = Math.min(1, fly * 4) * (1 - suck);
-      for (let i = 0; i < morphN; i++) {
-        // Out from the skull on a bowed spiral to its ring, then pulled spinning into the swirl.
-        const t = smooth(clamp01((fly - mDelay[i]) / (1 - mDelay[i]))), sx = mStart[i * 2], sy = mStart[i * 2 + 1];
-        const a = mAng[i] + t * 2.4 + time * 0.25 * t, bow = Math.sin(t * Math.PI) * 0.6, r = mRing[i] + bow;
-        let x = THREE.MathUtils.lerp(sx, Math.cos(a) * r, t), y = THREE.MathUtils.lerp(sy, Math.sin(a) * r, t), z = 0;
-        if (suck > 0) { const ia = a + suck * 6, ir = mRing[i] * (1 - suck); x = Math.cos(ia) * ir; y = Math.sin(ia) * ir; z = -suck * 0.8; }
-        mPos[i * 3] = x; mPos[i * 3 + 1] = y; mPos[i * 3 + 2] = z;
-      }
-      morphGeo.attributes.position.needsUpdate = true;
-    }
-    spinRings(arrivalRings, time, lockA, 0.85 + 0.15 * smooth(fly), 0.6 + 0.6 * lockA);
-    arrivalSwirl.material.uniforms.uTime.value = time;
-    arrivalSwirl.material.uniforms.uOpen.value = openA * (1 - smooth(span(p, 0.3, 0.36)));
-    arrivalBack.material.opacity = 1 - smooth(span(p, 0.24, 0.3)); // the pyramid shows through as the gate opens
-    arrival.visible = p < 0.37;
-
-    // --- the rise ---
-    const rise = 0.04 + 0.96 * smooth(span(p, 0.36, 0.55));
+    // The rise: from the flat logo triangle into the pyramid.
+    const rise = 0.04 + 0.96 * smooth(clamp01(p / 0.33));
     for (const m of edgeMeshes) {
       const { a, b } = m.userData, A = a.clone(), B = b.clone();
       A.y *= rise; B.y *= rise;
       m.position.copy(A).lerp(B, 0.5);
-      m.scale.set(1, A.distanceTo(B), 1);
+      m.scale.set(1, A.distanceTo(B) / a.distanceTo(b), 1);
       m.quaternion.setFromUnitVectors(up, tmp.subVectors(B, A).normalize());
     }
-    faces.scale.set(1, rise, 1);
+    faces.scale.set(1, rise, 1); // edges are placed one by one, so they stay round while the faces stretch
     cap.position.set(0, H * rise, 0); cap.rotation.y = time * 0.4;
     capGlow.position.copy(cap.position); capGlow.material.opacity = 0.5 + 0.4 * Math.sin(time * 1.6) ** 2;
-    // The energy gathers in the middle, climbs the core, then launches from the capstone into the dark sky.
-    const beamOn = smooth(span(p, 0.56, 0.66));
-    beam.visible = beamOn > 0;
-    beam.scale.set(1, Math.max(0.001, beamOn), 1);
-    beam.position.set(0, H * rise + 20 * beamOn, 0);
-    beam.children.forEach((b, i) => { b.material.opacity = [0.9, 0.18, 0.05][i] * beamOn * (0.85 + 0.15 * Math.sin(time * 3 + i)); });
-    const lightOn = smooth(span(p, 0.46, 0.56)), coreOn = smooth(span(p, 0.52, 0.6));
-    swarm.visible = swarmHalo.visible = lightOn > 0;
-    if (swarm.visible) {
-      swarm.material.opacity = lightOn; swarmHalo.material.opacity = lightOn * 0.22;
-      for (let i = 0; i < swarmN; i++) {
-        const o = sw[i];
-        o.t += dt * o.speed * (o.t < 1 ? 1 : 2.2) * (reducedMotion ? 0.3 : 1);
-        if (o.t >= 2) { newPath(o, false); swCol.set([o.col.r, o.col.g, o.col.b], i * 3); swGeo.attributes.color.needsUpdate = true; }
-        let x, y, z;
-        if (o.t < 1) {
-          // In across the floor, easing toward the centre, wandering a little sideways as it comes.
-          const e = 1 - (1 - o.t) * (1 - o.t), r = o.r0 * (1 - e), side = o.wob * Math.sin(o.t * Math.PI * o.freq + o.ph) * (1 - e);
-          const a = o.a + side / Math.max(0.6, r);
-          x = Math.cos(a) * r; z = Math.sin(a) * r; y = 0.05 + 0.12 * Math.sin(o.t * Math.PI);
-        } else {
-          // Up the core, gathering into a tight column, faster near the top.
-          const u = o.t - 1, sp = 0.18 * (1 - u) * Math.sin(o.ph + u * 9);
-          x = Math.cos(o.ph + u * 6) * sp; z = Math.sin(o.ph + u * 6) * sp; y = u * u * H * rise * 1.05;
-        }
-        swPos[i * 3] = x; swPos[i * 3 + 1] = y; swPos[i * 3 + 2] = z;
-      }
-      swGeo.attributes.position.needsUpdate = true;
-    }
-    for (const l of lights) {
-      const on = l.userData.core ? coreOn : lightOn;
-      l.visible = on > 0; l.material.uniforms.uTime.value = reducedMotion ? 0 : time; l.material.uniforms.uOn.value = on;
-      if (l.userData.core) { l.scale.y = Math.max(0.001, rise * coreOn); l.position.set(0, (H * rise * coreOn) / 2, 0); } // the core fills from the floor up
-    }
+    // The floor inside comes up with the walls; the beam rises to the capstone.
+    const inside = smooth(clamp01((p - 0.12) / 0.25));
+    hall.scale.set(1, Math.max(0.001, rise), 1);
+    hall.visible = inside > 0.01;
+    screens.forEach((s, i) => { s.position.y = 0.85 * rise + Math.sin(time * 0.6 + i) * 0.03 * (reducedMotion ? 0 : 1); s.scale.set(inside, inside / Math.max(0.001, rise), inside); });
+    core.material.opacity = inside * (0.8 + 0.2 * Math.sin(time * 3));
+    ticks.forEach((t, i) => { t.material.opacity = inside * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(time * 1.4 - i * 0.35))); });
+    spokes.forEach((l, i) => { l.material.opacity = inside * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 2 + i * 1.3))); });
+    nodes.forEach((n, i) => { n.material.opacity = inside * (0.6 + 0.4 * Math.sin(time * 2 + i * 1.3)); });
+    const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
+    for (const m of [beam, beamGlow]) { m.scale.set(1, beamLen, 1); m.position.set(0, 0.15 + beamLen / 2, 0); }
+    beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
     marks.children.forEach((m, i) => { if (m.isMesh) m.rotation.y = time * (0.15 + i * 0.03); });
+
+    // Particles flow from the corners to the apex and along the base; during the rise they lift too.
     const lift = (1 - rise) * 2.5;
     for (let i = 0; i < flowN; i++) {
       flowT[i] = (flowT[i] + dt * (reducedMotion ? 0.02 : 0.09)) % 1;
       const e = edges[flowE[i]];
       tmp.copy(e.a).lerp(e.b, flowT[i]);
       tmp.y = tmp.y * rise + lift * Math.sin(flowT[i] * Math.PI);
-      flowPos[i * 3] = tmp.x; flowPos[i * 3 + 1] = tmp.y; flowPos[i * 3 + 2] = tmp.z;
+      flowPos.set([tmp.x, tmp.y, tmp.z], i * 3);
     }
     flowGeo.attributes.position.needsUpdate = true;
 
-    // --- the front gate ---
-    const openF = smooth(span(p, 0.86, 0.97));
+    // The stargate: its rings turn slowly in opposite directions, then lock and open as we arrive.
+    const open = smooth(clamp01((p - 0.78) / 0.17));
     gate.scale.setScalar(rise);
-    gate.position.copy(gateCentre).setY(gateCentre.y * rise).addScaledVector(faceNormal, 0.16);
-    spinRings(gateRings, time, openF, 1, (0.5 + 0.5 * span(p, 0.6, 0.8)) * (1 + openF * 0.6));
-    gateSwirl.material.uniforms.uTime.value = time;
-    gateSwirl.material.uniforms.uOpen.value = openF;
-
-    // --- overlays: a burst as we pass through each gate, and the kinetic words during the opening shot ---
-    const burst = Math.max(bell(p, 0.27, 0.3, 0.31, 0.34), bell(p, 0.93, 0.97, 0.98, 1.001));
-    flash.style.opacity = String(past ? 0 : burst * 0.55);
-    const w = bell(p, 0.42, 0.5, 0.66, 0.74);
-    words.style.opacity = String(past ? 0 : w);
-    words.style.transform = `translate3d(${(0.5 - span(p, 0.42, 0.74)) * 60}vw, 0, 0)`;
+    gate.position.copy(gateCentre).setY(gateCentre.y * rise).addScaledVector(faceNormal, 0.04);
+    gateRings.forEach((g, i) => {
+      const spin = (i % 2 ? -1 : 1) * (0.12 + i * 0.05) * (reducedMotion ? 0 : 1);
+      g.ring.rotation.z = g.lock + (time * spin) * (1 - open);
+      g.ring.children.forEach(c => { c.material.opacity = c.userData.o * (0.5 + 0.5 * clamp01((p - 0.5) / 0.3)) * (1 + open * 0.6); });
+    });
+    horizon.material.uniforms.uTime.value = time;
+    horizon.material.uniforms.uOpen.value = open;
+    // A short burst of light as we pass through, gone again once we're in.
+    const through = clamp01((p - 0.9) / 0.1), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
+    flash.style.opacity = String(past ? 0 : burst * 0.85);
 
     const s = shotAt(p);
     camera.position.copy(s.pos);
     camera.up.copy(s.up);
     camera.lookAt(s.look);
-    if (composer) composer.render(); else renderer.render(scene, camera);
+    renderer.render(scene, camera);
 
     if (fpsEl) { fpsAcc += dt; fpsN++; if (now - fpsAt > 500) { fpsEl.textContent = `${Math.round(fpsN / fpsAcc)} fps · ${level}`; fpsAcc = 0; fpsN = 0; fpsAt = now; } }
     // Judge smoothness once, over the first few seconds: too slow and Auto steps down to 2D.
@@ -425,30 +356,14 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   }
   raf = requestAnimationFrame(frame);
 
-  // The rings turn slowly, each the opposite way to the one beside it, and settle into place as they lock.
-  // Until they lock, they also tilt slowly like a gyroscope, so the gate reads as a real 3D object.
-  function spinRings(rings, time, lock, scale, glow) {
-    const free = (1 - lock) * (reducedMotion ? 0 : 1);
-    rings.forEach((g, i) => {
-      const spin = (i % 2 ? -1 : 1) * (0.12 + i * 0.05) * (reducedMotion ? 0 : 1);
-      g.ring.rotation.z = g.lock + time * spin * (1 - lock);
-      g.ring.rotation.x = Math.sin(time * 0.45 + i * 1.7) * 0.38 * free;
-      g.ring.rotation.y = Math.cos(time * 0.37 + i * 1.1) * 0.38 * free;
-      g.ring.scale.setScalar(scale);
-      g.ring.children.forEach(c => { if (c.material.userData.o0 !== undefined) c.material.opacity = c.material.userData.o0 * glow; });
-    });
-    rings.chevrons.forEach((ch, k) => { ch.material.opacity = 0.2 + 0.8 * smooth(clamp01(lock * 9 - k)); }); // they light one by one
-  }
-
   return {
     stop() {
       cancelAnimationFrame(raf);
       removeEventListener("scroll", readScroll);
       removeEventListener("resize", resize);
-      composer?.dispose?.();
       renderer.dispose();
       scene.traverse(o => { o.geometry?.dispose?.(); if (o.material) [].concat(o.material).forEach(m => { m.map?.dispose?.(); m.dispose(); }); });
-      canvas.remove(); flash.remove(); words.remove(); fpsEl?.remove();
+      canvas.remove(); flash.remove(); fpsEl?.remove();
       delete document.body.dataset.three;
       document.body.style.removeProperty("--w3d-p");
       document.body.classList.remove("w3d-past");
@@ -456,213 +371,79 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   };
 }
 
-// ---------- helpers ----------
-// Light that moves. "beam": pulses running up a beam, fading out high up. "arc": one bright head racing
-// along a tube with a fading tail behind it, then starting again. `offset` staggers them.
-function movingLight(color, opacity, kind, offset) {
-  return new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uOn: { value: 0 }, uColor: { value: new THREE.Color(color) } },
-    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-    fragmentShader: kind === "beam"
-      ? `uniform float uTime; uniform float uOn; uniform vec3 uColor; varying vec2 vUv;
-        void main(){
-          float y = vUv.y;
-          float pulse = pow(fract(y * 3.0 - uTime * ${(0.35 + offset * 0.2).toFixed(3)}), 10.0);
-          float a = uOn * ${opacity.toFixed(3)} * (0.28 + 0.9 * pulse) * smoothstep(1.0, 0.25, y) * smoothstep(0.0, 0.04, y);
-          gl_FragColor = vec4(uColor * (1.0 + pulse), a);
-        }`
-      : `uniform float uTime; uniform float uOn; uniform vec3 uColor; varying vec2 vUv;
-        void main(){
-          float head = fract(uTime * 0.11 + ${offset.toFixed(3)}) * 1.3;
-          float d = head - vUv.x;
-          float tail = d >= 0.0 ? exp(-d * 9.0) : 0.0;
-          float a = uOn * ${opacity.toFixed(3)} * (0.012 + tail);
-          gl_FragColor = vec4(mix(uColor, vec3(1.0), tail * tail * 0.6), a);
-        }`,
-  });
+// A glass screen's picture: a candlestick chart with a line and a few figures, in the panel's colour.
+function chartTex(seed, color) {
+  const w = 256, h = 160, cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const g = cv.getContext("2d"), hex = "#" + color.toString(16).padStart(6, "0");
+  let r = seed * 9301 + 49297; const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+  g.fillStyle = "rgba(40,80,120,0.5)"; g.fillRect(0, 0, w, h);
+  g.strokeStyle = "rgba(160,200,240,0.18)"; g.lineWidth = 1;
+  for (let y = 30; y < h; y += 26) { g.beginPath(); g.moveTo(8, y); g.lineTo(w - 8, y); g.stroke(); }
+  g.fillStyle = hex; g.fillRect(10, 10, 70, 6); g.globalAlpha = 0.5; g.fillRect(90, 10, 40, 6); g.globalAlpha = 1;
+  let v = 90;
+  const pts = [];
+  for (let x = 14; x < w - 10; x += 9) {
+    const o = v, c = Math.max(35, Math.min(h - 18, v + (rnd() - 0.48) * 22)), hi = Math.min(o, c) - rnd() * 8, lo = Math.max(o, c) + rnd() * 8;
+    g.strokeStyle = g.fillStyle = c < o ? "#37e08a" : "#ff4d5e";
+    g.beginPath(); g.moveTo(x + 2, hi); g.lineTo(x + 2, lo); g.stroke();
+    g.fillRect(x, Math.min(o, c), 5, Math.max(1.5, Math.abs(c - o)));
+    pts.push([x + 2, (o + c) / 2]); v = c;
+  }
+  g.strokeStyle = hex; g.lineWidth = 1.6; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y - 6) : g.moveTo(x, y - 6))); g.stroke();
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
-const geo = arr => new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(arr, 3));
-const glowMat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
-function lineMat(color, opacity) {
-  const m = new THREE.LineBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
-  m.userData.o0 = opacity; // its full opacity, for fading
-  return m;
-}
-function canvasTex(size, draw) {
-  const cv = document.createElement("canvas");
-  cv.width = cv.height = size;
-  draw(cv.getContext("2d"));
-  return new THREE.CanvasTexture(cv);
-}
+
+// A soft round glow, drawn once.
 let radialTex = null;
 function radial() {
-  return radialTex || (radialTex = canvasTex(64, g => {
-    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grd.addColorStop(0, "rgba(255,255,255,1)"); grd.addColorStop(0.25, "rgba(255,255,255,0.5)"); grd.addColorStop(1, "rgba(255,255,255,0)");
-    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
-  }));
+  if (radialTex) return radialTex;
+  const s = 64, cv = document.createElement("canvas");
+  cv.width = cv.height = s;
+  const g = cv.getContext("2d"), grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  grd.addColorStop(0, "rgba(255,255,255,1)"); grd.addColorStop(0.25, "rgba(255,255,255,0.5)"); grd.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grd; g.fillRect(0, 0, s, s);
+  return (radialTex = new THREE.CanvasTexture(cv));
 }
 
-// The swirl inside a stargate: a three-colour vortex that turns inward (after the Lusion portal).
-function swirlMat() {
-  return new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uOpen: { value: 0 } },
-    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-    fragmentShader: `uniform float uTime; uniform float uOpen; varying vec2 vUv;
-      void main(){
-        vec2 p = vUv - 0.5; float r = length(p) * 2.0; float a = atan(p.y, p.x);
-        float s = a * 3.0 + log(r + 0.02) * 5.0 + uTime * 1.6;
-        float arms = 0.5 + 0.5 * sin(s);
-        float rings = 0.5 + 0.5 * sin(r * 22.0 - uTime * 3.0);
-        vec3 amber = vec3(1.0, 0.71, 0.28), blue = vec3(0.30, 0.64, 1.0), violet = vec3(0.73, 0.55, 1.0), pink = vec3(1.0, 0.45, 0.8);
-        vec3 col = mix(mix(blue, violet, arms), mix(pink, amber, rings), 0.35 + 0.25 * sin(a + uTime * 0.4));
-        col *= 0.75; col += vec3(0.9, 0.95, 1.0) * pow(1.0 - r, 4.0) * 0.55;
-        float edge = smoothstep(1.0, 0.85, r);
-        float alpha = edge * uOpen * (0.15 + 0.6 * arms * (0.55 + 0.45 * rings));
-        gl_FragColor = vec4(col, alpha);
-      }`,
-  });
-}
-
-// Points spread evenly along line segments (x, y, z pairs of ends), for the particle morph.
-function sampleSegments(segs, n) {
-  const lens = [], out = new Float32Array(n * 2);
-  let total = 0;
-  for (let i = 0; i < segs.length; i += 6) { const l = Math.hypot(segs[i + 3] - segs[i], segs[i + 4] - segs[i + 1]); lens.push(l); total += l; }
-  for (let k = 0; k < n; k++) {
-    let d = Math.random() * total, i = 0;
-    while (d > lens[i] && i < lens.length - 1) { d -= lens[i]; i++; }
-    const t = lens[i] ? d / lens[i] : 0, s = i * 6;
-    out[k * 2] = segs[s] + (segs[s + 3] - segs[s]) * t;
-    out[k * 2 + 1] = segs[s + 1] + (segs[s + 4] - segs[s + 1]) * t;
-  }
-  return out;
-}
-
-// The stargate in engraved line art: concentric bands of fine ornament, each band its own ring.
-function buildGate(parent, full, size, depth = 0) {
+// The stargate in engraved line art: concentric bands of fine ornament (from the skull mandala we were
+// shown, with D3MON's own motifs: ticks, triangles, flower-of-life petals), each band its own ring.
+function buildGate(parent, full) {
   const bands = [
-    { r: 1.0, color: C.callers, make: r => ticks(r, full ? 144 : 96, 0.06) },
-    { r: 0.92, color: C.bots, make: r => circle(r).concat(circle(r - 0.02 * size)) },
-    { r: 0.86, color: C.scripts, make: r => triangles(r, 12) },
-    { r: 0.77, color: C.callers, make: r => petals(r, 16) },
-    { r: 0.69, color: C.bots, make: r => ticks(r, 48, 0.03).concat(circle(r)) },
+    { r: 1.0, color: C.callers, make: r => ticks(r, full ? 120 : 72, 0.06) },
+    { r: 0.9, color: C.bots, make: r => circle(r).concat(circle(r - 0.025)) },
+    { r: 0.84, color: C.scripts, make: r => triangles(r, 9) },
+    { r: 0.74, color: C.callers, make: r => petals(r, 12) },
+    { r: 0.66, color: C.bots, make: r => ticks(r, 36, 0.03).concat(circle(r)) },
   ];
-  // Each band is a real ring with depth: a glowing tube carrying its engraved ornament, at its own depth.
-  const rings = bands.map((b, i) => {
+  return bands.map((b, i) => {
     const ring = new THREE.Group();
-    ring.add(new THREE.LineSegments(geo(new Float32Array(b.make(b.r * size))), lineMat(b.color, 0.9)));
-    const tube = new THREE.Mesh(new THREE.TorusGeometry(b.r * size, (i === 0 ? 0.016 : 0.01) * size, 8, 128), glowMat(b.color, 0.55));
-    tube.material.userData.o0 = 0.55;
-    ring.add(tube);
-    ring.position.z = (2 - i) * 0.05 * size;
+    const seg = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(b.make(b.r), 3)),
+      new THREE.LineBasicMaterial({ color: b.color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    seg.userData.o = 0.9;
+    ring.add(seg);
     parent.add(ring);
     return { ring, lock: (i * Math.PI) / 9 };
   });
-  // The gate itself: a heavy metal frame around the rings, with nine chevrons that light up as it locks.
-  const frame = new THREE.Group();
-  const metal = new THREE.MeshStandardMaterial({ color: 0x3a4f66, metalness: 0.8, roughness: 0.3, emissive: 0x0a1826 });
-  frame.add(new THREE.Mesh(new THREE.TorusGeometry(1.1 * size, 0.07 * size, 18, 160), metal));
-  frame.add(new THREE.Mesh(new THREE.TorusGeometry(1.1 * size, 0.074 * size, 4, 160), new THREE.MeshBasicMaterial({ color: 0x4da3ff, wireframe: true, transparent: true, opacity: 0.18, depthWrite: false })));
-  rings.chevrons = [];
-  for (let k = 0; k < 9; k++) {
-    const a = (k / 9) * Math.PI * 2 + Math.PI / 2, ch = new THREE.Group();
-    const block = new THREE.Mesh(new THREE.BoxGeometry(0.11 * size, 0.16 * size, 0.12 * size), metal);
-    const glow = new THREE.Mesh(new THREE.ConeGeometry(0.05 * size, 0.1 * size, 3), glowMat(C.callers, 0.25));
-    glow.rotation.z = Math.PI; glow.position.z = 0.065 * size;
-    ch.add(block, glow);
-    ch.position.set(Math.cos(a) * 1.1 * size, Math.sin(a) * 1.1 * size, 0);
-    ch.rotation.z = a - Math.PI / 2;
-    frame.add(ch);
-    rings.chevrons.push(glow);
-  }
-  const key = new THREE.PointLight(0xbfdcff, 6, 4 * size, 2); // lights the metal from the front
-  key.position.set(0.6 * size, 0.8 * size, 1.2 * size);
-  frame.add(key);
-  frame.add(new THREE.Mesh(new THREE.TorusGeometry(1.03 * size, 0.008 * size, 6, 160), glowMat(C.bots, 0.7))); // the lit inner edge
-  // A tunnel behind the gate, its rings shrinking into the pyramid, so you look into it, not at it.
-  if (depth) {
-    for (let k = 1; k <= 7; k++) {
-      const t = k / 7, r = (1 - 0.45 * t) * 0.98 * size;
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.006 * size, 6, 96), glowMat([C.callers, C.bots, C.scripts][k % 3], 0.5 * (1 - t) + 0.08));
-      ring.position.z = -t * depth;
-      frame.add(ring);
-    }
-    const wall = new THREE.Mesh(new THREE.CylinderGeometry(0.98 * size, 0.53 * size, depth, 48, 1, true), new THREE.MeshBasicMaterial({ color: 0x0b1622, side: THREE.BackSide, transparent: true, opacity: 0.85, depthWrite: false }));
-    wall.rotation.x = Math.PI / 2; wall.position.z = -depth / 2;
-    frame.add(wall);
-  }
-  parent.add(frame);
-  return rings;
-  function ticks(r, n, len) { const o = []; len *= size; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, l = i % 6 ? len : len * 2; o.push(Math.cos(a) * r, Math.sin(a) * r, 0, Math.cos(a) * (r - l), Math.sin(a) * (r - l), 0); } return o; }
+  function circle(r, n = 96) { const out = []; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, b = ((i + 1) / n) * Math.PI * 2; out.push(Math.cos(a) * r, Math.sin(a) * r, 0, Math.cos(b) * r, Math.sin(b) * r, 0); } return out; }
+  function ticks(r, n, len) { const out = []; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, l = i % 6 ? len : len * 2; out.push(Math.cos(a) * r, Math.sin(a) * r, 0, Math.cos(a) * (r - l), Math.sin(a) * (r - l), 0); } return out; }
   function triangles(r, n) {
-    const o = [], s = 0.06 * size;
+    const out = [];
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2, cx = Math.cos(a) * r, cy = Math.sin(a) * r;
+      const a = (i / n) * Math.PI * 2, s = 0.06, cx = Math.cos(a) * r, cy = Math.sin(a) * r;
       const pts = [0, 1, 2].map(k => { const t = a + (k * Math.PI * 2) / 3; return [cx + Math.cos(t) * s, cy + Math.sin(t) * s]; });
-      for (let k = 0; k < 3; k++) o.push(...pts[k], 0, ...pts[(k + 1) % 3], 0);
+      for (let k = 0; k < 3; k++) out.push(...pts[k], 0, ...pts[(k + 1) % 3], 0);
     }
-    return o;
+    return out;
   }
   function petals(r, n) {
-    const o = [], pr = 0.065 * size;
-    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; o.push(...circle(pr, 16, Math.cos(a) * (r - pr), Math.sin(a) * (r - pr))); }
-    return o;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, cx = Math.cos(a) * (r - 0.06), cy = Math.sin(a) * (r - 0.06), pr = 0.065;
+      for (let k = 0; k < 16; k++) { const t0 = (k / 16) * Math.PI * 2, t1 = ((k + 1) / 16) * Math.PI * 2; out.push(cx + Math.cos(t0) * pr, cy + Math.sin(t0) * pr, 0, cx + Math.cos(t1) * pr, cy + Math.sin(t1) * pr, 0); }
+    }
+    return out;
   }
-}
-function circle(r, n = 96, cx = 0, cy = 0) {
-  const o = [];
-  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, b = ((i + 1) / n) * Math.PI * 2; o.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0, cx + Math.cos(b) * r, cy + Math.sin(b) * r, 0); }
-  return o;
-}
-
-// The D3MON skull in engraved line art: our own drawing in the spirit of the skull mandala (inspiration 08),
-// with the D3MON triangle as its nose and the flower of life on its brow. Drawn as line segments in a
-// 2-unit box, mirrored left to right. Returns { lines, engraving, accent, web }.
-function skull() {
-  const lines = [], engraving = [], accent = [], webL = [];
-  const seg = (arr, a, b) => arr.push(a[0], a[1], 0, b[0], b[1], 0);
-  const poly = (arr, pts, closed) => { for (let i = 0; i < pts.length - 1; i++) seg(arr, pts[i], pts[i + 1]); if (closed) seg(arr, pts[pts.length - 1], pts[0]); };
-  const both = (arr, pts, closed) => { poly(arr, pts, closed); poly(arr, pts.map(([x, y]) => [-x, y]), closed); };
-  const scaleAbout = (pts, k, cx, cy) => pts.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
-
-  // Cranium, temples, cheekbones and the upper jaw.
-  const head = [[0, 0.98], [-0.2, 0.96], [-0.4, 0.88], [-0.56, 0.72], [-0.66, 0.5], [-0.69, 0.28], [-0.66, 0.08], [-0.6, -0.05], [-0.63, -0.17], [-0.56, -0.3], [-0.45, -0.37], [-0.37, -0.48], [-0.3, -0.56], [-0.27, -0.6]];
-  both(lines, head);
-  seg(lines, [-0.27, -0.6], [0.27, -0.6]);
-  // The jaw and the teeth.
-  both(lines, [[-0.29, -0.63], [-0.34, -0.72], [-0.31, -0.84], [-0.22, -0.95], [-0.1, -1.0], [0, -1.01]]);
-  seg(lines, [-0.25, -0.67], [0.25, -0.67]);
-  for (let x = -0.24; x <= 0.241; x += 0.06) { seg(lines, [x, -0.5], [x, -0.6]); seg(lines, [x, -0.67], [x + 0.005, -0.77]); }
-  // Eye sockets, with inner contours.
-  const eye = [[-0.47, 0.12], [-0.41, 0.22], [-0.28, 0.25], [-0.14, 0.2], [-0.1, 0.08], [-0.14, -0.06], [-0.26, -0.1], [-0.4, -0.05]];
-  both(lines, eye, true);
-  both(engraving, scaleAbout(eye, 0.72, -0.28, 0.07), true);
-  both(engraving, scaleAbout(eye, 0.45, -0.28, 0.07), true);
-  // Brow ridges and cheek lines.
-  both(engraving, [[-0.52, 0.27], [-0.31, 0.34], [-0.08, 0.29]]);
-  both(engraving, [[-0.5, -0.12], [-0.36, -0.2], [-0.2, -0.22]]);
-  both(engraving, [[-0.56, -0.24], [-0.42, -0.32], [-0.33, -0.42]]);
-  both(engraving, [[-0.6, 0.0], [-0.52, -0.08], [-0.46, -0.06]]);
-  // The engraved bands across the cranium, and the hatching on the temples.
-  for (const k of [0.86, 0.73, 0.6]) both(engraving, scaleAbout(head.slice(0, 7), k, 0, 0.32));
-  for (let i = 0; i < 7; i++) { const y = 0.5 - i * 0.07; both(engraving, [[-0.66 + i * 0.004, y], [-0.58 + i * 0.01, y - 0.03]]); }
-  // The nose: the D3MON triangle, doubled.
-  const tri = [[0, -0.07], [-0.1, -0.33], [0.1, -0.33]];
-  poly(accent, tri, true);
-  poly(accent, scaleAbout(tri, 0.55, 0, -0.24), true);
-  // The flower of life on the brow.
-  accent.push(...circle(0.075, 32, 0, 0.56));
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; accent.push(...circle(0.075, 24, Math.cos(a) * 0.075, 0.56 + Math.sin(a) * 0.075)); }
-  // The web of the mandala around the skull: spokes, and rings of sagging chords.
-  const spokes = 24;
-  for (let i = 0; i < spokes; i++) { const a = (i / spokes) * Math.PI * 2; seg(webL, [Math.cos(a) * 1.12, Math.sin(a) * 1.12], [Math.cos(a) * 1.62, Math.sin(a) * 1.62]); }
-  for (const r of [1.22, 1.36, 1.5, 1.62]) for (let i = 0; i < spokes; i++) {
-    const a = (i / spokes) * Math.PI * 2, b = ((i + 1) / spokes) * Math.PI * 2, m = (a + b) / 2, sag = r - 0.03;
-    seg(webL, [Math.cos(a) * r, Math.sin(a) * r], [Math.cos(m) * sag, Math.sin(m) * sag]);
-    seg(webL, [Math.cos(m) * sag, Math.sin(m) * sag], [Math.cos(b) * r, Math.sin(b) * r]);
-  }
-  return { lines, engraving, accent, web: webL };
 }
