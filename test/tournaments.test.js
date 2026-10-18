@@ -326,7 +326,7 @@ describe("tournaments: standings", () => {
     assert.match(t.notice, /D3MON never trades/);
     const rows = Object.fromEntries(t.standings.map(x => [x.entrant.name, x]));
     assert.deepEqual(t.standings.map(x => [x.entrant.name, x.rank]), [["Alpha", 1], ["Bravo", 2], ["Golf", 3], ["Hotel", 3], ["Charlie", 5], ["Echo", 6]]);
-    assert.deepEqual({ ...rows.Alpha, entrant: undefined, avgLeadMs: undefined }, { entrant: undefined, played: 3, calls: 3, correct: 3, wrong: 0, missed: 0, accuracy: 1, avgLeadMs: undefined, rank: 1 });
+    assert.deepEqual({ ...rows.Alpha, entrant: undefined, avgLeadMs: undefined }, { entrant: undefined, played: 3, calls: 3, correct: 3, wrong: 0, missed: 0, accuracy: 1, avgLeadMs: undefined, pricedCalls: 0, paperPerContract: null, rank: 1 }, "no Kalshi prices on a test server, so no paper result");
     assert.equal(rows.Alpha.avgLeadMs, 13 * MIN, "called 2 minutes in, calls close at the round's end");
     assert.deepEqual([rows.Bravo.played, rows.Bravo.calls, rows.Bravo.missed, rows.Bravo.correct], [3, 2, 1, 2]);
     assert.equal(rows.Golf.accuracy, 2 / 3);

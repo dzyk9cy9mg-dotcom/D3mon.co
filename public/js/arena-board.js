@@ -13,12 +13,18 @@
   }
   const fmtTime = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
+  // Kalshi's price for the side called, and the paper result on a $1 contract (paper only: D3MON never trades).
+  const cents = v => `${Math.round(Math.abs(v) * 100)}¢`;
+  const signed = v => v === null || v === undefined ? "–" : `${v > 0 ? "+" : v < 0 ? "−" : ""}$${Math.abs(v).toFixed(2)}`;
+  const SOURCES = { live: "read from Kalshi as the call arrived", snapshot: "Kalshi's price up to a minute before the call", candle: "Kalshi's price history, the minute before the call" };
   function cell(c) {
     if (!c) return `<td class="bc empty-c">–</td>`;
     const t = `${c.name}: sent ${new Date(c.receivedAt).toLocaleTimeString()}${c.via === "button" ? "" : " by bot key"}`;
     if (c.sealed) return `<td class="bc sealed" title="${esc(t)}. Sealed until the calls close.">●</td>`;
     const mark = c.correct === true ? ' <span class="ok">✓</span>' : c.correct === false ? ' <span class="no">✗</span>' : "";
-    return `<td class="bc ${esc(c.direction)}" title="${esc(t)}${c.verification ? ` · ${esc(c.verification)}` : ""}">${c.direction === "up" ? "▲" : "▼"}${mark}</td>`;
+    const p = c.price, pt = p ? ` · paid ${cents(p.paid)} for ${p.side === "yes" ? "Up" : "Down"} (${SOURCES[p.source] || p.source})` : "";
+    const pr = p ? `<br><span class="tag">@${cents(p.paid)}</span>${c.paperPerContract !== undefined ? ` <span class="${c.paperPerContract >= 0 ? "ok" : "no"}">${c.paperPerContract >= 0 ? "+" : "−"}${cents(c.paperPerContract)}</span>` : ""}` : "";
+    return `<td class="bc ${esc(c.direction)}" title="${esc(t)}${esc(pt)}${c.verification ? ` · ${esc(c.verification)}` : ""}">${c.direction === "up" ? "▲" : "▼"}${mark}${pr}</td>`;
   }
 
   function render() {
@@ -26,10 +32,10 @@
     $("boardBox").hidden = !b;
     if (!b) return;
     $("boardTitle").textContent = `${b.title} · ${b.state || b.status} · calls ${b.callWindowMin >= 15 ? "open the whole round" : b.callWindowMin ? `close ${b.callWindowMin} min into each round` : "close when each round starts"}`;
-    $("boardHead").innerHTML = `<tr><th>Entrant</th>${b.rounds.map(r => `<th class="${r.locked && !r.over ? "now" : ""}" title="${esc(when(r.round))}">${r.index + 1}<br><span class="tag">${esc(fmtTime(r.round))}</span></th>`).join("")}<th>Right</th><th>Wrong</th></tr>
-      <tr class="resrow"><th>Result</th>${b.rounds.map(r => `<th>${r.result ? `${r.result === "up" ? "▲" : "▼"} <span class="tag">${r.verification === "verified" ? "Kalshi" : "host"}</span>` : r.over ? '<span class="tag">pending</span>' : ""}</th>`).join("")}<th></th><th></th></tr>`;
-    $("boardRows").innerHTML = b.entrants.map(e => `<tr><td><b>${esc(e.name)}</b>${e.inLineup ? "" : ' <span class="tag">left</span>'}</td>${b.rounds.map(r => cell(r.calls.find(c => c.entrantId === e.entrantId))).join("")}<td>${e.right}</td><td>${e.wrong}</td></tr>`).join("")
-      || `<tr><td colspan="${b.rounds.length + 3}" class="empty">Nobody is in this battle's lineup yet.</td></tr>`;
+    $("boardHead").innerHTML = `<tr><th>Entrant</th>${b.rounds.map(r => `<th class="${r.locked && !r.over ? "now" : ""}" title="${esc(when(r.round))}">${r.index + 1}<br><span class="tag">${esc(fmtTime(r.round))}</span></th>`).join("")}<th>Right</th><th>Wrong</th><th title="Profit if each call had bought one $1 Kalshi contract at the price when it was made. Paper only.">Paper per $1</th></tr>
+      <tr class="resrow"><th>Result</th>${b.rounds.map(r => `<th>${r.result ? `${r.result === "up" ? "▲" : "▼"} <span class="tag">${r.verification === "verified" ? "Kalshi" : "host"}</span>` : r.over ? '<span class="tag">pending</span>' : ""}</th>`).join("")}<th></th><th></th><th></th></tr>`;
+    $("boardRows").innerHTML = b.entrants.map(e => `<tr><td><b>${esc(e.name)}</b>${e.inLineup ? "" : ' <span class="tag">left</span>'}</td>${b.rounds.map(r => cell(r.calls.find(c => c.entrantId === e.entrantId))).join("")}<td>${e.right}</td><td>${e.wrong}</td><td class="${e.paperPerContract > 0 ? "ok" : e.paperPerContract < 0 ? "no" : ""}" title="${esc(e.priced ? `${e.priced} priced calls, average price paid ${cents(e.avgPaid)}` : "No priced calls yet")}">${signed(e.paperPerContract)}</td></tr>`).join("")
+      || `<tr><td colspan="${b.rounds.length + 4}" class="empty">Nobody is in this battle's lineup yet.</td></tr>`;
   }
 
   async function load() {

@@ -6,6 +6,8 @@
 //
 // Every entrant gets them: callers (who have no bot key, so this is their whole card) and bots, whose
 // cards can show these next to the stats they send themselves. Like every stat they start hidden.
+import { paper } from "./prices.js";
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_MS = 86400000;
 const MIN_FOR_CHANCE = 10;
@@ -33,6 +35,10 @@ export const VERIFIED = [
   ["v_lead", "Average lead time", "duration", "duration", "", "How long before the calls closed the call was made"],
   ["v_crowd", "Against the crowd", "percent", "percent", "%", "Win rate when going against most others who called that round"],
   ["v_calls", "Calls made", "integer", "plain", "", "Rounds called, including ones not scored yet"],
+  // Priced at Kalshi's own price for the side called, read by the server the moment the call arrived (paper only).
+  ["v_paper", "Paper profit per $1", "money", "money", "$", "Profit if every call had bought one $1 Kalshi contract at the price when it was made. Paper only: D3MON never trades"],
+  ["v_avg_paid", "Average price paid", "money", "money", "$", "What Kalshi charged, on average, for the side called, when it was called. Cheaper means the call went against the market"],
+  ["v_edge", "Beat the odds by", "return", "percent", "%", "Win rate minus the average price paid: above zero means the calls were right more often than Kalshi's prices expected"],
 ].map(([key, label, type, format, unit, description], i) => ({ key, label, type, format, unit, description, category: CATEGORY, order: i + 1 }));
 
 const rate = (w, n) => (n ? Math.round((w / n) * 10000) / 10000 : null);
@@ -132,6 +138,10 @@ export class Verified {
 
     const crowd = scored.map(x => ({ x, c: this.#crowd(entrantId, x.line.market, x.round) })).filter(({ x, c }) => c && c !== x.dir).map(({ x }) => x);
     const leads = h.map(x => x.closesAt - x.at).filter(v => v >= 0);
+    const priceOf = x => this.calls.prices?.forCall(x.line.id) || null;
+    const priced = h.filter(priceOf), pricedScored = scored.filter(priceOf);
+    const avg = list => list.length ? list.reduce((a, x) => a + priceOf(x).paid, 0) / list.length : null;
+    const paperSum = pricedScored.reduce((a, x) => a + paper(priceOf(x).paid, right(x)), 0);
 
     return {
       v_win_rate: { value: rate(wins, scored.length), n: scored.length, ...verif(scored) },
@@ -152,6 +162,9 @@ export class Verified {
       v_lead: { value: leads.length ? Math.round(leads.reduce((a, v) => a + v, 0) / leads.length) : null, n: leads.length, ...server },
       v_crowd: { value: rate(crowd.filter(right).length, crowd.length), n: crowd.length, ...verif(crowd) },
       v_calls: { value: h.length || null, ...server },
+      v_paper: { value: pricedScored.length ? Math.round(paperSum * 10000) / 10000 : null, n: pricedScored.length, ...verif(pricedScored) },
+      v_avg_paid: { value: priced.length ? Math.round(avg(priced) * 10000) / 10000 : null, n: priced.length, ...server },
+      v_edge: { value: pricedScored.length ? Math.round((pricedScored.filter(right).length / pricedScored.length - avg(pricedScored)) * 10000) / 10000 : null, n: pricedScored.length, ...verif(pricedScored) },
     };
   }
 }

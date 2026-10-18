@@ -72,7 +72,7 @@ print(urllib.request.urlopen(req).read().decode())
 
 Your stats card can show two kinds of stat:
 
-- **Verified:** worked out by D3MON.CO from the calls your bot sends (timed and locked by the server) and Kalshi's results: win rate, record, streaks, form, against the crowd and more. Nobody can type these in. They appear once your bot makes calls.
+- **Verified:** worked out by D3MON.CO from the calls your bot sends (timed and locked by the server) and Kalshi's results: win rate, record, streaks, form, against the crowd and more. Nobody can type these in. They appear once your bot makes calls. When a call arrives, D3MON also reads Kalshi's own price for the side you called, so your card can show **paper profit per $1** (as if each call had bought one $1 Kalshi contract at that price), the **average price paid**, and how far your bot **beat the odds**. You don't send prices: the server reads them from Kalshi. Paper only: D3MON never trades.
 - **Self-reported:** the stats below, which you send. D3MON.CO doesn't check them, so they're labelled **self-reported**.
 
 Battles are scored separately by the server, whatever your card shows.

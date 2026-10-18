@@ -19,6 +19,7 @@
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
 import { ROUND_MS, callWindowMs, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
+import { paper } from "./prices.js";
 
 export const MARKET = "KXBTC15M";
 const MAX_AHEAD_MS = 24 * 3600 * 1000; // calls can be made up to a day ahead
@@ -28,6 +29,17 @@ export const nextRound = now => Math.floor(now / ROUND_MS) * ROUND_MS + ROUND_MS
 export const currentRound = now => Math.floor(now / ROUND_MS) * ROUND_MS;
 const closesAtOf = l => (Number.isFinite(l.closesAt) ? l.closesAt : l.round);
 const MIN_MS = 60000;
+
+// Paper results over a list of call views: profit on $1 contracts at Kalshi's prices, and the average price paid.
+export function paperTotals(views) {
+  const priced = views.filter(c => c.price), scored = priced.filter(c => c.paperPerContract !== undefined);
+  const sum = scored.reduce((a, c) => a + c.paperPerContract, 0);
+  return {
+    priced: priced.length,
+    paperPerContract: scored.length ? Math.round(sum * 10000) / 10000 : null,
+    avgPaid: priced.length ? Math.round((priced.reduce((a, c) => a + c.price.paid, 0) / priced.length) * 10000) / 10000 : null,
+  };
+}
 
 const BOT_CALL = {
   schema: { type: "enum", values: ["d3mon.call/v1"], required: true },
@@ -89,6 +101,13 @@ export class Calls {
     else out.sealed = true;
     const r = locked ? this.metrics.result(l.market, l.round) : null;
     if (r) Object.assign(out, { result: r.result, correct: l.dir === r.result, verification: r.source === "kalshi" ? "verified" : "recorded by host" });
+    // Kalshi's price for the side it backed when it called, and the paper result on a $1 contract. Only
+    // once its direction can be seen: the price paid would give a sealed call's direction away.
+    const p = out.direction && this.prices ? this.prices.forCall(l.id) : null;
+    if (p) {
+      out.price = { paid: p.paid, side: p.side, quotedAt: p.quotedAt, source: p.source };
+      if (r) out.paperPerContract = paper(p.paid, out.correct);
+    }
     return out;
   }
 
@@ -144,7 +163,8 @@ export class Calls {
     const entrants = ids.map(id => this.registry.entrantById(id)).filter(Boolean).map(e => {
       const mine = rounds.flatMap(r => r.calls.filter(c => c.entrantId === e.id));
       return { entrantId: e.id, name: e.name, slug: e.slug, kind: e.kind, inLineup: (b.entrants || []).includes(e.id),
-        called: mine.length, right: mine.filter(c => c.correct === true).length, wrong: mine.filter(c => c.correct === false).length };
+        called: mine.length, right: mine.filter(c => c.correct === true).length, wrong: mine.filter(c => c.correct === false).length,
+        ...paperTotals(mine) };
     });
     return { battleId: b.id, title: b.title, status: b.status, market: b.market, roundMs: b.roundMs, callWindowMin: callWindowMs(b) / MIN_MS, now, rounds, entrants };
   }

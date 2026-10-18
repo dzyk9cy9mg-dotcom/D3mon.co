@@ -40,9 +40,9 @@
     $("rows").innerHTML = t.standings.length ? t.standings.map(r => `<tr${r.rank === 1 && r.correct ? ' class="lead"' : ""}>
         <td class="trank">${r.rank}</td>
         <td><a href="card?e=${encodeURIComponent(r.entrant.slug)}"><b>${esc(r.entrant.name)}</b></a> <span class="tag">${r.entrant.kind === "script" ? "script" : "bot"} · by ${esc(r.entrant.creatorName)}</span></td>
-        <td><b>${r.correct}</b></td><td>${pct(r.accuracy)}</td><td>${r.calls}</td><td>${r.missed}</td><td>${dur(r.avgLeadMs)}</td>
+        <td><b>${r.correct}</b></td><td>${pct(r.accuracy)}</td><td>${r.calls}</td><td>${r.missed}</td><td>${dur(r.avgLeadMs)}</td><td class="${r.paperPerContract > 0 ? "pos" : r.paperPerContract < 0 ? "neg" : ""}">${r.paperPerContract === null || r.paperPerContract === undefined ? "–" : `${r.paperPerContract > 0 ? "+" : r.paperPerContract < 0 ? "−" : ""}$${Math.abs(r.paperPerContract).toFixed(2)}`}</td>
         ${S.admin ? `<td><button class="btn ghost sm" type="button" data-remove="${esc(r.entrant.id)}|${esc(r.entrant.name)}">Remove</button></td>` : ""}</tr>`).join("")
-      : `<tr><td colspan="8" class="empty">No bots in this tournament yet. Bot owners join on <a href="my">My bots</a>.</td></tr>`;
+      : `<tr><td colspan="9" class="empty">No bots in this tournament yet. Bot owners join on <a href="my">My bots</a>.</td></tr>`;
   }
 
   function renderAdmin() {
