@@ -130,14 +130,34 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const arc = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.018, 5, false), movingLight(C[k], 1, "arc", i / 3));
     scene.add(arc);
     lights.push(arc);
-    // The three feeding the centre (owner, 2026-10-18): a stream from each corner along the floor to the
-    // middle, all three in step, so their light meets there and rises up the core together.
-    const from = CORNERS[k].clone().multiplyScalar(1.28), side = new THREE.Vector3(-from.z, 0, from.x).normalize().multiplyScalar(0.6);
-    const feed = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([from.clone().setY(0.06), from.clone().multiplyScalar(0.5).add(side).setY(0.06), new THREE.Vector3(0, 0.06, 0)]), 64, 0.022, 5, false),
-      movingLight(C[k], 1, "arc", 0));
-    scene.add(feed);
-    lights.push(feed);
   });
+  // Many coming together (owner, 2026-10-18: "many of them, like many people coming together, and energy
+  // coming together"). Hundreds of little lights in the three colours, and white for the people, drift in
+  // from all around on slightly wandering paths, gather in the centre, rise up the core together and feed
+  // the beam into the sky. Each one loops: in across the floor, up the core, and in again from somewhere new.
+  const swarmN = full ? 2600 : phone ? 520 : 1500;
+  const swPos = new Float32Array(swarmN * 3), swCol = new Float32Array(swarmN * 3), sw = [];
+  const tints = [C.callers, C.bots, C.scripts].map(c => new THREE.Color(c)), people = new THREE.Color(0xeef4ff);
+  const newPath = (o, first) => {
+    const corner = Math.floor(Math.random() * 3);
+    // Most come from the direction of a corner, the rest from anywhere around.
+    const base = Math.atan2(CORNERS[keys[corner]].z, CORNERS[keys[corner]].x), anywhere = Math.random() < 0.35;
+    o.a = anywhere ? Math.random() * Math.PI * 2 : base + (Math.random() - 0.5) * 0.9;
+    o.r0 = 4.5 + Math.random() * 9;
+    o.wob = (Math.random() - 0.5) * 1.6; o.freq = 1 + Math.random() * 2.5; o.ph = Math.random() * 6.28;
+    o.speed = 0.06 + Math.random() * 0.08; o.t = first ? Math.random() : 0; // t: 0..1 across the floor, 1..2 up the core
+    o.col = Math.random() < 0.3 ? people : tints[corner];
+    return o;
+  };
+  for (let i = 0; i < swarmN; i++) {
+    const o = newPath({}, true);
+    sw.push(o);
+    swCol.set([o.col.r, o.col.g, o.col.b], i * 3);
+  }
+  const swGeo = geo(swPos).setAttribute("color", new THREE.BufferAttribute(swCol, 3));
+  const swarm = new THREE.Points(swGeo, new THREE.PointsMaterial({ size: full ? 0.12 : 0.14, vertexColors: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, map: radial() }));
+  const swarmHalo = new THREE.Points(swGeo, new THREE.PointsMaterial({ size: 0.42, vertexColors: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, map: radial() }));
+  scene.add(swarm, swarmHalo);
   // The core: energy rising from the floor's centre up through the pyramid into the capstone.
   for (const [r, o] of [[0.03, 1], [0.12, 0.3]]) {
     const core = new THREE.Mesh(new THREE.CylinderGeometry(r, r, H, 10, 1, true), movingLight(0xdfeaff, o, "beam", 0.9));
@@ -336,6 +356,28 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     beam.position.set(0, H * rise + 20 * beamOn, 0);
     beam.children.forEach((b, i) => { b.material.opacity = [0.9, 0.18, 0.05][i] * beamOn * (0.85 + 0.15 * Math.sin(time * 3 + i)); });
     const lightOn = smooth(span(p, 0.46, 0.56)), coreOn = smooth(span(p, 0.52, 0.6));
+    swarm.visible = swarmHalo.visible = lightOn > 0;
+    if (swarm.visible) {
+      swarm.material.opacity = lightOn; swarmHalo.material.opacity = lightOn * 0.22;
+      for (let i = 0; i < swarmN; i++) {
+        const o = sw[i];
+        o.t += dt * o.speed * (o.t < 1 ? 1 : 2.2) * (reducedMotion ? 0.3 : 1);
+        if (o.t >= 2) { newPath(o, false); swCol.set([o.col.r, o.col.g, o.col.b], i * 3); swGeo.attributes.color.needsUpdate = true; }
+        let x, y, z;
+        if (o.t < 1) {
+          // In across the floor, easing toward the centre, wandering a little sideways as it comes.
+          const e = 1 - (1 - o.t) * (1 - o.t), r = o.r0 * (1 - e), side = o.wob * Math.sin(o.t * Math.PI * o.freq + o.ph) * (1 - e);
+          const a = o.a + side / Math.max(0.6, r);
+          x = Math.cos(a) * r; z = Math.sin(a) * r; y = 0.05 + 0.12 * Math.sin(o.t * Math.PI);
+        } else {
+          // Up the core, gathering into a tight column, faster near the top.
+          const u = o.t - 1, sp = 0.18 * (1 - u) * Math.sin(o.ph + u * 9);
+          x = Math.cos(o.ph + u * 6) * sp; z = Math.sin(o.ph + u * 6) * sp; y = u * u * H * rise * 1.05;
+        }
+        swPos[i * 3] = x; swPos[i * 3 + 1] = y; swPos[i * 3 + 2] = z;
+      }
+      swGeo.attributes.position.needsUpdate = true;
+    }
     for (const l of lights) {
       const on = l.userData.core ? coreOn : lightOn;
       l.visible = on > 0; l.material.uniforms.uTime.value = reducedMotion ? 0 : time; l.material.uniforms.uOn.value = on;
