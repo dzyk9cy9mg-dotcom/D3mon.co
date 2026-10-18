@@ -118,7 +118,7 @@
     const c = S.calls;
     $("calls").innerHTML = c && c.calls.length ? c.calls.map(x => `<li class="${kindClass(x.kind)}"><a href="card?e=${encodeURIComponent(x.slug)}">${esc(x.name)}</a>
         <span class="w-k">${x.kind === "caller" ? "caller" : x.kind === "script" ? "script" : "bot"}</span>
-        <span class="w-d">${x.sealed ? '<span class="w-seal">● sealed</span>' : dirHtml(x.direction)}</span><time>${esc(time(x.receivedAt))}</time></li>`).join("")
+        <span class="w-d">${x.sealed ? '<span class="w-seal">● sealed</span>' : dirHtml(x.direction)}${x.price ? ` <span class="w-paid" title="Kalshi's price for this side when the call was made">@${Math.round(x.price.paid * 100)}¢</span>` : ""}</span><time>${esc(time(x.receivedAt))}</time></li>`).join("")
       : `<li class="w-empty">No calls yet this round.</li>`;
     const p = S.prev;
     if (!p) { $("prev").textContent = "–"; return; }

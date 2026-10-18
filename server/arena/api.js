@@ -16,6 +16,7 @@ import { Monitor } from "./monitor.js";
 import { Displays } from "./displays.js";
 import { Roster } from "./roster.js";
 import { Kalshi } from "./kalshi.js";
+import { Prices } from "./prices.js";
 import { Tournaments } from "./tournaments.js";
 import { Vip } from "./vip.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
@@ -60,6 +61,10 @@ export function createArena({ store, accounts, cfg }) {
   const roster = new Roster({ store, registry, ledger });
   const kalshi = new Kalshi({ ledger, metrics, registry, calls, feed, ...(cfg.kalshiUrl ? { base: cfg.kalshiUrl } : {}) });
   if (cfg.kalshi !== false) kalshi.start();
+  // Kalshi's prices at the moment of each call, for paper profit (server-read, so verified).
+  const prices = new Prices({ ledger, calls, metrics, live: cfg.kalshi !== false, ...(cfg.kalshiUrl ? { base: cfg.kalshiUrl } : {}) });
+  calls.prices = prices;
+  if (cfg.kalshi !== false) prices.start();
   const monitor = new Monitor({ store, registry, stats, catalog, calls, ledger, kalshi, feed, userName });
   const tournaments = new Tournaments({ ledger, registry, feed, calls, metrics });
   if (cfg.kalshi !== false) tournaments.start(); // no Kalshi, no results to save
@@ -160,7 +165,7 @@ export function createArena({ store, accounts, cfg }) {
     if ((m = route.match(/^GET \/tournaments\/([A-Za-z0-9-]{6,40})$/))) return ok({ tournament: tournaments.standings(m[1]) });
     if (route === "GET /kalshi") {
       if (!isAdmin(ctx)) throw new ApiError(ctx.uid ? 403 : 401, "not_granted", "Only HardSmoke can see the Kalshi status.");
-      return ok({ kalshi: kalshi.status() });
+      return ok({ kalshi: kalshi.status(), prices: prices.status() });
     }
     if (route === "GET /battles") return ok({ battles: registry.listBattles(ctx) });
     if (route === "POST /battles") { writer(); return ok({ battle: registry.battleView(registry.createBattle(ctx, await body()), ctx) }, 201); }
@@ -213,5 +218,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, verified, catalog, stats, monitor, displays, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }

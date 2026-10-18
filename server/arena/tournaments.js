@@ -30,6 +30,7 @@
 //
 // Ledger lines: { t: "tournament_removal", entrantId, removed, reason, from }
 //               { t: "tournament_pause", paused, reason, from }
+import { paper } from "./prices.js";
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
 import { nextRound, currentRound, MARKET } from "./calls.js";
@@ -302,7 +303,7 @@ export class Tournaments {
       if (!inRounds.length) continue; // never in this tournament
       const calls = new Map();
       for (const l of this.calls.byEntrant.get(entrantId) || []) if (l.market === MARKET && l.round >= p.startsAt && l.round < p.endsAt) calls.set(l.round, l);
-      let played = 0, called = 0, correct = 0, leadSum = 0;
+      let played = 0, called = 0, correct = 0, leadSum = 0, priced = 0, paperSum = 0;
       for (const r of inRounds) {
         const result = settled.get(r);
         if (!result) continue; // not settled by Kalshi (yet)
@@ -311,12 +312,15 @@ export class Tournaments {
         if (!c) continue; // missed
         called++;
         if (c.dir === result) correct++;
+        const price = this.calls.prices?.forCall(c.id); // shown beside the ranking, never part of it
+        if (price) { priced++; paperSum += paper(price.paid, c.dir === result); }
         leadSum += (Number.isFinite(c.closesAt) ? c.closesAt : c.round) - c.at;
       }
       rows.push({
         entrant: { id: e.id, name: e.name, slug: e.slug, kind: e.kind, creatorName: e.creatorName },
         played, calls: called, correct, wrong: called - correct, missed: played - called,
         accuracy: called ? correct / called : null, avgLeadMs: called ? Math.round(leadSum / called) : null,
+        pricedCalls: priced, paperPerContract: priced ? Math.round(paperSum * 10000) / 10000 : null,
       });
     }
     rows.sort((a, b) => b.correct - a.correct || (b.accuracy ?? -1) - (a.accuracy ?? -1) || (b.avgLeadMs ?? -1) - (a.avgLeadMs ?? -1) || a.entrant.name.localeCompare(b.entrant.name));
