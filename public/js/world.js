@@ -75,6 +75,7 @@
           slowFps = fps; auto.level = "2d"; renderQuality(); world3d();
         } });
       if (!scene3d) { auto.level = "2d"; renderQuality(); }
+      push3d();
     } catch (e) { console.error("3D world:", e); auto.level = "2d"; renderQuality(); }
   }
 
@@ -141,11 +142,15 @@
   }
   const left = ms => { const m = Math.max(0, Math.ceil(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; };
 
+  // The 3D Grand Hall shows the same live data on its screens, ring and spokes.
+  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, serverNow }); }
+
   async function loadStandings() {
     const cur = await api("GET", "tournaments");
     const id = cur.tournaments.find(t => t.kind === S.kind).id;
     S.t = (await api("GET", `tournaments/${id}`)).tournament;
     renderStandings();
+    push3d();
   }
   async function loadHall() {
     const now = serverNow(), cur = Math.floor(now / Q) * Q;
@@ -185,6 +190,7 @@
       await syncClock();
       tickClock();
       setInterval(tickClock, 1000);
+      setInterval(() => loadHall().catch(() => {}), 20000); // new calls reach the hall (and its 3D screens) within 20 s
       const [e] = await Promise.all([api("GET", "entrants"), loadHall()]);
       S.entrants = e.entrants.filter(x => x.status === "active").sort((a, b) => a.name.localeCompare(b.name));
       renderHelix();
