@@ -90,9 +90,22 @@ Changed 2026-10-18 (owner): the peak is a **paid room**, not the free community 
 - It works like the Grand Hall's trading floor, but only members with access get in. **Featured callers lead the trading**, backed by **featured bots and chart scripts**, and members trade along with them.
 - Members see the featured callers' calls **the moment they're made**. Everywhere else those calls stay sealed until the calls close.
 - The featured callers, bots and scripts have their **streams** on the walls.
+- **Its own text chat and voice chat, private to members with access** (owner, 2026-10-18).
 - A glass floor looks down through the Helix into the Grand Hall. **Ad-free.**
 - Access: an admin grants it for a number of days after the member pays outside the site (built: `/vip`, `server/arena/vip.js`). Built-in card payments (Stripe) come later.
 - The community's chat, voice and streams move to the **Grand Hall**, which gets its own text and voice chat.
+
+### Chat, voice and video in both rooms (owner, 2026-10-18)
+
+| | Grand Hall | VIP Room |
+| --- | --- | --- |
+| Text chat | Every signed-in member | Members with access only |
+| Voice chat | Every signed-in member | Members with access only |
+| Video streams | Every entrant's stream on the walls | The featured entrants' streams |
+
+- **Video streams are embedded, never hosted:** YouTube, Twitch and Kick play inside the room; X, Discord and others show as "Watch live" cards. D3MON's server never carries video, which keeps costs low.
+- **Text and voice reuse the Cortex** (the main site's chat and voice rooms) on the server, with one room for each place. The VIP Room's are checked against VIP access on the server, like everything else.
+- Built with each room in the 3D build order (Grand Hall in step 4, VIP Room in step 5). The 2D `/world` and `/vip` pages get them at the same time.
 
 ## 5. The battle
 

@@ -7,9 +7,9 @@ The 3D site has four places (see [BLUEPRINT.md](BLUEPRINT.md)), plus two menus:
 | Place | What it is now, with the tournaments |
 | --- | --- |
 | **Outside** | The pyramid. Billboards and the way in |
-| **Grand Hall** | The live **trading floor**: the tournaments, the round clock and every bot's call live, with its own **text chat and voice chat** (owner, 2026-10-18) |
+| **Grand Hall** | The live **trading floor**: the tournaments, the round clock and every bot's call live, with its own **text chat, voice chat and video streams** (owner, 2026-10-18) |
 | **Helix** | Browse every bot, script and caller as a card. Tap for their profile |
-| **VIP Room** (the peak) | **Paid access** (owner, 2026-10-18): featured callers lead the trading, backed by featured bots and scripts, with their streams. Members see the featured callers' calls at once |
+| **VIP Room** (the peak) | **Paid access** (owner, 2026-10-18): featured callers lead the trading, backed by featured bots and scripts, with their streams, and its own **text and voice chat, private to members**. Members see the featured callers' calls at once |
 | **My D3MON** (menu) | Everything about you: your bots, keys, account, messages, coin |
 | **Admin** (menu, admins only) | One admin hub for everything admins do |
 
