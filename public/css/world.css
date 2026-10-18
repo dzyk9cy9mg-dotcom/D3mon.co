@@ -136,20 +136,15 @@
 body[data-three="on"] .w-main,body[data-three="on"] .w-msg{position:relative;z-index:1}
 body[data-three="on"] .w-bar{background:linear-gradient(rgba(5,8,12,.85) 60%,transparent)}
 body[data-three="on"].w3d-past #w3d{opacity:.28;filter:blur(2px)}
-body[data-three="on"] .w-out{min-height:560vh;align-content:start;padding:0}
+body[data-three="on"] .w-out{min-height:300vh;align-content:start;padding:0}
 body[data-three="on"] .w-out>*{position:sticky}
 body[data-three="on"] .w-tri{display:none}
 body[data-three="on"] .w-out h1{top:18vh;margin-top:18vh;text-shadow:0 0 24px rgba(5,8,12,.9)}
 body[data-three="on"] .w-out .w-lede{top:calc(18vh + 90px);text-shadow:0 0 12px #05080C,0 0 24px #05080C}
 body[data-three="on"] .w-out .w-cta{top:calc(18vh + 170px)}
 body[data-three="on"] .w-out .w-corners{top:calc(18vh + 230px)}
-body[data-three="on"] .w-out h1,body[data-three="on"] .w-out .w-lede,body[data-three="on"] .w-out .w-cta,body[data-three="on"] .w-out .w-corners{opacity:clamp(0,calc(1 - var(--w3d-p,0) * 11),1);transform:translateY(calc(var(--w3d-p,0) * -600px))}
+body[data-three="on"] .w-out h1,body[data-three="on"] .w-out .w-lede,body[data-three="on"] .w-out .w-cta,body[data-three="on"] .w-out .w-corners{opacity:clamp(0,calc(1 - var(--w3d-p,0) * 4),1);transform:translateY(calc(var(--w3d-p,0) * -120px))}
 body[data-three="on"] .w-card{background:rgba(10,17,24,.86);backdrop-filter:blur(6px)}
 .w3d-flash{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 50%,rgba(220,235,255,.9),rgba(77,163,255,.4) 35%,rgba(5,8,12,0) 70%)}
 .w3d-fps{position:fixed;left:10px;bottom:10px;z-index:50;font:12px var(--mono);color:var(--up);background:rgba(0,0,0,.6);padding:3px 7px}
 @media (prefers-reduced-motion:reduce){#w3d{transition:none}}
-/* The kinetic words of the opening shot (after inspiration 09): huge outlined words sliding sideways. */
-.w3d-words{position:fixed;left:0;right:0;top:50%;z-index:1;pointer-events:none;opacity:0;display:flex;justify-content:center;align-items:center;gap:3vw;white-space:nowrap;margin-top:-6vw;
-  font:900 clamp(40px,9vw,150px)/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:transparent;will-change:transform,opacity}
-.w3d-words span{-webkit-text-stroke:1.5px var(--kc);text-shadow:0 0 30px color-mix(in srgb,var(--kc) 40%,transparent)}
-.w3d-words i{font-style:normal;color:var(--ink-3);-webkit-text-stroke:0}
