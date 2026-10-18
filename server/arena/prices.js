@@ -71,6 +71,16 @@ export function paidFor(dir, b) {
   return b.noAsk ?? (b.last !== null && b.last !== undefined ? r4(1 - b.last) : null);
 }
 
+// For Kalshi's candles: when nobody is offering, an ask reads as a placeholder (99.9¢ or 0.1¢, seen on the
+// server on 2026-10-18 in a round's first and last minutes). If the ask is that far from what people
+// actually traded at in the same minute, the traded price is used instead.
+const PLACEHOLDER_GAP = 0.15;
+export function paidForCandle(dir, b) {
+  const ask = (dir === "up" ? b?.yesAsk : b?.noAsk) ?? null, traded = paidFor(dir, { yesAsk: null, noAsk: null, last: b?.last ?? null });
+  if (ask !== null && (traded === null || Math.abs(ask - traded) <= PLACEHOLDER_GAP)) return { paid: ask, from: "ask" };
+  return traded !== null ? { paid: traded, from: "trade" } : null;
+}
+
 // Paper profit on one $1 contract: right pays $1.
 export const paper = (paid, correct) => r4(correct ? 1 - paid : -paid);
 
@@ -118,7 +128,8 @@ export class Prices {
 
   #write(l, b, source, quotedAt, extra = {}) {
     if (this.byCall.has(l.id)) return this.byCall.get(l.id);
-    const paid = paidFor(l.dir, b);
+    let paid = paidFor(l.dir, b);
+    if (source === "candle") { const c = paidForCandle(l.dir, b); paid = c ? c.paid : null; if (c?.from === "trade") extra = { ...extra, from: "trade" }; }
     if (paid === null) return null;
     const [saved] = this.ledger.append([{ t: "call_price", callId: l.id, entrantId: l.entrantId, round: l.round, side: l.dir === "up" ? "yes" : "no", paid,
       yesBid: b.yesBid, yesAsk: b.yesAsk, noBid: b.noBid, noAsk: b.noAsk, quotedAt, source, ...extra }], null);

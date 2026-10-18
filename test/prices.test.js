@@ -196,3 +196,16 @@ describe("npm run kalshi:check shows the call prices", () => {
     assert.match(out, /Call prices will work/);
   });
 });
+
+describe("Kalshi's placeholder asks in the candles", () => {
+  test("an ask far from the traded price (nobody offering) gives way to the traded price", async () => {
+    const { paidForCandle } = await import("../server/arena/prices.js");
+    // The real first minute seen on the server: YES ask opened at 99.9¢ while trades opened at 55¢.
+    const first = parseCandle({ end_period_ts: 1792363560, price: { open_dollars: "0.5500", close_dollars: "0.4700" }, yes_ask: { open_dollars: "0.9990", close_dollars: "0.4800" }, yes_bid: { open_dollars: "0.0000", close_dollars: "0.4700" } });
+    assert.deepEqual(paidForCandle("up", first.open), { paid: 0.55, from: "trade" });
+    assert.deepEqual(paidForCandle("down", first.open), { paid: 0.45, from: "trade" }, "no YES bid, so NO's ask falls back too");
+    assert.deepEqual(paidForCandle("up", first.close), { paid: 0.48, from: "ask" }, "a real ask is kept");
+    assert.deepEqual(paidForCandle("down", first.close), { paid: 0.53, from: "ask" });
+    assert.equal(paidForCandle("up", { yesAsk: null, noAsk: null, last: null }), null);
+  });
+});
