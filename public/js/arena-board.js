@@ -17,16 +17,16 @@
   const cents = v => `${Math.round(Math.abs(v) * 100)}¢`;
   const signed = v => v === null || v === undefined ? "–" : `${v > 0 ? "+" : v < 0 ? "−" : ""}$${Math.abs(v).toFixed(2)}`;
   const SOURCES = { live: "read from Kalshi as the call arrived", snapshot: "Kalshi's price up to a minute before the call", candle: "Kalshi's price history, the minute before the call" };
-  // When it was called, at a glance: minutes and seconds into the round, or "early" if before it started.
-  const into = ms => ms < 0 ? "early" : `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")} in`;
+  // When it was called, at a glance: the clock time it arrived, to the second (your own time zone).
+  const arrived = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" });
   function cell(c) {
     if (!c) return `<td class="bc empty-c">–</td>`;
     const t = `${c.name}: sent ${new Date(c.receivedAt).toLocaleTimeString()}${c.via === "button" ? "" : " by bot key"}`;
-    if (c.sealed) return `<td class="bc sealed" title="${esc(t)}. Sealed until the calls close.">●<br><span class="tag">${esc(into(c.intoRoundMs))}</span></td>`;
+    if (c.sealed) return `<td class="bc sealed" title="${esc(t)}. Sealed until the calls close.">●<br><span class="tag">${esc(arrived(c.receivedAt))}</span></td>`;
     const mark = c.correct === true ? ' <span class="ok">✓</span>' : c.correct === false ? ' <span class="no">✗</span>' : "";
     const p = c.price, pt = p ? ` · paid ${cents(p.paid)} for ${p.side === "yes" ? "Up" : "Down"} (${SOURCES[p.source] || p.source})` : "";
     const pr = p ? `<br><span class="tag">@${cents(p.paid)}</span>${c.paperPerContract !== undefined ? ` <span class="${c.paperPerContract >= 0 ? "ok" : "no"}">${c.paperPerContract >= 0 ? "+" : "−"}${cents(c.paperPerContract)}</span>` : ""}` : "";
-    return `<td class="bc ${esc(c.direction)}" title="${esc(t)}${esc(pt)}${c.verification ? ` · ${esc(c.verification)}` : ""}">${c.direction === "up" ? "▲" : "▼"}${mark}${pr}<br><span class="tag">${esc(into(c.intoRoundMs))}</span></td>`;
+    return `<td class="bc ${esc(c.direction)}" title="${esc(t)}${esc(pt)}${c.verification ? ` · ${esc(c.verification)}` : ""}">${c.direction === "up" ? "▲" : "▼"}${mark}${pr}<br><span class="tag">${esc(arrived(c.receivedAt))}</span></td>`;
   }
 
   function render() {
