@@ -25,15 +25,16 @@
     <a class="w-join" id="joinBtn" href="apply">Join D3MON</a>
     <div class="w-pop"><button class="w-btn" type="button" id="menuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="menuPanel">Menu</button>
       <div class="w-panel" id="menuPanel" hidden>
-        <b>World</b><a href="#outside">Outside</a><a href="#hall">Grand Hall · Tournaments</a><a href="#helix">Helix · Bots &amp; callers</a><a href="#floor">Trade Floor · Community</a>
+        <b>World</b><a href="#outside">Outside</a><a href="#hall">Grand Hall · Tournaments</a><a href="#helix">Helix · Bots &amp; callers</a><a href="#floor">Community</a><a href="vip">VIP Room (the peak)</a>
         <b>Tournaments</b><a href="tournaments">Full standings</a>
+        <b>VIP</b><a href="vip">VIP Room</a>
         <b>Community</b><a href="./">Chat, streams and forum</a>
         <b>My D3MON</b><a href="my">My bots</a><a href="apply">Apply</a><a href="login" id="acctLink">Account</a>
       </div>
     </div>
     <div class="w-pop" id="adminWrap" hidden><button class="w-btn w-admin" type="button" id="adminBtn" aria-haspopup="true" aria-expanded="false" aria-controls="adminPanel">Admin</button>
       <div class="w-panel" id="adminPanel" hidden>
-        <b>Bots</b><a href="applications">Applications</a><a href="tournaments#adminBox">Tournaments: remove a bot, pause</a>
+        <b>Bots</b><a href="applications">Applications</a><a href="vip">VIP access and featured</a><a href="tournaments#adminBox">Tournaments: remove a bot, pause</a>
         <b>Stats</b><a href="monitor">Stats monitor</a><a href="catalog">Stat list</a><a href="displays">Display slots</a>
         <b>Special events</b><a href="board">Battle board</a><a href="metrics">Round metrics</a>
         <b>Site</b><a href="./">Admin Control Center (main site)</a>
@@ -54,7 +55,8 @@
     <a href="#outside"><i class="d-out"></i>Outside<small>The pyramid and the way in</small></a>
     <a href="#hall"><i class="d-hall"></i>Grand Hall<small>The live tournaments</small></a>
     <a href="#helix"><i class="d-helix"></i>Helix<small>Every bot, script and caller</small></a>
-    <a href="#floor"><i class="d-floor"></i>Trade Floor<small>The community</small></a>
+    <a href="#floor"><i class="d-floor"></i>Community<small>Chat, streams and your bots</small></a>
+    <a href="vip"><i class="d-vip"></i>VIP Room<small>The paid room at the peak</small></a>
   </div>
 </header>
 
@@ -110,10 +112,11 @@
 
   <!-- Trade Floor: the community -->
   <section class="w-place w-floor" id="floor" aria-labelledby="floorT">
-    <div class="w-head"><h2 id="floorT">Trade Floor</h2></div>
+    <div class="w-head"><h2 id="floorT">Community</h2></div>
     <div class="w-floorgrid">
       <a class="w-card w-go" href="./"><b>Chat and voice rooms</b><span>Talk with the community on the main site's Cortex.</span></a>
       <a class="w-card w-go" href="./"><b>Streams</b><span>Callers, bots and scripts streaming live.</span></a>
+      <a class="w-card w-go w-vipgo" href="vip"><b>VIP Room</b><span>The paid room at the peak: featured callers lead the trading, backed by bots and scripts.</span></a>
       <a class="w-card w-go" href="my"><b>My bots</b><span>Keys, calls, your stats card and the tournaments switch.</span></a>
     </div>
     <p class="w-note">Text and voice chat inside the Grand Hall arrive with the 3D world.</p>

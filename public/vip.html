@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>VIP Room · D3MON.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+</head>
+<body>
+<main class="arena">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">The VIP Room, at the top of the pyramid. Featured callers lead the trading, backed by featured bots and chart scripts, and members see the callers' calls the moment they're made. <span class="live-dot" id="live">○ offline</span></p>
+
+  <section class="panel vipdoor" id="door" hidden>
+    <h2>Members only</h2>
+    <p id="doorText">The VIP Room needs access. Ask an admin to get in.</p>
+    <div id="teaser"></div>
+  </section>
+
+  <section class="panel" id="room" hidden>
+    <h2>This round <span class="tag" id="vClock"></span></h2>
+    <p class="meta" id="until"></p>
+    <div class="list" id="vCalls"></div>
+    <h3 class="sub">Featured</h3>
+    <div class="vipcards" id="vFeatured"></div>
+    <p class="tnotice">For entertainment. Not financial advice. D3MON never trades.</p>
+  </section>
+
+  <section class="panel" id="adminBox" hidden>
+    <h2>Admin: VIP access</h2>
+    <p class="tag">People pay you outside the site for now (Venmo, Cash App or PayPal business profiles). Then add their D3MON username here. Adding days to someone who still has access extends it from when it runs out. Access ends by itself when the time is up. Every change is recorded.</p>
+    <form class="row" id="grantForm" autocomplete="off">
+      <div class="field"><label for="gUser">Username</label><input id="gUser" maxlength="24" required placeholder="their D3MON username"></div>
+      <div class="field" style="flex:0 1 140px"><label for="gDays">Days</label><select id="gDays"><option>7</option><option selected>30</option><option>90</option><option>365</option></select></div>
+      <div class="field"><label for="gNote">Note (optional)</label><input id="gNote" maxlength="200" placeholder="e.g. paid by Venmo, Oct 18"></div>
+      <button class="btn" type="submit">Give access</button>
+    </form>
+    <div class="list" id="holders" style="margin-top:12px"></div>
+    <h3 class="sub">Who's featured</h3>
+    <p class="tag">Pick the callers, bots and chart scripts shown in the room. Members see the featured callers' calls straight away. Everyone else still sees them sealed until the calls close.</p>
+    <div class="vippick" id="pick"></div>
+    <div class="actions"><button class="btn" type="button" id="saveFeatured">Save featured</button></div>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/arena-vip.js"></script>
+</body>
+</html>

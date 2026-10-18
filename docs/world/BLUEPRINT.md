@@ -82,12 +82,17 @@ The battle is the main event inside the pyramid: **a grand room** (owner's wish)
   - **Tap a card** to see the entrant's details, then tap again to open their cinematic profile (section 7).
 - **The Helix balcony** is a ring at the Helix's middle where visitors browse from.
 
-### The Trade Floor (the peak)
+### The VIP Room (the peak)
+
+Changed 2026-10-18 (owner): the peak is a **paid room**, not the free community space.
 
 - The chamber at the very top, under a **golden geometric crown** (from `inspiration/04`).
-- A glass floor looks down through the Helix into the Grand Hall.
-- Wall screens show the community chat, the current round and live streams.
-- It's the community's space, and **ad-free**.
+- It works like the Grand Hall's trading floor, but only members with access get in. **Featured callers lead the trading**, backed by **featured bots and chart scripts**, and members trade along with them.
+- Members see the featured callers' calls **the moment they're made**. Everywhere else those calls stay sealed until the calls close.
+- The featured callers, bots and scripts have their **streams** on the walls.
+- A glass floor looks down through the Helix into the Grand Hall. **Ad-free.**
+- Access: an admin grants it for a number of days after the member pays outside the site (built: `/vip`, `server/arena/vip.js`). Built-in card payments (Stripe) come later.
+- The community's chat, voice and streams move to the **Grand Hall**, which gets its own text and voice chat.
 
 ## 5. The battle
 

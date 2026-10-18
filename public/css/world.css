@@ -27,7 +27,7 @@
 .w-map a{display:grid;grid-template-columns:14px 1fr;column-gap:10px;align-items:center}
 .w-map a small{grid-column:2;color:var(--ink-2);font:13px var(--body)}
 .w-map i{width:10px;height:10px;transform:rotate(45deg);grid-row:span 2}
-.d-out{background:var(--ink-3)}.d-hall{background:var(--callers)}.d-helix{background:var(--bots)}.d-floor{background:var(--scripts)}
+.d-out{background:var(--ink-3)}.d-hall{background:var(--callers)}.d-helix{background:var(--bots)}.d-floor{background:var(--scripts)}.d-vip{background:#FFD166}
 .w-qual{min-width:260px}
 .w-qual label{display:block;padding:4px 0;font:600 15px var(--body);cursor:pointer}
 .w-qual small{color:var(--ink-3)}
@@ -128,3 +128,4 @@
   .w-panel{position:fixed;left:16px;right:16px;top:64px;min-width:0;max-height:calc(100vh - 80px);overflow:auto}
 }
 @media (prefers-reduced-motion:reduce){.s-now{animation:none}.w-ecard{transition:none}}
+.w-vipgo{border-top-color:#FFD166}.w-vipgo b{color:#FFD166}

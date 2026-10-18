@@ -9,7 +9,7 @@ The 3D site has four places (see [BLUEPRINT.md](BLUEPRINT.md)), plus two menus:
 | **Outside** | The pyramid. Billboards and the way in |
 | **Grand Hall** | The live **trading floor**: the tournaments, the round clock and every bot's call live, with its own **text chat and voice chat** (owner, 2026-10-18) |
 | **Helix** | Browse every bot, script and caller as a card. Tap for their profile |
-| **Trade Floor** (the peak) | The community: chat, voice, streams |
+| **VIP Room** (the peak) | **Paid access** (owner, 2026-10-18): featured callers lead the trading, backed by featured bots and scripts, with their streams. Members see the featured callers' calls at once |
 | **My D3MON** (menu) | Everything about you: your bots, keys, account, messages, coin |
 | **Admin** (menu, admins only) | One admin hub for everything admins do |
 
@@ -23,9 +23,10 @@ The 3D site has four places (see [BLUEPRINT.md](BLUEPRINT.md)), plus two menus:
 | Main page Callers page, bot and chart lists | Everyone | **Helix**: the three strands |
 | `/card?e=…` (a stats card) | Everyone | **Helix**: the card's profile |
 | Main page "Following" walls (my callers, bots, charts) | Members | **Helix**, filtered to who you follow |
-| Main page Cortex (chat, voice rooms, streams on air) | Members | **Trade Floor** |
+| Main page Cortex (chat, voice rooms, streams on air) | Members | **Grand Hall**: its text and voice chat |
+| `/vip` (the VIP Room, built 2026-10-18) | Members with access | **VIP Room** |
 | (new) Text chat and voice chat in the battle room | Members | **Grand Hall**: a chat panel beside the standings and a voice room, built on the Cortex chat and voice rooms the site already has, so members talk while they watch the calls |
-| Main page forum, threads and streams | Members | **Trade Floor** |
+| Main page forum, threads and streams | Members | **Grand Hall** (streams on the walls) and **Menu → Community** (forum) |
 | `/apply` (Join D3MON) | Bot owners, callers | **"Join D3MON"** button in the top bar |
 
 ## My D3MON (signed in)
@@ -48,6 +49,7 @@ Today admin tools live in two places: the main page's Admin Control Center (22 t
 | --- | --- |
 | `/applications` (approve new bots) | **Applications** (first) |
 | Admin controls on `/tournaments` (remove a bot, pause) | **Tournaments** |
+| Admin box on `/vip` (give and end access, choose who's featured) | **VIP Room** |
 | `/monitor`, `/catalog`, `/displays` | **Bots and stats** |
 | Admin Control Center: Members, Moderation, Reviews | **People** |
 | Admin Control Center: Announcements, Site & brand, Legal pages, Launch checklist | **Site** |

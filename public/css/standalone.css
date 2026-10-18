@@ -201,3 +201,8 @@
 .arena .tnotice{margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);font:500 12px var(--mono);letter-spacing:.06em;color:var(--ink-2)}
 .arena .tpause{border-color:var(--dn)}
 .arena .tpause h2{color:var(--dn)}
+.arena .vipdoor{border-color:var(--callers)}
+.arena .vipdoor h2{color:var(--callers)}
+.arena .vipcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.arena .vipcards a{text-decoration:none;color:var(--ink)}
+.arena .vippick{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px;margin-bottom:10px}

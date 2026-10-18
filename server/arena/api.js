@@ -17,6 +17,7 @@ import { Displays } from "./displays.js";
 import { Roster } from "./roster.js";
 import { Kalshi } from "./kalshi.js";
 import { Tournaments } from "./tournaments.js";
+import { Vip } from "./vip.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
 
@@ -35,7 +36,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": case "tournaments": return id === undefined;
+      case "battles": case "catalog": case "tournaments": case "vip": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "admin": return (id === "applications" || id === "monitor") && isAdmin(ctx);
@@ -62,6 +63,7 @@ export function createArena({ store, accounts, cfg }) {
   const monitor = new Monitor({ store, registry, stats, catalog, calls, ledger, kalshi, feed, userName });
   const tournaments = new Tournaments({ ledger, registry, feed, calls, metrics });
   if (cfg.kalshi !== false) tournaments.start(); // no Kalshi, no results to save
+  const vip = new Vip({ ledger, registry, calls, feed, accounts });
   const displays = new Displays({ store, registry, stats, catalog, feed });
   displays.seed();
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
@@ -146,6 +148,12 @@ export function createArena({ store, accounts, cfg }) {
 
     if (route === "GET /rounds") return ok(roundsView(url));
     if ((m = route.match(/^GET \/rounds\/(\d{1,16})\/calls$/))) return ok(calls.roundCalls(ctx, m[1]));
+    if (route === "GET /vip") return ok(vip.info(ctx));
+    if (route === "GET /vip/room") return ok(vip.room(ctx));
+    if (route === "GET /vip/access") return ok({ access: vip.list(ctx) });
+    if (route === "POST /vip/access") { writer(); return ok({ access: vip.grant(ctx, await body()) }); }
+    if ((m = route.match(/^DELETE \/vip\/access\/([A-Za-z0-9_-]{8,40})$/))) { writer(); return ok({ access: vip.revoke(ctx, m[1]) }); }
+    if (route === "PUT /vip/featured") { writer(); return ok(vip.setFeatured(ctx, await body())); }
     if (route === "GET /tournaments") return ok(tournaments.current());
     if (route === "GET /tournaments/admin") return ok(tournaments.adminView(ctx));
     if (route === "PUT /tournaments/pause") { writer(); return ok(tournaments.pause(ctx, await body())); }
@@ -205,5 +213,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, verified, catalog, stats, monitor, displays, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, verified, catalog, stats, monitor, displays, roster, kalshi, close: () => { calls.stop(); kalshi.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }
