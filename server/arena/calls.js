@@ -106,6 +106,24 @@ export class Calls {
     return out.sort((a, b) => b.round - a.round);
   }
 
+  // Every entrant's call in one round, as this reader may see it (callers sealed until their calls close).
+  // GET /rounds/:round/calls, for the trading floor. Newest first.
+  roundCalls(ctx, round) {
+    const r = Number(round);
+    if (!Number.isInteger(r) || r % ROUND_MS) throw new ApiError(400, "invalid_argument", "A round is the start of a 15-minute round, in milliseconds.", "round");
+    const latest = new Map();
+    for (const l of this.byRound.get(`${MARKET}|${r}`) || []) latest.set(l.entrantId, l);
+    const calls = [];
+    for (const l of latest.values()) {
+      const e = this.registry.entrantById(l.entrantId);
+      if (!e || (e.status !== "active" && !isAdmin(ctx))) continue;
+      calls.push({ ...this.view(l, ctx), kind: e.kind, slug: e.slug });
+    }
+    calls.sort((a, b) => b.receivedAt - a.receivedAt);
+    const s = this.metrics.result(MARKET, r);
+    return { market: MARKET, round: r, endsAt: r + ROUND_MS, result: s && this.now() >= r + ROUND_MS ? s.result : null, calls };
+  }
+
   // The live battle board: every round of the battle with each entrant's call and the result.
   board(ctx, battleId) {
     const b = this.registry.battleFor(ctx, battleId), now = this.now();

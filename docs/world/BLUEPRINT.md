@@ -200,7 +200,7 @@ The owner wants a tidy site with far fewer buttons, grouped menus, a proper butt
 Each step is its own pull request, tested, with the server update walked through step by step.
 
 1. **This blueprint:** approved by the owner, after a user's-eye video of the Grand Hall, the Helix and the Trade Floor.
-2. **The `/world` foundation:**
+2. **The `/world` foundation** (first version done 2026-10-18: `public/world.html`, `js/world.js`, `css/world.css`; the 2D site with the top bar, Menu, Admin and the Quality switch, and the four places with live tournaments, the round ring, this round's calls and the Helix cards):
    - the page, device levels and the Quality switch;
    - the new **top bar and Menu**, with the applicant and admin buttons;
    - the complete 2D version with the live panels.

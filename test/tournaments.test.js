@@ -466,3 +466,45 @@ describe("tournaments: standings", () => {
     for (const id of ["hourly-2026-10-10", "daily-2026-13-01", "weekly-2026-10-06", "yearly-2026", "daily-2099-01-01"]) assert.equal((await get(hs, id)).status, 404, id);
   });
 });
+
+// The /world page (the 2D version of the 3D site) and the round calls it shows.
+describe("world: the page and a round's calls", () => {
+  let srv, hs, odin, freya, guest, bot, caller, key;
+  const cur = Math.floor(Date.now() / Q) * Q;
+  before(async () => {
+    srv = await startServer();
+    [hs, odin, freya, guest] = Array.from({ length: 4 }, () => new Client(srv.base));
+    await hs.register("hardsmoke", "smoke-pass-1", "HardSmoke");
+    await odin.register("odin", "odin-pass-12", "Odin");
+    await freya.register("freya", "freya-pass-1", "Freya");
+    const approve = async (c, body) => (await hs.post(`/api/v1/applications/${(await c.post("/api/v1/applications", body)).json.application.id}/review`, { decision: "approve" })).json.application.entrantId;
+    bot = await approve(odin, { kind: "bot", name: "Valhalla", creatorName: "Odin" });
+    caller = await approve(freya, { kind: "caller", name: "Freya Calls", creatorName: "Freya" });
+    key = (await odin.post(`/api/v1/entrants/${bot}/keys`, {})).json.token;
+    srv.app.arena.calls.now = () => cur + MIN;
+    await fetch(srv.base + "/api/v1/bot/calls", { method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" }, body: JSON.stringify({ schema: "d3mon.call/v1", market: "KXBTC15M", direction: "up" }) });
+    await freya.post(`/api/v1/entrants/${caller}/call`, { direction: "down", round: new Date(cur).toISOString() });
+  });
+  after(() => srv.stop());
+
+  test("/world is served", async () => {
+    const r = await guest.get("/world");
+    assert.equal(r.status, 200);
+    assert.match(r.text, /js\/world\.js/);
+  });
+
+  test("a round's calls: bots shown at once, callers sealed until the close", async () => {
+    const r = await guest.get(`/api/v1/rounds/${cur}/calls`);
+    assert.equal(r.status, 200);
+    const by = Object.fromEntries(r.json.calls.map(c => [c.name, c]));
+    assert.equal(by.Valhalla.direction, "up");
+    assert.equal(by.Valhalla.kind, "bot");
+    assert.equal(by["Freya Calls"].sealed, true);
+    assert.equal(by["Freya Calls"].direction, undefined, "a guest can't see a sealed call");
+    assert.equal((await freya.get(`/api/v1/rounds/${cur}/calls`)).json.calls.find(c => c.name === "Freya Calls").direction, "down", "the caller sees their own");
+    assert.equal(r.json.result, null);
+    srv.app.arena.calls.now = () => cur + Q + MIN; // calls closed
+    assert.equal((await guest.get(`/api/v1/rounds/${cur}/calls`)).json.calls.find(c => c.name === "Freya Calls").direction, "down");
+    assert.equal((await guest.get(`/api/v1/rounds/${cur + 7}/calls`)).status, 400);
+  });
+});
