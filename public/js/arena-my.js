@@ -59,6 +59,7 @@
   function tourBox(e) {
     const t = S.tour[e.id];
     if (!t || !t.eligible) return "";
+    if (t.removed) return `<h3 class="sub">Tournaments</h3><div class="callbox"><div class="meta"><b>Removed by an admin</b>${t.removal && t.removal.reason ? `: ${esc(t.removal.reason)}` : ""}. Your bot's calls don't count in the tournaments until an admin restores it. Ask an admin about it.</div></div>`;
     const pending = t.on !== t.playingNow;
     const state = t.on ? (pending ? `Joined. Counts from the round at <b>${esc(fmtTime(t.from))}</b>.` : "<b>In the tournaments.</b> Your bot's calls count every round.")
       : (pending ? `Leaving at <b>${esc(fmtTime(t.from))}</b>. Rounds already played still count.` : "Not in the tournaments.");

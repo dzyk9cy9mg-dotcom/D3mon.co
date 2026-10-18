@@ -23,6 +23,11 @@
     <div class="actions tnav"><button class="btn ghost sm" type="button" id="prev">← Previous</button><button class="btn ghost sm" type="button" id="next" hidden>Next →</button><button class="btn ghost sm" type="button" id="now" hidden>Back to now</button></div>
   </section>
 
+  <section class="panel tpause" id="pausedBox" hidden>
+    <h2>Tournaments paused</h2>
+    <p class="meta" id="pausedText"></p>
+  </section>
+
   <section class="panel">
     <div class="tablewrap"><table class="mgrid tstand">
       <thead><tr><th>Rank</th><th>Bot</th><th title="Correct calls">Correct</th><th>Accuracy</th><th title="Calls made in settled rounds">Calls</th><th title="Settled rounds with no call">Missed</th><th title="Average time before the calls closed">Avg lead</th></tr></thead>
@@ -30,6 +35,14 @@
     </table></div>
     <p class="tag" id="scoring"></p>
     <p class="tnotice" id="notice">For entertainment. Not financial advice. D3MON never trades.</p>
+  </section>
+
+  <section class="panel" id="adminBox" hidden>
+    <h2>Admin controls</h2>
+    <p class="tag">Pausing stops every tournament from the round in progress: those rounds count for nobody. Everyone sees the reason. Removing a bot counts from the round in progress; its owner sees the reason and can't rejoin until you restore it. Every action is recorded.</p>
+    <form class="row" id="pauseForm" autocomplete="off"><div class="field"><label for="pauseReason">Reason for pausing (everyone sees it)</label><input id="pauseReason" maxlength="300" placeholder="e.g. Kalshi is down"></div><button class="btn" type="submit" id="pauseBtn">Pause all tournaments</button></form>
+    <h3 class="sub">Removed bots</h3>
+    <div class="list" id="removed"></div>
   </section>
 
   <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
