@@ -124,7 +124,16 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     new THREE.LineBasicMaterial({ color: 0x9fc4e6, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false }));
   pyr.add(seamLines);
   // The crystal capstone.
-  const cap = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), new THREE.MeshBasicMaterial({ color: 0xcfe6ff }));
+  // The crystal capstone: a small glowing pyramid that is the very tip, lined up with the big one's corners.
+  const cap = new THREE.Group();
+  {
+    const geo = new THREE.ConeGeometry(0.3, 0.42, 3, 1);
+    cap.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xbfe0ff, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })));
+    cap.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })));
+    const heart = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: 0xffffff, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+    heart.scale.setScalar(0.45); heart.position.y = -0.05; cap.add(heart);
+    cap.rotation.y = -Math.PI / 2 - Math.atan2(CORNERS.callers.z, CORNERS.callers.x) + Math.PI / 2; // a corner faces each of the three
+  }
   const capGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: 0x9fd0ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
   capGlow.scale.setScalar(2.2);
   scene.add(cap, capGlow);
@@ -182,12 +191,14 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const add = (m, o) => fadeMat(m, o);
   const inr = y => 1.55 * (1 - y / H); // the room inside the walls at height y
   const glassLine = (color, o) => add(new THREE.LineBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), o);
-  function panel(tex, w, h, color, at, r, y, o = 1) {
+  // Screens face outward, toward the path the camera travels (and the glass we look in through); text is
+  // one-sided so it never reads mirrored.
+  function panel(tex, w, h, color, at, r, y, o = 1, text = false) {
     const g = new THREE.Group();
-    g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), add(new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), o)));
+    g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), add(new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: text ? THREE.FrontSide : THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), o)));
     g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, h)), glassLine(color, 0.9)));
     g.position.set(Math.cos(at) * r, y, Math.sin(at) * r);
-    g.lookAt(0, y, 0);
+    g.lookAt(Math.cos(at) * r * 2, y, Math.sin(at) * r * 2);
     g.userData.y = y;
     tower.add(g);
     return g;
@@ -197,7 +208,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // ramp, so nothing crosses it.
   for (let i = 0; i < 6; i++) screens.push(panel(chartTex(i, C[keys[i % 3]]), 0.64, 0.4, C[keys[i % 3]], (i / 6) * Math.PI * 2 + 0.2, inr(0.85) * 0.68, 0.85));
   for (let i = 0; i < 4; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.5, 0.31, C[keys[(i + 1) % 3]], (i / 4) * Math.PI * 2 + 0.95, inr(1.6) * 0.64, 1.6));
-  for (let i = 0; i < 4; i++) screens.push(panel(i % 2 ? mathTex(i) : codeTex(i), 0.36, i % 2 ? 0.18 : 0.23, i % 2 ? 0xdce7ee : C.scripts, (i / 4) * Math.PI * 2 + 0.2, inr(2.25) * 0.6, 2.25, 0.95));
+  for (let i = 0; i < 4; i++) screens.push(panel(i % 2 ? mathTex(i) : codeTex(i), 0.36, i % 2 ? 0.18 : 0.23, i % 2 ? 0xdce7ee : C.scripts, (i / 4) * Math.PI * 2 + 0.2, inr(2.25) * 0.6, 2.25, 0.95, true));
   screens.slice(-4).forEach((g, i) => { if (i % 2) g.children[1].visible = false; }); // the maths floats free, with no frame
   // The helix: one clean glass ramp, two turns, narrowing with the walls, ending level at the VIP Room's floor.
   const VIP_Y = 3.0, VIP_R = 0.38, TURNS = 2, RAMP_Y0 = 0.35;
@@ -235,19 +246,38 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     pod.position.copy(P).setY(P.y + 0.045);
     tower.add(pod); pods.push(pod);
   }
-  // The VIP Room under the capstone (docs/world/BLUEPRINT.md): a round gold glass room where the helix ends,
-  // with the featured callers as three gold lights.
+  // The VIP Room fills the tip of the pyramid (the owner's concept board, 05-grand-hall-concepts.webp): a gold
+  // glass floor across the pyramid where the helix ends, the three glass walls above it lined with chart
+  // screens leaning with the walls, the beam rising through the middle into the crystal capstone, and the
+  // featured callers as three gold lights.
   const GOLD = 0xffd166;
   const vip = new THREE.Group();
   vip.position.y = VIP_Y;
   tower.add(vip);
-  const vipFloor = new THREE.Mesh(new THREE.CircleGeometry(VIP_R, 48), add(new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.14));
-  vipFloor.rotation.x = -Math.PI / 2;
-  vip.add(vipFloor);
-  for (const [y, o] of [[0, 1], [0.11, 0.6]]) { const rim = new THREE.Mesh(new THREE.TorusGeometry(VIP_R, 0.005, 6, 96), add(edgeMat(GOLD, 1), o)); rim.rotation.x = Math.PI / 2; rim.position.y = y; vip.add(rim); }
-  const vipWall = new THREE.Mesh(new THREE.CylinderGeometry(VIP_R, VIP_R, 0.11, 48, 1, true), add(new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.08));
-  vipWall.position.y = 0.055;
-  vip.add(vipWall);
+  const slice = y => keys.map(k => CORNERS[k].clone().multiplyScalar(1 - y / H).setY(y)); // the walls' triangle at height y
+  {
+    const T = slice(VIP_Y).map(v => v.setY(0));
+    const floorGeo = new THREE.BufferGeometry().setFromPoints(T); floorGeo.setIndex([0, 1, 2]);
+    vip.add(new THREE.Mesh(floorGeo, add(new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.12)));
+    vip.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(T), glassLine(GOLD, 1)));
+    // a gold ring where the helix arrives
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(VIP_R, 0.005, 6, 96), add(edgeMat(GOLD, 1), 0.8)); ring.rotation.x = Math.PI / 2; vip.add(ring);
+  }
+  // Chart screens on the walls of the tip, two to a wall, leaning with the glass.
+  keys.forEach((k, i) => {
+    const k2 = keys[(i + 1) % 3], A = CORNERS[k], B = CORNERS[k2];
+    const inward = new THREE.Vector3().subVectors(B, A).cross(new THREE.Vector3().subVectors(apex, A)).normalize();
+    if (inward.dot(A.clone().lerp(B, 0.5)) > 0) inward.negate();
+    for (const [f, y, w] of [[0.3, VIP_Y + 0.2, 1], [0.7, VIP_Y + 0.2, 1], [0.5, VIP_Y + 0.56, 0.62]]) { // two low, one higher up the narrowing wall
+      const P = A.clone().lerp(B, f).multiplyScalar(1 - y / H).setY(y).addScaledVector(inward, 0.03);
+      const g = new THREE.Group(), color = [GOLD, C[k], C[k2]][f < 0.5 ? 0 : f > 0.5 ? 1 + (i % 2) : 0];
+      g.add(new THREE.Mesh(new THREE.PlaneGeometry(0.36 * w, 0.24 * w), add(new THREE.MeshBasicMaterial({ map: chartTex(20 + i * 3 + Math.round(f * 4), color), transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 1)));
+      g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.36 * w, 0.24 * w)), glassLine(color, 0.9)));
+      g.position.copy(P).sub(new THREE.Vector3(0, VIP_Y, 0));
+      vip.add(g);
+      g.lookAt(P.clone().add(inward)); // facing into the room, leaning with the wall (world space, before the rise scales it)
+    }
+  });
   const featured = [0, 1, 2].map(i => {
     const f = new THREE.Sprite(add(new THREE.SpriteMaterial({ map: radial(), color: GOLD, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.95));
     const a = (i / 3) * Math.PI * 2 + 0.5; f.position.set(Math.cos(a) * 0.22, 0.07, Math.sin(a) * 0.22); f.scale.setScalar(0.12);
@@ -305,8 +335,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // (owner, 2026-10-18: "random light beams and some random sized dots with trails flying around like comets")
   const pick = () => palette[Math.floor(Math.random() * palette.length)];
   const beams = [];
-  for (let i = 0; i < (full ? 12 : phone ? 4 : 8); i++) {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 30, 10, 1, true), movingLight(pick(), 0.75));
+  for (let i = 0; i < (full ? 7 : phone ? 3 : 5); i++) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 30, 10, 1, true), movingLight(pick(), 0.6));
     m.userData = { born: 0, life: 0 };
     scene.add(m); beams.push(m);
   }
@@ -320,7 +350,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     m.material.uniforms.uSpeed.value = 0.25 + Math.random() * 0.5;
     Object.assign(m.userData, { born: time, life: 4 + Math.random() * 6 });
   }
-  const cometN = full ? 22 : phone ? 6 : 14, TRAIL = full ? 48 : phone ? 24 : 36;
+  const cometN = full ? 14 : phone ? 5 : 10, TRAIL = full ? 48 : phone ? 24 : 36;
   const comets = [];
   const cPos = new Float32Array(cometN * TRAIL * 3), cCol = new Float32Array(cometN * TRAIL * 3), cSize = new Float32Array(cometN * TRAIL);
   const cGeo = new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(cPos, 3)).setAttribute("color", new THREE.BufferAttribute(cCol, 3)).setAttribute("size", new THREE.BufferAttribute(cSize, 1));
@@ -340,24 +370,31 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // the sky, where it sends a pulse that lights up the dark (owner, 2026-10-18). It takes its corner's colour.
   const BASE_Y = 0.15; // the floor line from each corner to the centre, where the core sits
   function respawnComet(c, time) {
-    const k = Math.floor(Math.random() * 3), a0 = Math.random() * Math.PI * 2, r = 5 + Math.random() * 7;
-    const start = new THREE.Vector3(Math.cos(a0) * r, 0.8 + Math.random() * 5, Math.sin(a0) * r);
-    const corner = CORNERS[keys[k]].clone().setY(0.08);
-    // the way in curves round, swinging to one side and dipping down onto the corner
-    const ctrl = start.clone().lerp(corner, 0.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.6));
-    ctrl.y = Math.max(start.y, 1.2) + Math.random() * 1.5;
+    if (Math.random() < 0.4) { // some just circle the pyramid on a slow, tilted orbit and fade away
+      const tilt = (Math.random() - 0.5) * 0.9, spin = Math.random() * Math.PI * 2;
+      const u = new THREE.Vector3(Math.cos(spin), 0, Math.sin(spin)), v = new THREE.Vector3(-Math.sin(spin), 0, Math.cos(spin)).applyAxisAngle(u, tilt);
+      Object.assign(c, { orbit: true, born: time, life: 5 + Math.random() * 5, u, v, r: 4.5 + Math.random() * 5, y: 1 + Math.random() * 4, a0: Math.random() * Math.PI * 2,
+        speed: (Math.random() < 0.5 ? -1 : 1) * (0.22 + Math.random() * 0.25), start: true, fired: true, size: 0.05 + Math.random() ** 2 * 0.25, color: new THREE.Color(pick()) });
+      return;
+    }
+    c.orbit = false;
+    // It circles the pyramid on a spiral, round and in, and lands on its corner (the circling the owner liked).
+    const k = Math.floor(Math.random() * 3), corner = CORNERS[keys[k]].clone().setY(0.08);
+    const aK = Math.atan2(corner.z, corner.x), dir = Math.random() < 0.5 ? -1 : 1, turns = 0.6 + Math.random() * 1.2;
+    const start = { a: aK - dir * turns * Math.PI * 2, r: 5 + Math.random() * 7, y: 0.8 + Math.random() * 4.5 };
     Object.assign(c, {
-      born: time, tIn: 2.5 + Math.random() * 3, tBase: 0.9 + Math.random() * 0.6, vUp: 2.2 + Math.random() * 1.8, fired: false,
-      start, ctrl, corner, size: 0.06 + Math.random() ** 2 * 0.34,
+      born: time, tIn: 3.5 + Math.random() * 3.5, aK, tBase: 0.9 + Math.random() * 0.6, vUp: 2.2 + Math.random() * 1.8, fired: false,
+      start, corner, size: 0.06 + Math.random() ** 2 * 0.34,
       color: new THREE.Color(Math.random() < 0.25 ? 0xffffff : C[keys[k]]),
     });
   }
   const SKY = 40; // how far the laser reaches into the sky
   const centre = new THREE.Vector3(0, BASE_Y, 0);
   function cometAt(c, t, apexY, out) { // where comet c is t seconds after it was born
-    if (t < c.tIn) { // in to the corner, faster as it gets close
-      const u = (t / c.tIn) ** 1.3, v = 1 - u;
-      return out.copy(c.start).multiplyScalar(v * v).addScaledVector(c.ctrl, 2 * v * u).addScaledVector(c.corner, u * u);
+    if (c.orbit) { const a = c.a0 + t * c.speed; return out.copy(c.u).multiplyScalar(Math.cos(a) * c.r).addScaledVector(c.v, Math.sin(a) * c.r).setY(out.y + c.y); }
+    if (t < c.tIn) { // round and in, faster as it gets close, ending on the corner
+      const u = t / c.tIn, e = 1 - (1 - u) ** 1.6, a = c.start.a + (c.aK - c.start.a) * e, r = c.start.r + (R - c.start.r) * smooth(u);
+      return out.set(Math.cos(a) * r, c.start.y + (c.corner.y - c.start.y) * smooth(u), Math.sin(a) * r);
     }
     const tb = t - c.tIn;
     if (tb < c.tBase) return out.copy(c.corner).lerp(centre, smooth(tb / c.tBase)).setY(0.08 + (BASE_Y - 0.08) * (tb / c.tBase)); // along the floor to the centre
@@ -366,7 +403,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const t3 = t2 - tUp; // out of the capstone and up the laser
     return out.set(0, apexY + c.vUp * tUp * t3 + 10 * t3 * t3, 0);
   }
-  const lifeOf = (c, apexY) => c.tIn + c.tBase + Math.sqrt((2 * Math.max(0.1, apexY - BASE_Y)) / c.vUp) + 1.6;
+  const lifeOf = (c, apexY) => c.orbit ? c.life : c.tIn + c.tBase + Math.sqrt((2 * Math.max(0.1, apexY - BASE_Y)) / c.vUp) + 1.6;
   const cTmp = new THREE.Vector3();
   const pulses = new Array(8).fill(-100); let nextPulse = 0; // when each recent pulse left the capstone
   function moveLights(time, apexY) {
@@ -378,9 +415,9 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       m.material.uniforms.uTime.value = time;
     }
     comets.forEach((c, i) => {
-      if (!c.start || time - c.born > lifeOf(c, apexY)) { const first = !c.start; respawnComet(c, time); if (first) c.born -= Math.random() * c.tIn; }
+      if (!c.start || time - c.born > lifeOf(c, apexY)) { const first = !c.start; respawnComet(c, time); if (first) c.born -= Math.random() * (c.orbit ? c.life : c.tIn); }
       const t = time - c.born, life = lifeOf(c, apexY);
-      if (!c.fired && t > life - 1.6) { c.fired = true; pulses[nextPulse] = time; nextPulse = (nextPulse + 1) % pulses.length; }
+      if (!c.fired && !c.orbit && t > life - 1.6) { c.fired = true; pulses[nextPulse] = time; nextPulse = (nextPulse + 1) % pulses.length; }
       const fade = smooth(clamp01(t / 0.8)) * smooth(clamp01((life - t) / 0.8));
       for (let j = 0; j < TRAIL; j++) {
         const k = i * TRAIL + j;
@@ -438,9 +475,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     { at: 0.74, pos: new THREE.Vector3(0, 1.05, 0).addScaledVector(faceNormal, 1.15), look: new THREE.Vector3(0, 0.95, 0), up: new THREE.Vector3(0, 1, 0) },
     // then up beside the ramp, past the screens and pods, to the code and maths near the top
     { at: 0.88, pos: new THREE.Vector3(0, 1.8, 0).addScaledVector(faceNormal, 0.82), look: new THREE.Vector3(0, 2.0, 0).addScaledVector(faceNormal, -0.5).addScaledVector(side, 0.5), up: new THREE.Vector3(0, 1, 0) },
-    { at: 0.95, pos: new THREE.Vector3(0, 2.55, 0).addScaledVector(faceNormal, 0.85).addScaledVector(side, 0.15), look: new THREE.Vector3(0, VIP_Y, 0), up: new THREE.Vector3(0, 1, 0) },
-    // the end: just above the VIP Room under the capstone, looking down into it
-    { at: 1, pos: new THREE.Vector3(0, VIP_Y + 0.62, 0).addScaledVector(faceNormal, 0.95), look: new THREE.Vector3(0, VIP_Y + 0.02, 0), up: new THREE.Vector3(0, 1, 0) },
+    // at the top of the helix, into the centre beam and up it like a lift, through the gold floor...
+    { at: 0.94, pos: new THREE.Vector3(0, VIP_Y - 0.55, 0).addScaledVector(faceNormal, 0.16), look: new THREE.Vector3(0, VIP_Y + 0.3, 0).addScaledVector(faceNormal, -0.45), up: new THREE.Vector3(0, 1, 0) },
+    // ...and the end: standing in the VIP Room, looking up the tip: wall screens closing in on the crystal
+    { at: 1, pos: new THREE.Vector3(0, VIP_Y + 0.06, 0).addScaledVector(faceNormal, 0.3), look: new THREE.Vector3(0, H - 0.2, 0).addScaledVector(faceNormal, -0.06), up: new THREE.Vector3(0, 1, 0) },
   ];
   function shotAt(p) {
     let i = 0;
@@ -499,7 +537,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       m.quaternion.setFromUnitVectors(up, tmp.subVectors(B, A).normalize());
     }
     faces.scale.set(1, rise, 1); // edges are placed one by one, so they stay round while the faces stretch
-    cap.position.set(0, H * rise, 0); cap.rotation.y = time * 0.4;
+    cap.position.set(0, H * rise - 0.12, 0);
     capGlow.position.copy(cap.position); capGlow.material.opacity = 0.5 + 0.4 * Math.sin(time * 1.6) ** 2;
     // The floor inside comes up with the walls; the beam rises to the capstone.
     const inside = smooth(clamp01((p - 0.12) / 0.25));
@@ -547,7 +585,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     // Up close inside, the core's glow and the beams' haze would fill the screen: dim them as the camera nears.
     const near = clamp01((Math.hypot(camera.position.x, camera.position.z) - 0.35) / 1.6);
     core.material.opacity *= 0.25 + 0.75 * near; beamGlow.material.opacity *= near;
-    for (const m of [beam, beam2]) { const w = 0.45 + 0.55 * near; m.scale.x = m.scale.z = w; }
+    for (const m of [beam, beam2]) { const w = 0.2 + 0.8 * near; m.scale.x = m.scale.z = w; }
     renderer.render(scene, camera);
 
     if (fpsEl) { fpsAcc += dt; fpsN++; if (now - fpsAt > 500) { fpsEl.textContent = `${Math.round(fpsN / fpsAcc)} fps · ${level}`; fpsAcc = 0; fpsN = 0; fpsAt = now; } }
