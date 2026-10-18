@@ -37,7 +37,7 @@ Scrolling glides through these moments. Free flight is available at any time, wi
 | 1 | **Arrival** | The loading screen draws the triangle in engraved line art. Seen from above, it's the logo. |
 | 2 | **The rise** | Particles of light lift the triangle into the pyramid, and the camera eases down to the opening shot (from `inspiration/02`). The astronaut drifts past toward it. |
 | 3 | **Outside** | A slow, gentle pass showing the three corner landmarks and the billboard faces. |
-| 4 | **The portal** | The astronaut flies through a ring of light in the three colours and a short tunnel of glowing flower-of-life cells (from `inspiration/05`). We arrive in the Grand Hall. |
+| 4 | **The portal** | **A stargate of engraved line art** (owner, 2026-10-18, from the skull mandala in `inspiration/08`): concentric rings of ornament turning slowly in opposite directions in the three colours, which lock, fill with a rippling event horizon, and let us through. The astronaut flies through, then a short tunnel of glowing flower-of-life cells (from `inspiration/05`). We arrive in the Grand Hall. The same gate, smaller, is the transition between places. |
 | 5 | **The Grand Hall** | We land on the **balcony**, overlooking the battle (section 5). |
 | 6 | **The Helix** | A smooth lift up to the Helix balcony. Scrolling turns the Helix past a steady camera (section 4). |
 | 7 | **The Trade Floor** | A smooth lift to the peak, under the golden crown. The community space. |
@@ -224,7 +224,7 @@ Each step is its own pull request, tested, with the server update walked through
    - the page, device levels and the Quality switch;
    - the new **top bar and Menu**, with the applicant and admin buttons;
    - the complete 2D version with the live panels.
-3. **The 3D world, outside:** space, floor, the pyramid, the corners, the opening and the portal.
+3. **The 3D world, outside** (first version done 2026-10-18: `public/js/world3d.js`, three.js 0.169.0 in `public/vendor/`): space, the flower-of-life floor, the pyramid rising from the flat logo triangle, the corner landmarks, particles along the edges, the opening shot and the **stargate** on the front face (engraved rings turning, locking, and the event horizon opening). Loaded only above 2D; Auto drops to 2D if it runs slower than about 22 frames a second; `/world?fps` shows the frame rate.
 4. **The Grand Hall:** the clock, stations, stream walls, spotlight screen, balcony and the lock moment.
 5. **The Helix and the Trade Floor:** filtering, cards to profiles, the descent at battle start, and the astronaut.
 6. **Rich profiles,** using generated art first.

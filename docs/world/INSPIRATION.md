@@ -48,6 +48,11 @@ The intricate black-and-white line art in `08`: a skull mandala with ornate, eng
   - the public announcement art.
 - **In 3D:** line art glowing on the glass walls and faces. It's lines of light, which is exactly our look, and cheap to draw.
 - **Our own art only:** commissioned, or generated and then cleaned up, not copied from that site.
+- **Update 2026-10-18 (owner): use the design and its movement, and make it like a stargate when we enter somewhere, maybe for transitions too.** How we'll do it:
+  - **The stargate portal:** the way into each place is a ring of engraved line art: rings of fine ornament (the mandala's concentric bands, with D3MON's triangle and flower-of-life motifs instead of the skull's) that **turn slowly in opposite directions**, glowing in amber, blue and violet. As you arrive, the rings lock into place, a ripple of light fills the middle like a stargate's event horizon, and you pass through.
+  - **Transitions:** the same gate, smaller and quicker, between places (Outside → Grand Hall → Helix → VIP Room) and when a profile opens.
+  - **Movement:** slow and smooth, never fast spinning. Reduce motion shows the gate still and fades through it.
+  - The skull itself isn't copied: the D3MON emblem sits in the gate's centre where the skull would be.
 
 ### Profiles in the cinematic style (owner, 2026-10-16)
 

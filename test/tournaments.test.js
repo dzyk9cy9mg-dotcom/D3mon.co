@@ -487,10 +487,19 @@ describe("world: the page and a round's calls", () => {
   });
   after(() => srv.stop());
 
-  test("/world is served", async () => {
+  test("/world is served, with the 3D scene and the pinned three.js", async () => {
     const r = await guest.get("/world");
     assert.equal(r.status, 200);
     assert.match(r.text, /js\/world\.js/);
+    const scene = await guest.get("/js/world3d.js");
+    assert.equal(scene.status, 200);
+    assert.match(scene.headers.get("content-type"), /javascript/);
+    const three = scene.text.match(/from "\.\.\/vendor\/(three-[\d.]+\.module\.min\.js)"/);
+    assert.ok(three, "world3d.js imports the vendored three.js");
+    const lib = await guest.get(`/vendor/${three[1]}`);
+    assert.equal(lib.status, 200);
+    assert.match(lib.headers.get("content-type"), /javascript/);
+    assert.match(lib.text.slice(0, 300), /Three\.js Authors/);
   });
 
   test("a round's calls: bots shown at once, callers sealed until the close", async () => {
