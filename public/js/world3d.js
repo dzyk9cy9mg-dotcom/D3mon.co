@@ -123,20 +123,9 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const seamLines = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(seams, 3)),
     new THREE.LineBasicMaterial({ color: 0x9fc4e6, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false }));
   pyr.add(seamLines);
-  // The crystal capstone.
-  // The crystal capstone: a small glowing pyramid that is the very tip, lined up with the big one's corners.
-  const cap = new THREE.Group();
-  {
-    const geo = new THREE.ConeGeometry(0.3, 0.42, 3, 1);
-    cap.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xbfe0ff, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })));
-    cap.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })));
-    const heart = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: 0xffffff, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
-    heart.scale.setScalar(0.45); heart.position.y = -0.05; cap.add(heart);
-    cap.rotation.y = -Math.PI / 2 - Math.atan2(CORNERS.callers.z, CORNERS.callers.x) + Math.PI / 2; // a corner faces each of the three
-  }
   const capGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: 0x9fd0ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
   capGlow.scale.setScalar(2.2);
-  scene.add(cap, capGlow);
+  scene.add(capGlow);
 
   // ---------- inside: the trading floor ----------
   const hall = new THREE.Group();
@@ -206,16 +195,17 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const screens = [];
   // Chart screens in two rings, and code and maths for the chart scripts higher up: all kept well inside the
   // ramp, so nothing crosses it.
-  for (let i = 0; i < 6; i++) screens.push(panel(chartTex(i, C[keys[i % 3]]), 0.64, 0.4, C[keys[i % 3]], (i / 6) * Math.PI * 2 + 0.2, inr(0.85) * 0.68, 0.85));
-  for (let i = 0; i < 4; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.5, 0.31, C[keys[(i + 1) % 3]], (i / 4) * Math.PI * 2 + 0.95, inr(1.6) * 0.64, 1.6));
-  for (let i = 0; i < 4; i++) screens.push(panel(i % 2 ? mathTex(i) : codeTex(i), 0.36, i % 2 ? 0.18 : 0.23, i % 2 ? 0xdce7ee : C.scripts, (i / 4) * Math.PI * 2 + 0.2, inr(2.25) * 0.6, 2.25, 0.95, true));
-  screens.slice(-4).forEach((g, i) => { if (i % 2) g.children[1].visible = false; }); // the maths floats free, with no frame
-  // The helix: one clean glass ramp, two turns, narrowing with the walls, ending level at the VIP Room's floor.
+  for (let i = 0; i < 4; i++) screens.push(panel(chartTex(i, C[keys[i % 3]]), 0.7, 0.44, C[keys[i % 3]], (i / 4) * Math.PI * 2 + 0.4, inr(0.85) * 0.68, 0.85));
+  for (let i = 0; i < 3; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.52, 0.32, C[keys[(i + 1) % 3]], (i / 3) * Math.PI * 2 + 1.2, inr(1.6) * 0.64, 1.6));
+  for (let i = 0; i < 2; i++) screens.push(panel(i % 2 ? mathTex(i) : codeTex(i), 0.38, i % 2 ? 0.19 : 0.25, i % 2 ? 0xdce7ee : C.scripts, i * Math.PI + 0.6, inr(2.25) * 0.6, 2.25, 0.95, true));
+  screens.slice(-2).forEach((g, i) => { if (i % 2) g.children[1].visible = false; }); // the maths floats free, with no frame
+  // The helix: one clean glass ramp, two turns, narrowing with the walls. It levels off near the top and runs
+  // onto a full gold landing ring around the foot of the crystal capstone, so it finishes, not stops.
   const VIP_Y = 3.0, VIP_R = 0.38, TURNS = 2, RAMP_Y0 = 0.35;
   const rampW = y => 0.05 + 0.07 * (inr(y) / 1.4);
   const rampAt = (t, side = 0) => {
-    const y = RAMP_Y0 + (VIP_Y - RAMP_Y0) * t, a = t * TURNS * Math.PI * 2;
-    const r = VIP_R + rampW(VIP_Y) / 2 + (inr(y) * 0.94 - VIP_R - rampW(VIP_Y) / 2) * (1 - t) ** 0.9 + side * rampW(y); // meets the room's edge exactly
+    const y = RAMP_Y0 + (VIP_Y - RAMP_Y0) * (1 - (1 - t) ** 1.6), a = t * TURNS * Math.PI * 2; // level at the top
+    const r = VIP_R + (inr(y) * 0.94 - VIP_R) * (1 - t) ** 0.9 + side * rampW(y); // its middle meets the landing ring
     return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
   };
   {
@@ -228,6 +218,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const deck = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); deck.setIndex(idx);
     tower.add(new THREE.Mesh(deck, add(new THREE.MeshBasicMaterial({ color: 0x8fc4ff, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.1)));
     for (const e of [edgeIn, edgeOut]) tower.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(e), glassLine(0x9fd0ff, 0.75)));
+  }
+  {
+    const w = rampW(VIP_Y), land = new THREE.Mesh(new THREE.RingGeometry(VIP_R - w / 2, VIP_R + w / 2, 96), add(new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.16));
+    land.rotation.x = -Math.PI / 2; land.position.y = VIP_Y; tower.add(land);
+    for (const r of [VIP_R - w / 2, VIP_R + w / 2]) { const e = new THREE.Mesh(new THREE.TorusGeometry(r, 0.004, 6, 128), add(edgeMat(0xffd166, 1), 0.9)); e.rotation.x = Math.PI / 2; e.position.y = VIP_Y; tower.add(e); }
   }
   // Lights walking up the helix: the people rising toward the VIP Room.
   const walkN = full ? 40 : phone ? 12 : 24, walkPos = new Float32Array(walkN * 3), walkT = Array.from({ length: walkN }, () => Math.random());
@@ -246,38 +241,33 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     pod.position.copy(P).setY(P.y + 0.045);
     tower.add(pod); pods.push(pod);
   }
-  // The VIP Room fills the tip of the pyramid (the owner's concept board, 05-grand-hall-concepts.webp): a gold
-  // glass floor across the pyramid where the helix ends, the three glass walls above it lined with chart
-  // screens leaning with the walls, the beam rising through the middle into the crystal capstone, and the
-  // featured callers as three gold lights.
+  // The VIP Room is the crystal capstone: the whole tip of the pyramid above the landing, built from the
+  // pyramid's own corners so it's perfectly straight, glowing brighter toward the top, with the featured
+  // callers as three gold lights inside. No screens up here: it stays clean (owner, 2026-10-18).
   const GOLD = 0xffd166;
   const vip = new THREE.Group();
   vip.position.y = VIP_Y;
   tower.add(vip);
   const slice = y => keys.map(k => CORNERS[k].clone().multiplyScalar(1 - y / H).setY(y)); // the walls' triangle at height y
+  const capstone = new THREE.Group(); // in world space, stretched with the rise like the walls
+  scene.add(capstone);
   {
-    const T = slice(VIP_Y).map(v => v.setY(0));
-    const floorGeo = new THREE.BufferGeometry().setFromPoints(T); floorGeo.setIndex([0, 1, 2]);
-    vip.add(new THREE.Mesh(floorGeo, add(new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.12)));
-    vip.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(T), glassLine(GOLD, 1)));
-    // a gold ring where the helix arrives
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(VIP_R, 0.005, 6, 96), add(edgeMat(GOLD, 1), 0.8)); ring.rotation.x = Math.PI / 2; vip.add(ring);
-  }
-  // Chart screens on the walls of the tip, two to a wall, leaning with the glass.
-  keys.forEach((k, i) => {
-    const k2 = keys[(i + 1) % 3], A = CORNERS[k], B = CORNERS[k2];
-    const inward = new THREE.Vector3().subVectors(B, A).cross(new THREE.Vector3().subVectors(apex, A)).normalize();
-    if (inward.dot(A.clone().lerp(B, 0.5)) > 0) inward.negate();
-    for (const [f, y, w] of [[0.3, VIP_Y + 0.2, 1], [0.7, VIP_Y + 0.2, 1], [0.5, VIP_Y + 0.56, 0.62]]) { // two low, one higher up the narrowing wall
-      const P = A.clone().lerp(B, f).multiplyScalar(1 - y / H).setY(y).addScaledVector(inward, 0.03);
-      const g = new THREE.Group(), color = [GOLD, C[k], C[k2]][f < 0.5 ? 0 : f > 0.5 ? 1 + (i % 2) : 0];
-      g.add(new THREE.Mesh(new THREE.PlaneGeometry(0.36 * w, 0.24 * w), add(new THREE.MeshBasicMaterial({ map: chartTex(20 + i * 3 + Math.round(f * 4), color), transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 1)));
-      g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.36 * w, 0.24 * w)), glassLine(color, 0.9)));
-      g.position.copy(P).sub(new THREE.Vector3(0, VIP_Y, 0));
-      vip.add(g);
-      g.lookAt(P.clone().add(inward)); // facing into the room, leaning with the wall (world space, before the rise scales it)
+    const T = slice(VIP_Y), top = apex.clone(), pos = [], col = [], low = new THREE.Color(0x3d6a9a), high = new THREE.Color(0xf2f8ff);
+    for (let i = 0; i < 3; i++) { const A = T[i], B = T[(i + 1) % 3]; pos.push(...A.toArray(), ...B.toArray(), ...top.toArray()); col.push(low.r, low.g, low.b, low.r, low.g, low.b, high.r, high.g, high.b); }
+    pos.push(...T[0].toArray(), ...T[1].toArray(), ...T[2].toArray()); col.push(...Array(3).fill([0.35, 0.3, 0.12]).flat()); // its gold base, the room's floor
+    const geo = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)).setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+    capstone.add(new THREE.Mesh(geo, add(new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.28)));
+    const lines = [];
+    for (let i = 0; i < 3; i++) {
+      const A = T[i], B = T[(i + 1) % 3], M = A.clone().lerp(B, 0.5);
+      lines.push(...A.toArray(), ...B.toArray(), ...A.toArray(), ...top.toArray()); // its base and edges
+      lines.push(...M.toArray(), ...top.toArray()); // a facet line up the middle of each face
     }
-  });
+    capstone.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(lines, 3)), glassLine(0xffffff, 0.9)));
+    const heart = new THREE.Sprite(add(new THREE.SpriteMaterial({ map: radial(), color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.55));
+    heart.position.set(0, VIP_Y + (H - VIP_Y) * 0.4, 0); heart.scale.setScalar(0.5);
+    capstone.add(heart);
+  }
   const featured = [0, 1, 2].map(i => {
     const f = new THREE.Sprite(add(new THREE.SpriteMaterial({ map: radial(), color: GOLD, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.95));
     const a = (i / 3) * Math.PI * 2 + 0.5; f.position.set(Math.cos(a) * 0.22, 0.07, Math.sin(a) * 0.22); f.scale.setScalar(0.12);
@@ -475,10 +465,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     { at: 0.74, pos: new THREE.Vector3(0, 1.05, 0).addScaledVector(faceNormal, 1.15), look: new THREE.Vector3(0, 0.95, 0), up: new THREE.Vector3(0, 1, 0) },
     // then up beside the ramp, past the screens and pods, to the code and maths near the top
     { at: 0.88, pos: new THREE.Vector3(0, 1.8, 0).addScaledVector(faceNormal, 0.82), look: new THREE.Vector3(0, 2.0, 0).addScaledVector(faceNormal, -0.5).addScaledVector(side, 0.5), up: new THREE.Vector3(0, 1, 0) },
-    // at the top of the helix, into the centre beam and up it like a lift, through the gold floor...
-    { at: 0.94, pos: new THREE.Vector3(0, VIP_Y - 0.55, 0).addScaledVector(faceNormal, 0.16), look: new THREE.Vector3(0, VIP_Y + 0.3, 0).addScaledVector(faceNormal, -0.45), up: new THREE.Vector3(0, 1, 0) },
-    // ...and the end: standing in the VIP Room, looking up the tip: wall screens closing in on the crystal
-    { at: 1, pos: new THREE.Vector3(0, VIP_Y + 0.06, 0).addScaledVector(faceNormal, 0.3), look: new THREE.Vector3(0, H - 0.2, 0).addScaledVector(faceNormal, -0.06), up: new THREE.Vector3(0, 1, 0) },
+    // at the top of the helix, into the centre beam and up it like a lift, under the crystal...
+    { at: 0.94, pos: new THREE.Vector3(0, VIP_Y - 0.5, 0).addScaledVector(faceNormal, 0.16), look: new THREE.Vector3(0, VIP_Y + 0.4, 0).addScaledVector(faceNormal, -0.4), up: new THREE.Vector3(0, 1, 0) },
+    // ...then out through the glass to the end: the crystal capstone, the VIP Room, whole and glowing
+    { at: 1, pos: new THREE.Vector3(0, VIP_Y + 0.35, 0).addScaledVector(faceNormal, 2.7).addScaledVector(side, 0.6), look: new THREE.Vector3(0, VIP_Y + 0.6, 0), up: new THREE.Vector3(0, 1, 0) },
   ];
   function shotAt(p) {
     let i = 0;
@@ -537,14 +527,14 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       m.quaternion.setFromUnitVectors(up, tmp.subVectors(B, A).normalize());
     }
     faces.scale.set(1, rise, 1); // edges are placed one by one, so they stay round while the faces stretch
-    cap.position.set(0, H * rise - 0.12, 0);
-    capGlow.position.copy(cap.position); capGlow.material.opacity = 0.5 + 0.4 * Math.sin(time * 1.6) ** 2;
+    capGlow.position.set(0, H * rise, 0); capGlow.material.opacity = 0.35 + 0.25 * Math.sin(time * 1.6) ** 2;
     // The floor inside comes up with the walls; the beam rises to the capstone.
     const inside = smooth(clamp01((p - 0.12) / 0.25));
     hall.scale.set(1, Math.max(0.001, rise), 1);
     hall.visible = inside > 0.01;
     tower.visible = inside > 0.01;
     tower.scale.set(1, Math.max(0.001, rise), 1);
+    capstone.scale.set(1, Math.max(0.001, rise), 1); capstone.visible = inside > 0.01;
     for (const [m, o] of fades) m.opacity = o * inside;
     const bob = reducedMotion ? 0 : 1;
     screens.forEach((g, i) => { g.position.y = g.userData.y + Math.sin(time * 0.6 + i) * 0.02 * bob; });
