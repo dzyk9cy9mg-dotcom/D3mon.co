@@ -195,10 +195,107 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const screens = [];
   // Chart screens in two rings, and code and maths for the chart scripts higher up: all kept well inside the
   // ramp, so nothing crosses it.
-  for (let i = 0; i < 4; i++) screens.push(panel(chartTex(i, C[keys[i % 3]]), 0.7, 0.44, C[keys[i % 3]], (i / 4) * Math.PI * 2 + 0.4, inr(0.85) * 0.68, 0.85));
+  // The lower ring is the Grand Hall's live screens (below); the rest are charts.
   for (let i = 0; i < 3; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.52, 0.32, C[keys[(i + 1) % 3]], (i / 3) * Math.PI * 2 + 1.2, inr(1.6) * 0.64, 1.6));
   for (let i = 0; i < 2; i++) screens.push(panel(i % 2 ? mathTex(i) : codeTex(i), 0.38, i % 2 ? 0.19 : 0.25, i % 2 ? 0xdce7ee : C.scripts, i * Math.PI + 0.6, inr(2.25) * 0.6, 2.25, 0.95, true));
   screens.slice(-2).forEach((g, i) => { if (i % 2) g.children[1].visible = false; }); // the maths floats free, with no frame
+  // ---------- the Grand Hall's live screens: the everyday trading room (docs/world/SITEMAP.md) ----------
+  // This round with its clock and every call as it arrives, the tournament standings, the last round's result,
+  // and the place kept for the Demon Discord, which becomes the hall's chat and voice. world.js hands the data
+  // in with hall(); the ring of ticks is the round clock and the spokes are this round's calls.
+  const live = { calls: null, prev: null, standings: null, rounds: [], serverNow: () => Date.now() };
+  const Q = 15 * 60000, hhmm = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const hex = c => "#" + c.toString(16).padStart(6, "0"), KIND = { caller: C.callers, bot: C.bots, script: C.scripts };
+  const UP = "#37e08a", DOWN = "#ff4d5e", INK = "#dce7ee", DIM = "#8aa0b4";
+  const FONT = '"Share Tech Mono", ui-monospace, monospace', HEAD = 'Orbitron, "Share Tech Mono", sans-serif';
+  const clip = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
+  function liveScreen(color, at, draw) {
+    const cv = document.createElement("canvas"); cv.width = 512; cv.height = 320;
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    panel(tex, 0.5, 0.3125, color, at, inr(0.85) * 0.68, 0.85, 1, true);
+    const sc = { redraw() {
+      const g = cv.getContext("2d");
+      g.clearRect(0, 0, 512, 320); g.fillStyle = "rgba(24,46,72,0.62)"; g.fillRect(0, 0, 512, 320);
+      g.fillStyle = hex(color); g.fillRect(0, 0, 512, 4);
+      draw(g); tex.needsUpdate = true;
+    } };
+    sc.redraw();
+    return sc;
+  }
+  const title = (g, text, sub) => { g.fillStyle = INK; g.font = `700 24px ${HEAD}`; g.fillText(text, 22, 42); if (sub) { g.fillStyle = DIM; g.font = `18px ${FONT}`; g.fillText(sub, 22, 68); } };
+  const arrow = d => (d === "up" ? "▲" : "▼");
+  const FRONT = Math.PI / 2; // they form a curved wall facing the way in, so they're read on the way in
+  const roundScreen = liveScreen(C.callers, FRONT + 0.32, g => {
+    const now = live.serverNow(), cur = Math.floor(now / Q) * Q, left = Math.max(0, cur + Q - now);
+    title(g, "THIS ROUND", `${hhmm(cur)}–${hhmm(cur + Q)} · Bitcoin up or down`);
+    g.fillStyle = INK; g.font = `700 40px ${FONT}`; g.textAlign = "right";
+    g.fillText(`${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, "0")}`, 490, 50); g.textAlign = "left";
+    const calls = (live.calls?.round === cur ? live.calls.calls : []).slice(0, 6);
+    g.font = `22px ${FONT}`;
+    if (!calls.length) { g.fillStyle = DIM; g.fillText("No calls yet this round.", 22, 120); return; }
+    calls.forEach((c, i) => {
+      const y = 112 + i * 34;
+      g.fillStyle = c.sealed ? INK : c.direction === "up" ? UP : DOWN; g.fillText(c.sealed ? "●" : arrow(c.direction), 22, y);
+      g.fillStyle = hex(KIND[c.kind] || C.bots); g.fillText(clip(c.name || "?", 18), 56, y);
+      g.fillStyle = DIM; g.textAlign = "right";
+      g.fillText(c.sealed ? "sealed" : c.price ? `@${Math.round(c.price.paid * 100)}¢` : "", 490, y); g.textAlign = "left";
+    });
+  });
+  const standingsScreen = liveScreen(C.bots, FRONT - 0.32, g => {
+    const t = live.standings;
+    title(g, "TOURNAMENT", t ? clip(t.title, 34) : "Loading…");
+    const rows = (t?.standings || []).slice(0, 6);
+    g.font = `22px ${FONT}`;
+    if (t && !rows.length) { g.fillStyle = DIM; g.fillText("No bots in it yet.", 22, 120); }
+    rows.forEach((r, i) => {
+      const y = 112 + i * 32;
+      g.fillStyle = r.rank === 1 ? hex(C.callers) : DIM; g.fillText(String(r.rank).padStart(2, " "), 22, y);
+      g.fillStyle = INK; g.fillText(clip(r.entrant.name, 17), 66, y);
+      g.textAlign = "right"; g.fillStyle = INK; g.fillText(`${r.correct} right`, 400, y);
+      g.fillStyle = DIM; g.fillText(r.accuracy === null ? "–" : `${Math.round(r.accuracy * 100)}%`, 490, y); g.textAlign = "left";
+    });
+    g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Not financial advice. D3MON never trades.", 22, 306);
+  });
+  const lastScreen = liveScreen(C.scripts, FRONT + 0.96, g => {
+    const p = live.prev;
+    title(g, "LAST ROUND", p ? `${hhmm(p.round)}–${hhmm(p.round + Q)}` : "");
+    if (!p) return;
+    if (!p.result) { g.fillStyle = DIM; g.font = `24px ${FONT}`; g.fillText("Waiting for Kalshi's result…", 22, 130); return; }
+    g.fillStyle = p.result === "up" ? UP : DOWN; g.font = `700 46px ${HEAD}`; g.fillText(`${arrow(p.result)} ${p.result.toUpperCase()}`, 22, 140);
+    const right = p.calls.filter(c => c.correct === true).length, wrong = p.calls.filter(c => c.correct === false).length;
+    g.fillStyle = INK; g.font = `24px ${FONT}`; g.fillText(`${right} right · ${wrong} wrong`, 22, 190);
+    const best = p.calls.filter(c => c.paperPerContract !== undefined).sort((a, b) => b.paperPerContract - a.paperPerContract)[0];
+    if (best && best.paperPerContract > 0) { g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText(`Best on paper: ${clip(best.name, 16)} +${Math.round(best.paperPerContract * 100)}¢ per $1`, 22, 236); }
+    g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Settled by Kalshi. Paper results only.", 22, 306);
+  });
+  liveScreen(0x5865f2, FRONT - 0.96, g => {
+    title(g, "DEMON DISCORD", "The Grand Hall's chat and voice");
+    g.fillStyle = INK; g.font = `24px ${FONT}`; g.fillText("Talk with everyone trading", 22, 140); g.fillText("the rounds, right here.", 22, 172);
+    g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText("Coming soon, mirrored with the Discord.", 22, 236);
+  });
+  const liveScreens = [roundScreen, standingsScreen, lastScreen];
+  try { document.fonts?.ready.then(() => liveScreens.forEach(x => x.redraw())); } catch (e) {}
+  const GREY = new THREE.Color(0x2a3a4c), WHITE = new THREE.Color(0xffffff), GREEN = new THREE.Color(0x37e08a), RED = new THREE.Color(0xff4d5e);
+  function hallData(d) {
+    Object.assign(live, d);
+    liveScreens.forEach(x => x.redraw());
+    // The ring of ticks is the round clock: the last 72 rounds (18 hours), green up and red down, the round now in white.
+    const cur = Math.floor(live.serverNow() / Q) * Q, by = new Map((live.rounds || []).map(r => [r.round, r.result]));
+    ticks.forEach((t, i) => {
+      const round = cur - (ticks.length - 1 - i) * Q, res = round === cur ? "now" : by.get(round);
+      t.material.color.copy(res === "now" ? WHITE : res === "up" ? GREEN : res === "down" ? RED : GREY);
+      t.userData.on = res ? 1 : 0.35;
+    });
+    // The spokes are this round's calls streaming into the core: the caller, bot or script's colour at the
+    // end, the line green or red by the call (white while a caller's is sealed). Unused ones go dim.
+    const calls = live.calls?.round === cur ? live.calls.calls : [];
+    nodes.forEach((n, i) => {
+      const c = calls[i];
+      n.userData.on = c ? 1 : 0.12; spokes[i].userData.on = c ? 1 : 0.1;
+      if (c) { n.material.color.set(KIND[c.kind] || C.bots); spokes[i].material.color.copy(c.sealed ? WHITE : c.direction === "up" ? GREEN : RED); }
+    });
+  }
+
   // The helix: one clean glass ramp, two turns, narrowing with the walls. It levels off near the top and runs
   // onto a full gold landing ring around the foot of the crystal capstone, so it finishes, not stops.
   const VIP_Y = 3.0, VIP_R = 0.38, TURNS = 2, RAMP_Y0 = 0.35;
@@ -462,7 +559,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     { at: 0, pos: new THREE.Vector3(0, 15.5, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
     { at: 0.3, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
     { at: 0.56, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
-    { at: 0.74, pos: new THREE.Vector3(0, 1.05, 0).addScaledVector(faceNormal, 1.15), look: new THREE.Vector3(0, 0.95, 0), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.74, pos: new THREE.Vector3(0, 0.95, 0).addScaledVector(faceNormal, 2.0), look: new THREE.Vector3(0, 0.85, 0), // facing the hall's live screens
+       up: new THREE.Vector3(0, 1, 0) },
     // then up beside the ramp, past the screens and pods, to the code and maths near the top
     { at: 0.88, pos: new THREE.Vector3(0, 1.8, 0).addScaledVector(faceNormal, 0.82), look: new THREE.Vector3(0, 2.0, 0).addScaledVector(faceNormal, -0.5).addScaledVector(side, 0.5), up: new THREE.Vector3(0, 1, 0) },
     // at the top of the helix, into the centre beam and up it like a lift, under the crystal...
@@ -505,6 +603,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   if (showFps) { fpsEl = document.createElement("div"); fpsEl.className = "w3d-fps"; document.body.append(fpsEl); }
   const tmp = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), clock = new THREE.Clock();
   let raf = 0, last = performance.now(), frames = [], judged = false, started = performance.now(), fpsAcc = 0, fpsN = 0, fpsAt = last;
+  let clockAt = 0;
   const minFrame = full ? 0 : 1000 / 40; // Lite caps at about 40 frames a second
   function frame(now) {
     raf = requestAnimationFrame(frame);
@@ -543,9 +642,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     walkers.geometry.attributes.position.needsUpdate = true;
     featured.forEach((f, i) => { f.material.opacity = inside * (0.7 + 0.3 * Math.sin(time * 1.8 + i * 2.1)); });
     core.material.opacity = inside * (0.8 + 0.2 * Math.sin(time * 3));
-    ticks.forEach((t, i) => { t.material.opacity = inside * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(time * 1.4 - i * 0.35))); });
-    spokes.forEach((l, i) => { l.material.opacity = inside * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 2 + i * 1.3))); });
-    nodes.forEach((n, i) => { n.material.opacity = inside * (0.6 + 0.4 * Math.sin(time * 2 + i * 1.3)); });
+    ticks.forEach((t, i) => { t.material.opacity = inside * (t.userData.on ?? 1) * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(time * 1.4 - i * 0.35))); });
+    spokes.forEach((l, i) => { l.material.opacity = inside * (l.userData.on ?? 1) * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 2 + i * 1.3))); });
+    nodes.forEach((n, i) => { n.material.opacity = inside * (n.userData.on ?? 1) * (0.6 + 0.4 * Math.sin(time * 2 + i * 1.3)); });
+    if (inside > 0.01 && time - clockAt >= 1) { clockAt = time; roundScreen.redraw(); } // the round clock ticks
     const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
     for (const m of [beam, beamGlow, beam2]) { m.scale.set(1, beamLen, 1); m.position.set(m === beam2 ? 0.05 : 0, 0.15 + beamLen / 2, m === beam2 ? 0.03 : 0); }
     beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
@@ -589,6 +689,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   raf = requestAnimationFrame(frame);
 
   return {
+    hall: hallData,
     stop() {
       cancelAnimationFrame(raf);
       removeEventListener("scroll", readScroll);
