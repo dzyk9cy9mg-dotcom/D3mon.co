@@ -3,7 +3,8 @@
 //   0.00  overhead, the pyramid flat on the floor: seen from above it's the D3MON logo
 //   0.35  the triangle has risen into the pyramid, particles lifting with it
 //   0.70  the opening shot, low and in front
-//   1.00  at the stargate on the front face: its rings lock, the event horizon fills, and we pass through
+//   1.00  at the stargate in the centre of the pyramid, around the golden beam: its rings lock, the event
+//         horizon fills, and we pass through
 // The look follows the owner's concept board (docs/world/inspiration/05-grand-hall-concepts.webp): clear glass
 // walls, and inside them the trading floor: a glass walkway ring, a ring of up and down ticks, the calls
 // streaming into a bright core, the golden beam up to the capstone, and glass screens with charts.
@@ -42,22 +43,23 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     scene.add(l);
   }
 
-  // ---------- floor: the flower of life, fading out into the dark ----------
+  // ---------- floor: the main page's own Flower of Life (d3mon.css --fol), fading out into the dark ----------
+  // Seen from overhead it matches the main page's background; as the camera tilts it becomes the floor.
+  // On arrival it forms, spreading out from the pyramid.
+  const TILE = 0.84; // one 52 x 90 tile in world units: from the overhead shot it's the main page's size
   const floorTex = (() => {
-    const s = 512, cv = document.createElement("canvas");
-    cv.width = cv.height = s;
-    const g = cv.getContext("2d");
-    g.strokeStyle = "rgba(77,163,255,0.55)";
-    g.lineWidth = 1.2;
-    const r = s / 4;
-    for (let row = -1; row <= 5; row++) for (let col = -1; col <= 5; col++) {
-      const x = col * r + (row % 2 ? r / 2 : 0), y = row * r * Math.sqrt(3) / 2;
-      g.beginPath(); g.arc(x, y, r / 2, 0, Math.PI * 2); g.stroke();
-    }
+    const cv = document.createElement("canvas");
+    cv.width = 52 * 4; cv.height = 90 * 4;
     const t = new THREE.CanvasTexture(cv);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(36, 36);
-    t.anisotropy = 4;
+    t.repeat.set(200 / TILE, 200 / (TILE * 90 / 52));
+    t.anisotropy = 8;
+    const m = getComputedStyle(document.documentElement).getPropertyValue("--fol").trim().match(/^url\(["']?(.*?)["']?\)$/s);
+    if (m) {
+      const im = new Image();
+      im.onload = () => { const g = cv.getContext("2d"); g.drawImage(im, 0, 0, cv.width, cv.height); t.needsUpdate = true; };
+      im.src = m[1].replace(/stroke-opacity='[.0-9]+'/g, "stroke-opacity='.9'");
+    }
     return t;
   })();
   const floorFade = (() => {
@@ -66,12 +68,19 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const g = cv.getContext("2d"), grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
     grd.addColorStop(0, "#fff"); grd.addColorStop(0.35, "#888"); grd.addColorStop(1, "#000");
     g.fillStyle = grd; g.fillRect(0, 0, s, s);
-    return new THREE.CanvasTexture(cv);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    return t;
   })();
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(100, 96), new THREE.MeshBasicMaterial({ map: floorTex, alphaMap: floorFade, transparent: true, opacity: 0.3, depthWrite: false }));
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(100, 96), new THREE.MeshBasicMaterial({ map: floorTex, alphaMap: floorFade, transparent: true, opacity: 0.13, depthWrite: false }));
+  const formFloor = time => { // the mask grows from a speck to the whole floor in the first seconds
+    const k = reducedMotion ? 1 : 0.02 + 0.98 * smooth(clamp01(time / 3.5)), r = 1 / k;
+    floorFade.repeat.set(r, r); floorFade.offset.set(0.5 - 0.5 * r, 0.5 - 0.5 * r);
+  };
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
-  const glow = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshBasicMaterial({ color: C.bots, transparent: true, opacity: 0.06, depthWrite: false, blending: THREE.AdditiveBlending }));
+  // The light around the pyramid fades softly into the dark, with no edge (owner, 2026-10-18).
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(26, 26), new THREE.MeshBasicMaterial({ map: radial(), color: 0x4d8fd6, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending }));
   glow.rotation.x = -Math.PI / 2; glow.position.y = 0.01;
   scene.add(glow);
 
@@ -206,12 +215,86 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const flow = new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: full ? 0.07 : 0.09, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, map: radial(), alphaTest: 0.01 }));
   scene.add(flow);
 
+  // ---------- moving light: random beams rising in the dark, and comets flying around ----------
+  // (owner, 2026-10-18: "random light beams and some random sized dots with trails flying around like comets")
+  const palette = [C.callers, C.bots, C.scripts, 0xffffff];
+  const pick = () => palette[Math.floor(Math.random() * palette.length)];
+  const beams = [];
+  for (let i = 0; i < (full ? 12 : phone ? 4 : 8); i++) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 30, 10, 1, true), movingLight(pick(), 0.75));
+    m.userData = { born: 0, life: 0 };
+    scene.add(m); beams.push(m);
+  }
+  function respawnBeam(m, time) {
+    const a = Math.random() * Math.PI * 2, d = 4 + Math.random() * 9, w = 0.012 + Math.random() * 0.05;
+    m.position.set(Math.cos(a) * d, 15, Math.sin(a) * d);
+    m.scale.set(w, 1, w);
+    m.material.uniforms.uColor.value.set(pick());
+    m.material.uniforms.uSpeed.value = 0.25 + Math.random() * 0.5;
+    Object.assign(m.userData, { born: time, life: 4 + Math.random() * 6 });
+  }
+  const cometN = full ? 22 : phone ? 6 : 14, TRAIL = full ? 48 : phone ? 24 : 36;
+  const comets = [];
+  const cPos = new Float32Array(cometN * TRAIL * 3), cCol = new Float32Array(cometN * TRAIL * 3), cSize = new Float32Array(cometN * TRAIL);
+  const cGeo = new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(cPos, 3)).setAttribute("color", new THREE.BufferAttribute(cCol, 3)).setAttribute("size", new THREE.BufferAttribute(cSize, 1));
+  const cometPoints = new THREE.Points(cGeo, new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true,
+    uniforms: { uScale: { value: 300 } },
+    vertexShader: `attribute float size; varying vec3 vColor; uniform float uScale;
+      void main(){ vColor = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * uScale / -mv.z; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying vec3 vColor;
+      void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float a = smoothstep(1.0, 0.0, d); gl_FragColor = vec4(vColor * (a * a + a * 0.3), 1.0); }`,
+  }));
+  cometPoints.frustumCulled = false;
+  scene.add(cometPoints);
+  for (let i = 0; i < cometN; i++) comets.push({ born: 0, life: 0 });
+  function respawnComet(c, time) {
+    // An orbit around the pyramid, tilted at random, travelled for part of a turn.
+    const tilt = (Math.random() - 0.5) * 1.1, spin = Math.random() * Math.PI * 2;
+    const u = new THREE.Vector3(Math.cos(spin), 0, Math.sin(spin));
+    const v = new THREE.Vector3(-Math.sin(spin), 0, Math.cos(spin)).applyAxisAngle(u, tilt);
+    Object.assign(c, {
+      born: time, life: 3 + Math.random() * 5, u, v,
+      r: 3.6 + Math.random() * 6, y: 0.8 + Math.random() * 4.5, a0: Math.random() * Math.PI * 2,
+      speed: (Math.random() < 0.5 ? -1 : 1) * (0.25 + Math.random() * 0.45),
+      size: 0.06 + Math.random() ** 2 * 0.34, color: new THREE.Color(pick()),
+    });
+  }
+  const cTmp = new THREE.Vector3();
+  function moveLights(time) {
+    for (const m of beams) {
+      const d = m.userData, age = time - d.born;
+      if (age > d.life) { const first = !d.life; respawnBeam(m, time); if (first) d.born -= Math.random() * d.life; continue; } // the first ones start part-way, so they don't all appear at once
+      const fade = smooth(clamp01(age / 1.2)) * smooth(clamp01((d.life - age) / 1.2));
+      m.material.uniforms.uOn.value = d.life ? fade : 0;
+      m.material.uniforms.uTime.value = time;
+    }
+    comets.forEach((c, i) => {
+      const age = time - c.born;
+      if (age > c.life || !c.u) { const first = !c.u; respawnComet(c, time); if (first) c.born -= Math.random() * c.life; }
+      const ageNow = time - c.born;
+      const fade = smooth(clamp01(ageNow / 0.8)) * smooth(clamp01((c.life - ageNow) / 0.8));
+      for (let j = 0; j < TRAIL; j++) {
+        const a = c.a0 + (ageNow - j * 0.02) * c.speed, k = (i * TRAIL + j);
+        cTmp.copy(c.u).multiplyScalar(Math.cos(a) * c.r).addScaledVector(c.v, Math.sin(a) * c.r);
+        cPos.set([cTmp.x, cTmp.y + c.y, cTmp.z], k * 3);
+        const f = 1 - j / TRAIL, glow = fade * f * f * (j === 0 ? 1.6 : 1);
+        cCol.set([c.color.r * glow, c.color.g * glow, c.color.b * glow], k * 3);
+        cSize[k] = c.size * (j === 0 ? 1 : 0.25 + 0.6 * f);
+      }
+    });
+    cGeo.attributes.position.needsUpdate = cGeo.attributes.color.needsUpdate = cGeo.attributes.size.needsUpdate = true;
+  }
+  if (reducedMotion) cometPoints.visible = false; // still beams only, no flying lights
+
   // ---------- the stargate on the front face ----------
   const front = { a: CORNERS.bots, b: CORNERS.scripts };
-  const gateCentre = new THREE.Vector3(0, H * 0.3, 0).add(front.a.clone().add(front.b).multiplyScalar(0.5 * 0.7));
-  const faceNormal = new THREE.Vector3().subVectors(front.b, front.a).cross(new THREE.Vector3().subVectors(apex, front.a)).normalize();
+  // In the centre of the pyramid, around the golden beam, facing the front (owner, 2026-10-18).
+  const GATE = 0.68; // its size: it fits inside the walls at this height
+  const gateCentre = new THREE.Vector3(0, H * 0.38, 0);
+  const faceNormal = new THREE.Vector3().subVectors(front.b, front.a).cross(new THREE.Vector3().subVectors(apex, front.a)).setY(0).normalize();
   const gate = new THREE.Group();
-  gate.position.copy(gateCentre).addScaledVector(faceNormal, 0.04);
+  gate.position.copy(gateCentre);
   gate.lookAt(gateCentre.clone().add(faceNormal));
   scene.add(gate);
   const gateRings = buildGate(gate, full);
@@ -240,7 +323,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     { at: 0, pos: new THREE.Vector3(0, 15.5, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
     { at: 0.35, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
     { at: 0.7, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
-    { at: 1, pos: gateCentre.clone().addScaledVector(faceNormal, 1.3), look: gateCentre.clone(), up: new THREE.Vector3(0, 1, 0) },
+    { at: 1, pos: gateCentre.clone().addScaledVector(faceNormal, 1.5), look: gateCentre.clone(), up: new THREE.Vector3(0, 1, 0) },
   ];
   function shotAt(p) {
     let i = 0;
@@ -267,6 +350,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     camera.aspect = w / h;
     camera.fov = w < h ? 60 : 45; // portrait screens see the same pyramid
     camera.updateProjectionMatrix();
+    cometPoints.material.uniforms.uScale.value = h / (2 * Math.tan((camera.fov * Math.PI) / 360)) * renderer.getPixelRatio();
   }
   addEventListener("resize", resize);
   resize(); readScroll(); shown = target;
@@ -327,11 +411,15 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
 
     // The stargate: its rings turn slowly in opposite directions, then lock and open as we arrive.
     const open = smooth(clamp01((p - 0.78) / 0.17));
-    gate.scale.setScalar(rise);
-    gate.position.copy(gateCentre).setY(gateCentre.y * rise).addScaledVector(faceNormal, 0.04);
+    gate.scale.setScalar(rise * GATE);
+    gate.position.copy(gateCentre).setY(gateCentre.y * rise);
     gateRings.forEach((g, i) => {
       const spin = (i % 2 ? -1 : 1) * (0.12 + i * 0.05) * (reducedMotion ? 0 : 1);
       g.ring.rotation.z = g.lock + (time * spin) * (1 - open);
+      // Until they lock, the rings tilt slowly like a gyroscope, so the gate reads as a real 3D object.
+      const free = (1 - open) * (reducedMotion ? 0 : 1);
+      g.ring.rotation.x = Math.sin(time * 0.45 + i * 1.7) * 0.5 * free;
+      g.ring.rotation.y = Math.cos(time * 0.37 + i * 1.1) * 0.5 * free;
       g.ring.children.forEach(c => { c.material.opacity = c.userData.o * (0.5 + 0.5 * clamp01((p - 0.5) / 0.3)) * (1 + open * 0.6); });
     });
     horizon.material.uniforms.uTime.value = time;
@@ -340,6 +428,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const through = clamp01((p - 0.9) / 0.1), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
     flash.style.opacity = String(past ? 0 : burst * 0.85);
 
+    moveLights(time);
+    formFloor(time);
     const s = shotAt(p);
     camera.position.copy(s.pos);
     camera.up.copy(s.up);
@@ -396,6 +486,22 @@ function chartTex(seed, color) {
   return t;
 }
 
+// A rising beam of light with bright pulses climbing it (from the end of the 10118 video).
+function movingLight(color, opacity) {
+  return new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 }, uOn: { value: 0 }, uSpeed: { value: 0.4 }, uColor: { value: new THREE.Color(color) } },
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `uniform float uTime; uniform float uOn; uniform float uSpeed; uniform vec3 uColor; varying vec2 vUv;
+      void main(){
+        float y = vUv.y;
+        float pulse = pow(fract(y * 3.0 - uTime * uSpeed), 10.0);
+        float a = uOn * ${opacity.toFixed(3)} * (0.22 + 0.9 * pulse) * smoothstep(1.0, 0.3, y) * smoothstep(0.0, 0.05, y);
+        gl_FragColor = vec4(uColor * (1.0 + pulse), a);
+      }`,
+  });
+}
+
 // A soft round glow, drawn once.
 let radialTex = null;
 function radial() {
@@ -424,6 +530,11 @@ function buildGate(parent, full) {
       new THREE.LineBasicMaterial({ color: b.color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
     seg.userData.o = 0.9;
     ring.add(seg);
+    // A glowing tube under each band's engraving, and each band at its own depth: a real ring, not a drawing.
+    const tube = new THREE.Mesh(new THREE.TorusGeometry(b.r, i === 0 ? 0.022 : 0.013, 10, 128), new THREE.MeshBasicMaterial({ color: b.color, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+    tube.userData.o = 0.6;
+    ring.add(tube);
+    ring.position.z = (2 - i) * 0.06;
     parent.add(ring);
     return { ring, lock: (i * Math.PI) / 9 };
   });
