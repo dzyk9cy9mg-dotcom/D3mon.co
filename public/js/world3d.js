@@ -80,15 +80,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  // ---------- stars ----------
-  const starN = full ? 2400 : phone ? 600 : 1300;
-  const starPos = new Float32Array(starN * 3);
-  for (let i = 0; i < starN; i++) {
-    const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 60, s = Math.sqrt(1 - u * u);
-    starPos.set([Math.cos(a) * s * d, Math.abs(u) * d * 0.8 + 2, Math.sin(a) * s * d], i * 3);
-  }
-  const stars = new THREE.Points(geo(starPos), new THREE.PointsMaterial({ color: 0x9fb8cc, size: 0.12, transparent: true, opacity: 0.8, fog: false }));
-  scene.add(stars);
+  // No stars: the owner doesn't like them (2026-10-18). The sky is the plain D3MON black.
 
   // ---------- the pyramid ----------
   const apex = new THREE.Vector3(0, H, 0), keys = Object.keys(CORNERS);
@@ -119,6 +111,40 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const beam = new THREE.Group();
   for (const [r, o] of [[0.03, 0.9], [0.16, 0.18], [0.45, 0.05]]) beam.add(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 40, 12, 1, true), glowMat(0xbfdcff, o)));
   scene.add(beam);
+  // Moving light (the end of the 10118 video, owner 2026-10-18): a beam in each colour rising from its corner,
+  // with pulses of light running up it, and thin arcs that sweep up and around the pyramid like comets.
+  const lights = [];
+  keys.forEach((k, i) => {
+    const pos = CORNERS[k].clone().multiplyScalar(1.28);
+    for (const [r, o] of [[0.025, 1], [0.14, 0.22]]) {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 34, 10, 1, true), movingLight(C[k], o, "beam", 0.5 + i * 0.17));
+      m.position.copy(pos).setY(17);
+      scene.add(m);
+      lights.push(m);
+    }
+    const pts = [];
+    for (let s = 0; s <= 80; s++) {
+      const t = s / 80, a = (i / 3) * Math.PI * 2 + t * Math.PI * 3, rad = R * 1.35 * (1 - t * 0.85);
+      pts.push(new THREE.Vector3(Math.cos(a) * rad, 0.2 + t * 11, Math.sin(a) * rad));
+    }
+    const arc = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.018, 5, false), movingLight(C[k], 1, "arc", i / 3));
+    scene.add(arc);
+    lights.push(arc);
+    // The three feeding the centre (owner, 2026-10-18): a stream from each corner along the floor to the
+    // middle, all three in step, so their light meets there and rises up the core together.
+    const from = CORNERS[k].clone().multiplyScalar(1.28), side = new THREE.Vector3(-from.z, 0, from.x).normalize().multiplyScalar(0.6);
+    const feed = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([from.clone().setY(0.06), from.clone().multiplyScalar(0.5).add(side).setY(0.06), new THREE.Vector3(0, 0.06, 0)]), 64, 0.022, 5, false),
+      movingLight(C[k], 1, "arc", 0));
+    scene.add(feed);
+    lights.push(feed);
+  });
+  // The core: energy rising from the floor's centre up through the pyramid into the capstone.
+  for (const [r, o] of [[0.03, 1], [0.12, 0.3]]) {
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(r, r, H, 10, 1, true), movingLight(0xdfeaff, o, "beam", 0.9));
+    core.userData.core = true;
+    scene.add(core);
+    lights.push(core);
+  }
 
   // ---------- the corner landmarks: Callers spire, Bots crystal, Scripts dome ----------
   const marks = new THREE.Group();
@@ -303,10 +329,18 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     faces.scale.set(1, rise, 1);
     cap.position.set(0, H * rise, 0); cap.rotation.y = time * 0.4;
     capGlow.position.copy(cap.position); capGlow.material.opacity = 0.5 + 0.4 * Math.sin(time * 1.6) ** 2;
-    const beamOn = smooth(span(p, 0.5, 0.62));
+    // The energy gathers in the middle, climbs the core, then launches from the capstone into the dark sky.
+    const beamOn = smooth(span(p, 0.56, 0.66));
     beam.visible = beamOn > 0;
-    beam.position.set(0, H * rise + 20, 0);
+    beam.scale.set(1, Math.max(0.001, beamOn), 1);
+    beam.position.set(0, H * rise + 20 * beamOn, 0);
     beam.children.forEach((b, i) => { b.material.opacity = [0.9, 0.18, 0.05][i] * beamOn * (0.85 + 0.15 * Math.sin(time * 3 + i)); });
+    const lightOn = smooth(span(p, 0.46, 0.56)), coreOn = smooth(span(p, 0.52, 0.6));
+    for (const l of lights) {
+      const on = l.userData.core ? coreOn : lightOn;
+      l.visible = on > 0; l.material.uniforms.uTime.value = reducedMotion ? 0 : time; l.material.uniforms.uOn.value = on;
+      if (l.userData.core) { l.scale.y = Math.max(0.001, rise * coreOn); l.position.set(0, (H * rise * coreOn) / 2, 0); } // the core fills from the floor up
+    }
     marks.children.forEach((m, i) => { if (m.isMesh) m.rotation.y = time * (0.15 + i * 0.03); });
     const lift = (1 - rise) * 2.5;
     for (let i = 0; i < flowN; i++) {
@@ -317,7 +351,6 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       flowPos[i * 3] = tmp.x; flowPos[i * 3 + 1] = tmp.y; flowPos[i * 3 + 2] = tmp.z;
     }
     flowGeo.attributes.position.needsUpdate = true;
-    stars.rotation.y = time * 0.004;
 
     // --- the front gate ---
     const openF = smooth(span(p, 0.86, 0.97));
@@ -377,6 +410,31 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
 }
 
 // ---------- helpers ----------
+// Light that moves. "beam": pulses running up a beam, fading out high up. "arc": one bright head racing
+// along a tube with a fading tail behind it, then starting again. `offset` staggers them.
+function movingLight(color, opacity, kind, offset) {
+  return new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 }, uOn: { value: 0 }, uColor: { value: new THREE.Color(color) } },
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: kind === "beam"
+      ? `uniform float uTime; uniform float uOn; uniform vec3 uColor; varying vec2 vUv;
+        void main(){
+          float y = vUv.y;
+          float pulse = pow(fract(y * 3.0 - uTime * ${(0.35 + offset * 0.2).toFixed(3)}), 10.0);
+          float a = uOn * ${opacity.toFixed(3)} * (0.28 + 0.9 * pulse) * smoothstep(1.0, 0.25, y) * smoothstep(0.0, 0.04, y);
+          gl_FragColor = vec4(uColor * (1.0 + pulse), a);
+        }`
+      : `uniform float uTime; uniform float uOn; uniform vec3 uColor; varying vec2 vUv;
+        void main(){
+          float head = fract(uTime * 0.11 + ${offset.toFixed(3)}) * 1.3;
+          float d = head - vUv.x;
+          float tail = d >= 0.0 ? exp(-d * 9.0) : 0.0;
+          float a = uOn * ${opacity.toFixed(3)} * (0.012 + tail);
+          gl_FragColor = vec4(mix(uColor, vec3(1.0), tail * tail * 0.6), a);
+        }`,
+  });
+}
 const geo = arr => new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(arr, 3));
 const glowMat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
 function lineMat(color, opacity) {

@@ -28,6 +28,21 @@ The D3MON triangle is a **pyramid of light in deep space**, with three levels in
 - **Motion:** slow, weighted, with momentum; nothing snaps. Particles of light carry each change from one place to the next (from `inspiration/07`).
 - **Sound:** off until the visitor turns it on. An eerie, echoing score with no water-like sounds. A deep cue for the lock moment.
 
+### Light that moves, and glass screens (owner, 2026-10-18, from the end of the 10118 video)
+
+The owner likes how the light moves at the end of that video, and the look of its screens. They're part of the design everywhere:
+
+- **Rising beams:** tall beams in amber, blue and violet, with pulses of light running up them. Built: one at each corner of the pyramid, plus the capstone beam.
+- **Sweeping arcs:** thin lines of light that sweep up and around in curves, a bright head with a fading tail, like a comet. Built: three around the pyramid, one per colour.
+- **The energy of the three (owner, 2026-10-18): "these three are connecting and producing energy through all the three parts and the people on the website."** Built in the outside: a stream of light runs from each corner along the floor to the centre, all three in step; they meet, the energy climbs the pyramid's core, and the beam launches from the capstone into the dark sky. **Next:** inside the Grand Hall, the members online (their lights in the stands) send their own small streams into the centre too, so the people are part of the energy; each lock moment sends a surge up the core.
+- **Flares** where beams meet: the capstone already glows; more at crossings in the halls.
+- **Where they're used next:**
+  - the **lift between places** (Grand Hall → Helix → VIP Room) rides up on rising beams with arcs sweeping past;
+  - the **lock moment** every 15 minutes sends a pulse up every beam in the Grand Hall;
+  - **transitions** use a quick sweep of arcs across the screen.
+- **Glass screens:** layers of glass panels at different depths, thin glowing borders, candlestick charts, gauges, small tables and floating lines of code and maths. The Grand Hall's walls and the VIP Room's screens use this look, filled with our live data: the round ring, this round's calls, the standings and the stats cards.
+- **No stars:** the owner doesn't like them. The sky stays the plain D3MON black, and the gold stars at the end of that video are left out.
+
 ## 3. The journey
 
 Scrolling glides through these moments. Free flight is available at any time, with "back to route". A **level switch** (Hall · Helix · Trade Floor) jumps straight to a level. The **astronaut** (our own, never Lusion's) is the guide at the key moments.
