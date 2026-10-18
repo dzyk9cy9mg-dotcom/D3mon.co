@@ -171,19 +171,77 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 8, 1, true), edgeMat(C.callers, 0.95));
   const beamGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1, 12, 1, true), edgeMat(C.callers, 0.18));
   scene.add(beam, beamGlow);
-  // Glass screens with charts, standing around the walkway and facing the core.
-  const screens = [];
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + Math.PI / 6, color = C[keys[i % 3]];
-    const panel = new THREE.Group();
-    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.56), new THREE.MeshBasicMaterial({ map: chartTex(i, color), transparent: true, opacity: 1, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
-    panel.add(face);
-    const frameGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.9, 0.56));
-    panel.add(new THREE.LineSegments(frameGeo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })));
-    panel.position.set(Math.cos(a) * 1.8, 0.85, Math.sin(a) * 1.8);
-    panel.lookAt(0, 0.85, 0);
-    hall.add(panel); screens.push(panel);
+  const palette = [C.callers, C.bots, C.scripts, 0xffffff];
+  // ---------- inside, rising up: the 10118 video (owner, 2026-10-18; its booths with people and its stars left out) ----------
+  // Rings of glass chart screens, a glass ramp spiralling up with hexagon bot pods along it, floating code and
+  // maths for the chart scripts near the top, and the people online as little lights in the stands.
+  const tower = new THREE.Group();
+  scene.add(tower);
+  const fades = []; // [material, full opacity], faded in with the inside
+  const fadeMat = (m, o) => { m.opacity = 0; fades.push([m, o]); return m; };
+  const add = (m, o) => fadeMat(m, o);
+  const inr = y => 1.55 * (1 - y / H); // the room inside the walls at height y
+  const glassLine = (color, o) => add(new THREE.LineBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), o);
+  function panel(tex, w, h, color, at, r, y, o = 1) {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), add(new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), o)));
+    g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, h)), glassLine(color, 0.9)));
+    g.position.set(Math.cos(at) * r, y, Math.sin(at) * r);
+    g.lookAt(0, y, 0);
+    g.userData.y = y;
+    tower.add(g);
+    return g;
   }
+  const screens = [];
+  // The lower ring of chart screens, and a smaller ring above it.
+  for (let i = 0; i < 7; i++) screens.push(panel(chartTex(i, C[keys[i % 3]]), 0.5, 0.31, C[keys[i % 3]], (i / 7) * Math.PI * 2 + 0.2, inr(0.85) * 0.8, 0.85));
+  for (let i = 0; i < 5; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.4, 0.25, C[keys[(i + 1) % 3]], (i / 5) * Math.PI * 2 + 0.9, inr(1.65) * 0.78, 1.65));
+  // Code and maths for the chart scripts, floating near the top.
+  for (let i = 0; i < 4; i++) screens.push(panel(codeTex(i), 0.34, 0.22, C.scripts, (i / 4) * Math.PI * 2 + 0.4, inr(2.45) * 0.72, 2.45, 0.95));
+  for (let i = 0; i < 3; i++) screens.push(panel(mathTex(i), 0.36, 0.18, 0xdce7ee, (i / 3) * Math.PI * 2 + 1.3, inr(3.0) * 0.6, 3.0, 0.9));
+  screens.slice(-3).forEach(g => (g.children[1].visible = false)); // the maths floats free, with no frame
+  // The glass ramp spiralling up around the beam, two and a half turns, with rails and cross ties.
+  const TURNS = 2.5, RAMP_Y0 = 0.35, RAMP_Y1 = 3.2, RAMP_W = 0.13;
+  const rampAt = (t, side = 0) => { const y = RAMP_Y0 + (RAMP_Y1 - RAMP_Y0) * t, a = t * TURNS * Math.PI * 2, r = inr(y) * 0.86 + side * RAMP_W; return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r); };
+  {
+    const N = 220, pos = [], idx = [], rails = [], ties = [];
+    for (let k = 0; k <= N; k++) {
+      const t = k / N, A = rampAt(t, -0.5), B = rampAt(t, 0.5);
+      pos.push(...A.toArray(), ...B.toArray());
+      if (k) { const q = k * 2; idx.push(q - 2, q - 1, q, q - 1, q + 1, q); rails.push(...rampAt((k - 1) / N, -0.5).toArray(), ...A.toArray(), ...rampAt((k - 1) / N, 0.5).toArray(), ...B.toArray()); }
+      if (k % 6 === 0) ties.push(...A.toArray(), ...B.toArray());
+    }
+    const deck = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); deck.setIndex(idx);
+    tower.add(new THREE.Mesh(deck, add(new THREE.MeshBasicMaterial({ color: 0x8fc4ff, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.12)));
+    tower.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(rails, 3)), glassLine(0x9fd0ff, 0.8)));
+    tower.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(ties, 3)), glassLine(0x9fd0ff, 0.3)));
+  }
+  // Hexagon pods for the bots along the ramp, each with a glowing heart.
+  const pods = [];
+  for (let i = 0; i < 6; i++) {
+    const t = 0.08 + i * 0.15, P = rampAt(t, 0.9), pod = new THREE.Group();
+    const hex = new THREE.CylinderGeometry(0.065, 0.065, 0.1, 6);
+    pod.add(new THREE.Mesh(hex, add(new THREE.MeshBasicMaterial({ color: 0x5be3ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.16)));
+    pod.add(new THREE.LineSegments(new THREE.EdgesGeometry(hex), glassLine(0x5be3ff, 0.95)));
+    const heart = new THREE.Sprite(add(new THREE.SpriteMaterial({ map: radial(), color: 0x7fe9ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9));
+    heart.scale.setScalar(0.14); pod.add(heart);
+    pod.position.copy(P).setY(P.y + 0.06);
+    tower.add(pod); pods.push(pod);
+  }
+  // The people online: little lights in the stands around the floor (later from the live count).
+  {
+    const n = full ? 700 : phone ? 160 : 380, pp = new Float32Array(n * 3), pc = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, tier = Math.floor(Math.random() * 3), r = 1.22 + tier * 0.09 + Math.random() * 0.05;
+      pp.set([Math.cos(a) * r, 0.16 + tier * 0.07, Math.sin(a) * r], i * 3);
+      const c = new THREE.Color(Math.random() < 0.6 ? 0xdce7ee : palette[Math.floor(Math.random() * 3)]); pc.set([c.r, c.g, c.b], i * 3);
+    }
+    tower.add(new THREE.Points(new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(pp, 3)).setAttribute("color", new THREE.BufferAttribute(pc, 3)),
+      add(new THREE.PointsMaterial({ size: 0.035, vertexColors: true, map: radial(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9)));
+  }
+  // A violet beam beside the golden one, as in the video.
+  const beam2 = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1, 8, 1, true), add(edgeMat(C.scripts, 0.9), 0.9));
+  scene.add(beam2);
 
   // ---------- the three corner landmarks: Callers spire, Bots crystal, Scripts dome ----------
   const marks = new THREE.Group();
@@ -217,7 +275,6 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
 
   // ---------- moving light: random beams rising in the dark, and comets flying around ----------
   // (owner, 2026-10-18: "random light beams and some random sized dots with trails flying around like comets")
-  const palette = [C.callers, C.bots, C.scripts, 0xffffff];
   const pick = () => palette[Math.floor(Math.random() * palette.length)];
   const beams = [];
   for (let i = 0; i < (full ? 12 : phone ? 4 : 8); i++) {
@@ -243,7 +300,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true,
     uniforms: { uScale: { value: 300 } },
     vertexShader: `attribute float size; varying vec3 vColor; uniform float uScale;
-      void main(){ vColor = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * uScale / -mv.z; gl_Position = projectionMatrix * mv; }`,
+      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vColor = color * smoothstep(0.25, 1.4, -mv.z); gl_PointSize = min(size * uScale / -mv.z, 30.0); gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `varying vec3 vColor;
       void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float a = smoothstep(1.0, 0.0, d); gl_FragColor = vec4(vColor * (a * a + a * 0.3), 1.0); }`,
   }));
@@ -334,12 +391,16 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   flash.className = "w3d-flash";
   document.body.append(flash);
 
+  const side = new THREE.Vector3().crossVectors(faceNormal, new THREE.Vector3(0, 1, 0)); // across the front, so the beam sits to one side
   // ---------- the camera path ----------
   const shots = [
     { at: 0, pos: new THREE.Vector3(0, 15.5, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
-    { at: 0.35, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
-    { at: 0.7, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
-    { at: 1, pos: new THREE.Vector3(0, 1.25, 0).addScaledVector(faceNormal, 1.05), look: new THREE.Vector3(0, 0.2, 0), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.3, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.56, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.74, pos: new THREE.Vector3(0, 1.05, 0).addScaledVector(faceNormal, 1.15), look: new THREE.Vector3(0, 0.95, 0), up: new THREE.Vector3(0, 1, 0) },
+    // then up beside the ramp, past the screens and pods, to the code and maths near the top
+    { at: 0.88, pos: new THREE.Vector3(0, 1.85, 0).addScaledVector(faceNormal, 0.8), look: new THREE.Vector3(0, 1.85, 0).addScaledVector(faceNormal, -0.6).addScaledVector(side, 0.55), up: new THREE.Vector3(0, 1, 0) },
+    { at: 1, pos: new THREE.Vector3(0, 2.75, 0).addScaledVector(faceNormal, 0.5), look: new THREE.Vector3(0, 2.7, 0).addScaledVector(faceNormal, -0.6).addScaledVector(side, -0.5), up: new THREE.Vector3(0, 1, 0) },
   ];
   function shotAt(p) {
     let i = 0;
@@ -354,7 +415,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   function readScroll() {
     const r = outside.getBoundingClientRect(), span = Math.max(1, r.height - innerHeight);
     target = clamp01(-r.top / span);
-    if (reducedMotion) target = target < 0.2 ? 0 : target < 0.85 ? 0.7 : 1; // cut between shots, no flying
+    if (reducedMotion) target = [0, 0.56, 0.74, 1].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a)); // cut between shots, no flying
     document.body.style.setProperty("--w3d-p", String(clamp01(-r.top / span)));
     const past = r.bottom < innerHeight * 0.6;
     document.body.classList.toggle("w3d-past", past);
@@ -404,13 +465,18 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const inside = smooth(clamp01((p - 0.12) / 0.25));
     hall.scale.set(1, Math.max(0.001, rise), 1);
     hall.visible = inside > 0.01;
-    screens.forEach((s, i) => { s.position.y = 0.85 * rise + Math.sin(time * 0.6 + i) * 0.03 * (reducedMotion ? 0 : 1); s.scale.set(inside, inside / Math.max(0.001, rise), inside); });
+    tower.visible = inside > 0.01;
+    tower.scale.set(1, Math.max(0.001, rise), 1);
+    for (const [m, o] of fades) m.opacity = o * inside;
+    const bob = reducedMotion ? 0 : 1;
+    screens.forEach((g, i) => { g.position.y = g.userData.y + Math.sin(time * 0.6 + i) * 0.02 * bob; });
+    pods.forEach((g, i) => { g.rotation.y = time * 0.5 * bob + i; g.children[2].material.opacity = inside * (0.6 + 0.4 * Math.sin(time * 2.4 + i * 1.7)); });
     core.material.opacity = inside * (0.8 + 0.2 * Math.sin(time * 3));
     ticks.forEach((t, i) => { t.material.opacity = inside * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(time * 1.4 - i * 0.35))); });
     spokes.forEach((l, i) => { l.material.opacity = inside * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 2 + i * 1.3))); });
     nodes.forEach((n, i) => { n.material.opacity = inside * (0.6 + 0.4 * Math.sin(time * 2 + i * 1.3)); });
     const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
-    for (const m of [beam, beamGlow]) { m.scale.set(1, beamLen, 1); m.position.set(0, 0.15 + beamLen / 2, 0); }
+    for (const m of [beam, beamGlow, beam2]) { m.scale.set(1, beamLen, 1); m.position.set(m === beam2 ? 0.05 : 0, 0.15 + beamLen / 2, m === beam2 ? 0.03 : 0); }
     beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
     marks.children.forEach((m, i) => { if (m.isMesh) m.rotation.y = time * (0.15 + i * 0.03); });
 
@@ -426,7 +492,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     flowGeo.attributes.position.needsUpdate = true;
 
     // A short burst of light as we pass through, gone again once we're in.
-    const through = clamp01((p - 0.9) / 0.1), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
+    const through = clamp01((p - 0.64) / 0.1), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
     flash.style.opacity = String(past ? 0 : burst * 0.85);
 
     moveLights(time, H * rise);
@@ -435,6 +501,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     camera.position.copy(s.pos);
     camera.up.copy(s.up);
     camera.lookAt(s.look);
+    // Up close inside, the core's glow and the beams' haze would fill the screen: dim them as the camera nears.
+    const near = clamp01((Math.hypot(camera.position.x, camera.position.z) - 0.35) / 1.6);
+    core.material.opacity *= 0.25 + 0.75 * near; beamGlow.material.opacity *= near;
+    for (const m of [beam, beam2]) { const w = 0.45 + 0.55 * near; m.scale.x = m.scale.z = w; }
     renderer.render(scene, camera);
 
     if (fpsEl) { fpsAcc += dt; fpsN++; if (now - fpsAt > 500) { fpsEl.textContent = `${Math.round(fpsN / fpsAcc)} fps · ${level}`; fpsAcc = 0; fpsN = 0; fpsAt = now; } }
@@ -501,6 +571,26 @@ function movingLight(color, opacity) {
         gl_FragColor = vec4(uColor * (1.0 + pulse), a);
       }`,
   });
+}
+
+// A chart script's code on a glass panel, and maths floating free (the video's look; made-up text).
+function codeTex(seed) {
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 166;
+  const g = cv.getContext("2d");
+  g.fillStyle = "rgba(30,50,80,0.45)"; g.fillRect(0, 0, 256, 166);
+  const lines = ["fn signal(round) {", "  let ema = avg(close, 21)", "  if close > ema && rsi < 70", "    return UP", "  else if close < ema", "    return DOWN", "  hold()", "}", "// next round: 15m", "send(call, key)"];
+  g.font = "12px monospace";
+  lines.forEach((l, i) => { g.fillStyle = i % 4 === 3 ? "#b98cff" : i % 3 ? "#5be3a6" : "#9fd0ff"; g.fillText(l.slice(0, 26 - (seed * 3 + i) % 6), 10, 18 + i * 15); });
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function mathTex(seed) {
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 128;
+  const g = cv.getContext("2d");
+  const f = ["σ = √(Σ(x−μ)² / n)", "EMA = α·x + (1−α)·EMA", "P(up) = e^z / (1+e^z)"][seed % 3];
+  g.font = "italic 22px serif"; g.fillStyle = "#e8f0ff"; g.fillText(f, 12, 56);
+  g.strokeStyle = "rgba(232,240,255,0.5)"; g.beginPath(); g.moveTo(12, 78); g.lineTo(230, 78); g.stroke();
+  g.font = "14px serif"; g.fillText(["n = 96 rounds", "α = 2/(21+1)", "z = w·x + b"][seed % 3], 12, 104);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
 // A soft round glow, drawn once.
