@@ -8,6 +8,7 @@ The redesign of D3MON.CO as an immersive 3D world: the Callers / Bots / Chart Sc
 | --- | --- |
 | [VISION.md](VISION.md) | The owner's brief: what must stay, what can change, the pyramid idea. |
 | [PLAN.md](PLAN.md) | The proposed technical approach: engine, device levels, live data, ads, PR order. |
+| [SITEMAP.md](SITEMAP.md) | Every page and section today, who uses it, and where it goes in the 3D site: the plan for the tidy-up. |
 | [QUESTIONS.md](QUESTIONS.md) | Decisions waiting on the owner, and decisions made (with dates). |
 | [INSPIRATION.md](INSPIRATION.md) | Every image and video the owner sent, prompts that worked, and lessons from award-winning sites. |
 | [`inspiration/`](inspiration/) | The image and video files themselves. |
