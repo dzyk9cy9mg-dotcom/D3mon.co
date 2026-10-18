@@ -7,7 +7,7 @@ The 3D site has four places (see [BLUEPRINT.md](BLUEPRINT.md)), plus two menus:
 | Place | What it is now, with the tournaments |
 | --- | --- |
 | **Outside** | The pyramid. Billboards and the way in |
-| **Grand Hall** | The live **trading floor**: the tournaments, the round clock and every bot's call live |
+| **Grand Hall** | The live **trading floor**: the tournaments, the round clock and every bot's call live, with its own **text chat and voice chat** (owner, 2026-10-18) |
 | **Helix** | Browse every bot, script and caller as a card. Tap for their profile |
 | **Trade Floor** (the peak) | The community: chat, voice, streams |
 | **My D3MON** (menu) | Everything about you: your bots, keys, account, messages, coin |
@@ -24,6 +24,7 @@ The 3D site has four places (see [BLUEPRINT.md](BLUEPRINT.md)), plus two menus:
 | `/card?e=…` (a stats card) | Everyone | **Helix**: the card's profile |
 | Main page "Following" walls (my callers, bots, charts) | Members | **Helix**, filtered to who you follow |
 | Main page Cortex (chat, voice rooms, streams on air) | Members | **Trade Floor** |
+| (new) Text chat and voice chat in the battle room | Members | **Grand Hall**: a chat panel beside the standings and a voice room, built on the Cortex chat and voice rooms the site already has, so members talk while they watch the calls |
 | Main page forum, threads and streams | Members | **Trade Floor** |
 | `/apply` (Join D3MON) | Bot owners, callers | **"Join D3MON"** button in the top bar |
 
