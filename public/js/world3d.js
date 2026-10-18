@@ -3,7 +3,8 @@
 //   0.00  overhead, the pyramid flat on the floor: seen from above it's the D3MON logo
 //   0.35  the triangle has risen into the pyramid, particles lifting with it
 //   0.70  the opening shot, low and in front
-//   1.00  at the stargate on the front face: its rings lock, the event horizon fills, and we pass through
+//   1.00  through the front glass, down to the bright core of the trading floor, with a burst of light
+// The upright stargate was taken out (owner, 2026-10-18: it had no use): the core and its beam are the centre.
 // The look follows the owner's concept board (docs/world/inspiration/05-grand-hall-concepts.webp): clear glass
 // walls, and inside them the trading floor: a glass walkway ring, a ring of up and down ticks, the calls
 // streaming into a bright core, the golden beam up to the capstone, and glass screens with charts.
@@ -42,22 +43,23 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     scene.add(l);
   }
 
-  // ---------- floor: the flower of life, fading out into the dark ----------
+  // ---------- floor: the main page's own Flower of Life (d3mon.css --fol), fading out into the dark ----------
+  // Seen from overhead it matches the main page's background; as the camera tilts it becomes the floor.
+  // On arrival it forms, spreading out from the pyramid.
+  const TILE = 0.84; // one 52 x 90 tile in world units: from the overhead shot it's the main page's size
   const floorTex = (() => {
-    const s = 512, cv = document.createElement("canvas");
-    cv.width = cv.height = s;
-    const g = cv.getContext("2d");
-    g.strokeStyle = "rgba(77,163,255,0.55)";
-    g.lineWidth = 1.2;
-    const r = s / 4;
-    for (let row = -1; row <= 5; row++) for (let col = -1; col <= 5; col++) {
-      const x = col * r + (row % 2 ? r / 2 : 0), y = row * r * Math.sqrt(3) / 2;
-      g.beginPath(); g.arc(x, y, r / 2, 0, Math.PI * 2); g.stroke();
-    }
+    const cv = document.createElement("canvas");
+    cv.width = 52 * 4; cv.height = 90 * 4;
     const t = new THREE.CanvasTexture(cv);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(36, 36);
-    t.anisotropy = 4;
+    t.repeat.set(200 / TILE, 200 / (TILE * 90 / 52));
+    t.anisotropy = 8;
+    const m = getComputedStyle(document.documentElement).getPropertyValue("--fol").trim().match(/^url\(["']?(.*?)["']?\)$/s);
+    if (m) {
+      const im = new Image();
+      im.onload = () => { const g = cv.getContext("2d"); g.drawImage(im, 0, 0, cv.width, cv.height); t.needsUpdate = true; };
+      im.src = m[1].replace(/stroke-opacity='[.0-9]+'/g, "stroke-opacity='.9'");
+    }
     return t;
   })();
   const floorFade = (() => {
@@ -66,12 +68,19 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const g = cv.getContext("2d"), grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
     grd.addColorStop(0, "#fff"); grd.addColorStop(0.35, "#888"); grd.addColorStop(1, "#000");
     g.fillStyle = grd; g.fillRect(0, 0, s, s);
-    return new THREE.CanvasTexture(cv);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    return t;
   })();
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(100, 96), new THREE.MeshBasicMaterial({ map: floorTex, alphaMap: floorFade, transparent: true, opacity: 0.3, depthWrite: false }));
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(100, 96), new THREE.MeshBasicMaterial({ map: floorTex, alphaMap: floorFade, transparent: true, opacity: 0.13, depthWrite: false }));
+  const formFloor = time => { // the mask grows from a speck to the whole floor in the first seconds
+    const k = reducedMotion ? 1 : 0.02 + 0.98 * smooth(clamp01(time / 3.5)), r = 1 / k;
+    floorFade.repeat.set(r, r); floorFade.offset.set(0.5 - 0.5 * r, 0.5 - 0.5 * r);
+  };
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
-  const glow = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshBasicMaterial({ color: C.bots, transparent: true, opacity: 0.06, depthWrite: false, blending: THREE.AdditiveBlending }));
+  // The light around the pyramid fades softly into the dark, with no edge (owner, 2026-10-18).
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(26, 26), new THREE.MeshBasicMaterial({ map: radial(), color: 0x4d8fd6, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending }));
   glow.rotation.x = -Math.PI / 2; glow.position.y = 0.01;
   scene.add(glow);
 
@@ -162,19 +171,77 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 8, 1, true), edgeMat(C.callers, 0.95));
   const beamGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1, 12, 1, true), edgeMat(C.callers, 0.18));
   scene.add(beam, beamGlow);
-  // Glass screens with charts, standing around the walkway and facing the core.
-  const screens = [];
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + Math.PI / 6, color = C[keys[i % 3]];
-    const panel = new THREE.Group();
-    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.56), new THREE.MeshBasicMaterial({ map: chartTex(i, color), transparent: true, opacity: 1, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
-    panel.add(face);
-    const frameGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.9, 0.56));
-    panel.add(new THREE.LineSegments(frameGeo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })));
-    panel.position.set(Math.cos(a) * 1.8, 0.85, Math.sin(a) * 1.8);
-    panel.lookAt(0, 0.85, 0);
-    hall.add(panel); screens.push(panel);
+  const palette = [C.callers, C.bots, C.scripts, 0xffffff];
+  // ---------- inside, rising up: the 10118 video (owner, 2026-10-18; its booths with people and its stars left out) ----------
+  // Rings of glass chart screens, a glass ramp spiralling up with hexagon bot pods along it, floating code and
+  // maths for the chart scripts near the top, and the people online as little lights in the stands.
+  const tower = new THREE.Group();
+  scene.add(tower);
+  const fades = []; // [material, full opacity], faded in with the inside
+  const fadeMat = (m, o) => { m.opacity = 0; fades.push([m, o]); return m; };
+  const add = (m, o) => fadeMat(m, o);
+  const inr = y => 1.55 * (1 - y / H); // the room inside the walls at height y
+  const glassLine = (color, o) => add(new THREE.LineBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), o);
+  function panel(tex, w, h, color, at, r, y, o = 1) {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), add(new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), o)));
+    g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, h)), glassLine(color, 0.9)));
+    g.position.set(Math.cos(at) * r, y, Math.sin(at) * r);
+    g.lookAt(0, y, 0);
+    g.userData.y = y;
+    tower.add(g);
+    return g;
   }
+  const screens = [];
+  // The lower ring of chart screens, and a smaller ring above it.
+  for (let i = 0; i < 7; i++) screens.push(panel(chartTex(i, C[keys[i % 3]]), 0.5, 0.31, C[keys[i % 3]], (i / 7) * Math.PI * 2 + 0.2, inr(0.85) * 0.8, 0.85));
+  for (let i = 0; i < 5; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.4, 0.25, C[keys[(i + 1) % 3]], (i / 5) * Math.PI * 2 + 0.9, inr(1.65) * 0.78, 1.65));
+  // Code and maths for the chart scripts, floating near the top.
+  for (let i = 0; i < 4; i++) screens.push(panel(codeTex(i), 0.34, 0.22, C.scripts, (i / 4) * Math.PI * 2 + 0.4, inr(2.45) * 0.72, 2.45, 0.95));
+  for (let i = 0; i < 3; i++) screens.push(panel(mathTex(i), 0.36, 0.18, 0xdce7ee, (i / 3) * Math.PI * 2 + 1.3, inr(3.0) * 0.6, 3.0, 0.9));
+  screens.slice(-3).forEach(g => (g.children[1].visible = false)); // the maths floats free, with no frame
+  // The glass ramp spiralling up around the beam, two and a half turns, with rails and cross ties.
+  const TURNS = 2.5, RAMP_Y0 = 0.35, RAMP_Y1 = 3.2, RAMP_W = 0.13;
+  const rampAt = (t, side = 0) => { const y = RAMP_Y0 + (RAMP_Y1 - RAMP_Y0) * t, a = t * TURNS * Math.PI * 2, r = inr(y) * 0.86 + side * RAMP_W; return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r); };
+  {
+    const N = 220, pos = [], idx = [], rails = [], ties = [];
+    for (let k = 0; k <= N; k++) {
+      const t = k / N, A = rampAt(t, -0.5), B = rampAt(t, 0.5);
+      pos.push(...A.toArray(), ...B.toArray());
+      if (k) { const q = k * 2; idx.push(q - 2, q - 1, q, q - 1, q + 1, q); rails.push(...rampAt((k - 1) / N, -0.5).toArray(), ...A.toArray(), ...rampAt((k - 1) / N, 0.5).toArray(), ...B.toArray()); }
+      if (k % 6 === 0) ties.push(...A.toArray(), ...B.toArray());
+    }
+    const deck = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); deck.setIndex(idx);
+    tower.add(new THREE.Mesh(deck, add(new THREE.MeshBasicMaterial({ color: 0x8fc4ff, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.12)));
+    tower.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(rails, 3)), glassLine(0x9fd0ff, 0.8)));
+    tower.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(ties, 3)), glassLine(0x9fd0ff, 0.3)));
+  }
+  // Hexagon pods for the bots along the ramp, each with a glowing heart.
+  const pods = [];
+  for (let i = 0; i < 6; i++) {
+    const t = 0.08 + i * 0.15, P = rampAt(t, 0.9), pod = new THREE.Group();
+    const hex = new THREE.CylinderGeometry(0.065, 0.065, 0.1, 6);
+    pod.add(new THREE.Mesh(hex, add(new THREE.MeshBasicMaterial({ color: 0x5be3ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.16)));
+    pod.add(new THREE.LineSegments(new THREE.EdgesGeometry(hex), glassLine(0x5be3ff, 0.95)));
+    const heart = new THREE.Sprite(add(new THREE.SpriteMaterial({ map: radial(), color: 0x7fe9ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9));
+    heart.scale.setScalar(0.14); pod.add(heart);
+    pod.position.copy(P).setY(P.y + 0.06);
+    tower.add(pod); pods.push(pod);
+  }
+  // The people online: little lights in the stands around the floor (later from the live count).
+  {
+    const n = full ? 700 : phone ? 160 : 380, pp = new Float32Array(n * 3), pc = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, tier = Math.floor(Math.random() * 3), r = 1.22 + tier * 0.09 + Math.random() * 0.05;
+      pp.set([Math.cos(a) * r, 0.16 + tier * 0.07, Math.sin(a) * r], i * 3);
+      const c = new THREE.Color(Math.random() < 0.6 ? 0xdce7ee : palette[Math.floor(Math.random() * 3)]); pc.set([c.r, c.g, c.b], i * 3);
+    }
+    tower.add(new THREE.Points(new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(pp, 3)).setAttribute("color", new THREE.BufferAttribute(pc, 3)),
+      add(new THREE.PointsMaterial({ size: 0.035, vertexColors: true, map: radial(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9)));
+  }
+  // A violet beam beside the golden one, as in the video.
+  const beam2 = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1, 8, 1, true), add(edgeMat(C.scripts, 0.9), 0.9));
+  scene.add(beam2);
 
   // ---------- the three corner landmarks: Callers spire, Bots crystal, Scripts dome ----------
   const marks = new THREE.Group();
@@ -206,41 +273,134 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const flow = new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: full ? 0.07 : 0.09, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, map: radial(), alphaTest: 0.01 }));
   scene.add(flow);
 
-  // ---------- the stargate on the front face ----------
-  const front = { a: CORNERS.bots, b: CORNERS.scripts };
-  const gateCentre = new THREE.Vector3(0, H * 0.3, 0).add(front.a.clone().add(front.b).multiplyScalar(0.5 * 0.7));
-  const faceNormal = new THREE.Vector3().subVectors(front.b, front.a).cross(new THREE.Vector3().subVectors(apex, front.a)).normalize();
-  const gate = new THREE.Group();
-  gate.position.copy(gateCentre).addScaledVector(faceNormal, 0.04);
-  gate.lookAt(gateCentre.clone().add(faceNormal));
-  scene.add(gate);
-  const gateRings = buildGate(gate, full);
-  const horizon = new THREE.Mesh(new THREE.CircleGeometry(0.62, 64), new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uOpen: { value: 0 } },
+  // ---------- moving light: random beams rising in the dark, and comets flying around ----------
+  // (owner, 2026-10-18: "random light beams and some random sized dots with trails flying around like comets")
+  const pick = () => palette[Math.floor(Math.random() * palette.length)];
+  const beams = [];
+  for (let i = 0; i < (full ? 12 : phone ? 4 : 8); i++) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 30, 10, 1, true), movingLight(pick(), 0.75));
+    m.userData = { born: 0, life: 0 };
+    scene.add(m); beams.push(m);
+  }
+  function respawnBeam(m, time) {
+    let a, d; // never right in front of the camera, where a beam would fill the screen
+    do { a = Math.random() * Math.PI * 2; d = 7 + Math.random() * 8; } while (Math.hypot(Math.cos(a) * d, Math.sin(a) * d - 10) < 5);
+    const w = 0.012 + Math.random() * 0.05;
+    m.position.set(Math.cos(a) * d, 15, Math.sin(a) * d);
+    m.scale.set(w, 1, w);
+    m.material.uniforms.uColor.value.set(pick());
+    m.material.uniforms.uSpeed.value = 0.25 + Math.random() * 0.5;
+    Object.assign(m.userData, { born: time, life: 4 + Math.random() * 6 });
+  }
+  const cometN = full ? 22 : phone ? 6 : 14, TRAIL = full ? 48 : phone ? 24 : 36;
+  const comets = [];
+  const cPos = new Float32Array(cometN * TRAIL * 3), cCol = new Float32Array(cometN * TRAIL * 3), cSize = new Float32Array(cometN * TRAIL);
+  const cGeo = new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(cPos, 3)).setAttribute("color", new THREE.BufferAttribute(cCol, 3)).setAttribute("size", new THREE.BufferAttribute(cSize, 1));
+  const cometPoints = new THREE.Points(cGeo, new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true,
+    uniforms: { uScale: { value: 300 } },
+    vertexShader: `attribute float size; varying vec3 vColor; uniform float uScale;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vColor = color * smoothstep(0.25, 1.4, -mv.z); gl_PointSize = min(size * uScale / -mv.z, 30.0); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying vec3 vColor;
+      void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float a = smoothstep(1.0, 0.0, d); gl_FragColor = vec4(vColor * (a * a + a * 0.3), 1.0); }`,
+  }));
+  cometPoints.frustumCulled = false;
+  scene.add(cometPoints);
+  for (let i = 0; i < cometN; i++) comets.push({ born: 0 });
+  // Each comet spirals in from far out, into the golden beam in the centre, rides it up through the capstone
+  // and shoots out along the laser into the sky, where it sends a pulse that lights up the dark (owner, 2026-10-18).
+  function respawnComet(c, time) {
+    Object.assign(c, {
+      born: time, tIn: 3 + Math.random() * 4, vUp: 2.2 + Math.random() * 1.8, fired: false,
+      r: 4 + Math.random() * 7, y: 0.6 + Math.random() * 5, yIn: 0.3 + Math.random() * 1.6, a0: Math.random() * Math.PI * 2,
+      speed: (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.4), wob: (Math.random() - 0.5) * 0.6,
+      size: 0.06 + Math.random() ** 2 * 0.34, color: new THREE.Color(pick()),
+    });
+  }
+  const SKY = 40; // how far the laser reaches into the sky
+  function cometAt(c, t, apexY, out) { // where comet c is t seconds after it was born
+    if (t < c.tIn) { // spiralling in, faster as it nears the centre
+      const u = t / c.tIn, r = c.r * (1 - u) ** 1.4, a = c.a0 + c.speed * t * (1 + 2.5 * u);
+      return out.set(Math.cos(a) * r, c.y + (c.yIn - c.y) * smooth(u) + Math.sin(a) * r * c.wob * 0.3, Math.sin(a) * r);
+    }
+    const t2 = t - c.tIn, climb = Math.max(0.1, apexY - c.yIn), tUp = Math.sqrt((2 * climb) / c.vUp); // speeding up the beam
+    if (t2 < tUp) { const y = c.yIn + 0.5 * c.vUp * t2 * t2, w = 0.06 * (1 - t2 / tUp); return out.set(Math.cos(t2 * 9) * w, y, Math.sin(t2 * 9) * w); }
+    const t3 = t2 - tUp; // out of the capstone and up the laser
+    return out.set(0, apexY + c.vUp * tUp * t3 + 10 * t3 * t3, 0);
+  }
+  const lifeOf = (c, apexY) => c.tIn + Math.sqrt((2 * Math.max(0.1, apexY - c.yIn)) / c.vUp) + 1.6;
+  const cTmp = new THREE.Vector3();
+  const pulses = new Array(8).fill(-100); let nextPulse = 0; // when each recent pulse left the capstone
+  function moveLights(time, apexY) {
+    for (const m of beams) {
+      const d = m.userData, age = time - d.born;
+      if (age > d.life) { const first = !d.life; respawnBeam(m, time); if (first) d.born -= Math.random() * d.life; continue; } // the first ones start part-way, so they don't all appear at once
+      const fade = smooth(clamp01(age / 1.2)) * smooth(clamp01((d.life - age) / 1.2));
+      m.material.uniforms.uOn.value = d.life ? fade : 0;
+      m.material.uniforms.uTime.value = time;
+    }
+    comets.forEach((c, i) => {
+      if (!c.r || time - c.born > lifeOf(c, apexY)) { const first = !c.r; respawnComet(c, time); if (first) c.born -= Math.random() * c.tIn; }
+      const t = time - c.born, life = lifeOf(c, apexY);
+      if (!c.fired && t > life - 1.6) { c.fired = true; pulses[nextPulse] = time; nextPulse = (nextPulse + 1) % pulses.length; }
+      const fade = smooth(clamp01(t / 0.8)) * smooth(clamp01((life - t) / 0.8));
+      for (let j = 0; j < TRAIL; j++) {
+        const k = i * TRAIL + j;
+        cometAt(c, Math.max(0, t - j * 0.03), apexY, cTmp);
+        cPos.set([cTmp.x, cTmp.y, cTmp.z], k * 3);
+        const f = 1 - j / TRAIL, glow = (t - j * 0.03 < 0 ? 0 : 1) * fade * f * f * (j === 0 ? 1.6 : 1);
+        cCol.set([c.color.r * glow, c.color.g * glow, c.color.b * glow], k * 3);
+        cSize[k] = c.size * (j === 0 ? 1 : 0.25 + 0.6 * f);
+      }
+    });
+    cGeo.attributes.position.needsUpdate = cGeo.attributes.color.needsUpdate = cGeo.attributes.size.needsUpdate = true;
+    // The laser out of the capstone carries the pulses up; the sky brightens as each one goes high.
+    for (const m of [laser, laserGlow]) { m.position.set(0, apexY + SKY / 2, 0); m.material.uniforms.uTime.value = time; m.material.uniforms.uPulse.value = pulses; }
+    let sky = 0;
+    for (const t0 of pulses) { const a = time - t0; if (a > 0) sky += Math.exp(-((a - 1.3) ** 2) / 0.18) * 0.45; } // a short flash as each pulse reaches high
+    sky = Math.min(1, sky);
+    skyGlow.position.set(0, apexY + 16, 0);
+    skyGlow.material.opacity = 0.03 + 0.35 * sky;
+    bgNow.copy(bg0).lerp(bgLit, sky * 0.35);
+    renderer.setClearColor(bgNow, 1); scene.fog.color.copy(bgNow);
+  }
+  const laserMat = (r, o) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, SKY, 10, 1, true), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    uniforms: { uTime: { value: 0 }, uPulse: { value: pulses } },
     vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-    fragmentShader: `uniform float uTime; uniform float uOpen; varying vec2 vUv;
+    fragmentShader: `uniform float uTime; uniform float uPulse[8]; varying vec2 vUv;
       void main(){
-        vec2 p = vUv - 0.5; float r = length(p) * 2.0; float a = atan(p.y, p.x);
-        float w = sin(r * 18.0 - uTime * 2.2 + sin(a * 3.0 + uTime) * 0.6) * 0.5 + 0.5;
-        vec3 amber = vec3(1.0, 0.71, 0.28), blue = vec3(0.30, 0.64, 1.0), violet = vec3(0.73, 0.55, 1.0);
-        vec3 col = mix(mix(blue, violet, 0.5 + 0.5 * sin(a + uTime * 0.3)), amber, w * 0.35);
-        float edge = smoothstep(1.0, 0.82, r);
-        float alpha = edge * uOpen * (0.35 + 0.65 * w * (1.0 - r * 0.5));
-        gl_FragColor = vec4(col * (0.6 + 0.8 * (1.0 - r)), alpha);
+        float y = vUv.y, p = 0.0;
+        for (int i = 0; i < 8; i++) { float f = (uTime - uPulse[i]) * 0.55; if (f > 0.0 && f < 1.2) p += exp(-pow((y - f) * 14.0, 2.0)) * (1.2 - f); }
+        float a = ${o.toFixed(3)} * (0.35 + 1.6 * p) * smoothstep(1.0, 0.2, y);
+        gl_FragColor = vec4(mix(vec3(1.0, 0.82, 0.5), vec3(1.0), clamp(p, 0.0, 1.0)), a);
       }`,
   }));
-  gate.add(horizon);
+  const laser = laserMat(0.03, 1), laserGlow = laserMat(0.16, 0.22);
+  scene.add(laser, laserGlow);
+  const skyGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: 0x6fa8ff, transparent: true, opacity: 0.06, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  skyGlow.scale.set(70, 40, 1);
+  scene.add(skyGlow);
+  const bg0 = new THREE.Color(C.bg), bgLit = new THREE.Color(0x0c1a2c), bgNow = new THREE.Color();
+  if (reducedMotion) cometPoints.visible = false; // still beams only, no flying lights
+
+  // ---------- the way in: through the front glass, down to the core ----------
+  const front = { a: CORNERS.bots, b: CORNERS.scripts };
+  const faceNormal = new THREE.Vector3().subVectors(front.b, front.a).cross(new THREE.Vector3().subVectors(apex, front.a)).setY(0).normalize();
   const flash = document.createElement("div");
   flash.className = "w3d-flash";
   document.body.append(flash);
 
+  const side = new THREE.Vector3().crossVectors(faceNormal, new THREE.Vector3(0, 1, 0)); // across the front, so the beam sits to one side
   // ---------- the camera path ----------
   const shots = [
     { at: 0, pos: new THREE.Vector3(0, 15.5, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
-    { at: 0.35, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
-    { at: 0.7, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
-    { at: 1, pos: gateCentre.clone().addScaledVector(faceNormal, 1.3), look: gateCentre.clone(), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.3, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.56, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.74, pos: new THREE.Vector3(0, 1.05, 0).addScaledVector(faceNormal, 1.15), look: new THREE.Vector3(0, 0.95, 0), up: new THREE.Vector3(0, 1, 0) },
+    // then up beside the ramp, past the screens and pods, to the code and maths near the top
+    { at: 0.88, pos: new THREE.Vector3(0, 1.85, 0).addScaledVector(faceNormal, 0.8), look: new THREE.Vector3(0, 1.85, 0).addScaledVector(faceNormal, -0.6).addScaledVector(side, 0.55), up: new THREE.Vector3(0, 1, 0) },
+    { at: 1, pos: new THREE.Vector3(0, 2.75, 0).addScaledVector(faceNormal, 0.5), look: new THREE.Vector3(0, 2.7, 0).addScaledVector(faceNormal, -0.6).addScaledVector(side, -0.5), up: new THREE.Vector3(0, 1, 0) },
   ];
   function shotAt(p) {
     let i = 0;
@@ -255,7 +415,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   function readScroll() {
     const r = outside.getBoundingClientRect(), span = Math.max(1, r.height - innerHeight);
     target = clamp01(-r.top / span);
-    if (reducedMotion) target = target < 0.2 ? 0 : target < 0.85 ? 0.7 : 1; // cut between shots, no flying
+    if (reducedMotion) target = [0, 0.56, 0.74, 1].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a)); // cut between shots, no flying
     document.body.style.setProperty("--w3d-p", String(clamp01(-r.top / span)));
     const past = r.bottom < innerHeight * 0.6;
     document.body.classList.toggle("w3d-past", past);
@@ -267,6 +427,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     camera.aspect = w / h;
     camera.fov = w < h ? 60 : 45; // portrait screens see the same pyramid
     camera.updateProjectionMatrix();
+    cometPoints.material.uniforms.uScale.value = h / (2 * Math.tan((camera.fov * Math.PI) / 360)) * renderer.getPixelRatio();
   }
   addEventListener("resize", resize);
   resize(); readScroll(); shown = target;
@@ -304,13 +465,18 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const inside = smooth(clamp01((p - 0.12) / 0.25));
     hall.scale.set(1, Math.max(0.001, rise), 1);
     hall.visible = inside > 0.01;
-    screens.forEach((s, i) => { s.position.y = 0.85 * rise + Math.sin(time * 0.6 + i) * 0.03 * (reducedMotion ? 0 : 1); s.scale.set(inside, inside / Math.max(0.001, rise), inside); });
+    tower.visible = inside > 0.01;
+    tower.scale.set(1, Math.max(0.001, rise), 1);
+    for (const [m, o] of fades) m.opacity = o * inside;
+    const bob = reducedMotion ? 0 : 1;
+    screens.forEach((g, i) => { g.position.y = g.userData.y + Math.sin(time * 0.6 + i) * 0.02 * bob; });
+    pods.forEach((g, i) => { g.rotation.y = time * 0.5 * bob + i; g.children[2].material.opacity = inside * (0.6 + 0.4 * Math.sin(time * 2.4 + i * 1.7)); });
     core.material.opacity = inside * (0.8 + 0.2 * Math.sin(time * 3));
     ticks.forEach((t, i) => { t.material.opacity = inside * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(time * 1.4 - i * 0.35))); });
     spokes.forEach((l, i) => { l.material.opacity = inside * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 2 + i * 1.3))); });
     nodes.forEach((n, i) => { n.material.opacity = inside * (0.6 + 0.4 * Math.sin(time * 2 + i * 1.3)); });
     const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
-    for (const m of [beam, beamGlow]) { m.scale.set(1, beamLen, 1); m.position.set(0, 0.15 + beamLen / 2, 0); }
+    for (const m of [beam, beamGlow, beam2]) { m.scale.set(1, beamLen, 1); m.position.set(m === beam2 ? 0.05 : 0, 0.15 + beamLen / 2, m === beam2 ? 0.03 : 0); }
     beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
     marks.children.forEach((m, i) => { if (m.isMesh) m.rotation.y = time * (0.15 + i * 0.03); });
 
@@ -325,25 +491,20 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     }
     flowGeo.attributes.position.needsUpdate = true;
 
-    // The stargate: its rings turn slowly in opposite directions, then lock and open as we arrive.
-    const open = smooth(clamp01((p - 0.78) / 0.17));
-    gate.scale.setScalar(rise);
-    gate.position.copy(gateCentre).setY(gateCentre.y * rise).addScaledVector(faceNormal, 0.04);
-    gateRings.forEach((g, i) => {
-      const spin = (i % 2 ? -1 : 1) * (0.12 + i * 0.05) * (reducedMotion ? 0 : 1);
-      g.ring.rotation.z = g.lock + (time * spin) * (1 - open);
-      g.ring.children.forEach(c => { c.material.opacity = c.userData.o * (0.5 + 0.5 * clamp01((p - 0.5) / 0.3)) * (1 + open * 0.6); });
-    });
-    horizon.material.uniforms.uTime.value = time;
-    horizon.material.uniforms.uOpen.value = open;
     // A short burst of light as we pass through, gone again once we're in.
-    const through = clamp01((p - 0.9) / 0.1), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
+    const through = clamp01((p - 0.64) / 0.1), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
     flash.style.opacity = String(past ? 0 : burst * 0.85);
 
+    moveLights(time, H * rise);
+    formFloor(time);
     const s = shotAt(p);
     camera.position.copy(s.pos);
     camera.up.copy(s.up);
     camera.lookAt(s.look);
+    // Up close inside, the core's glow and the beams' haze would fill the screen: dim them as the camera nears.
+    const near = clamp01((Math.hypot(camera.position.x, camera.position.z) - 0.35) / 1.6);
+    core.material.opacity *= 0.25 + 0.75 * near; beamGlow.material.opacity *= near;
+    for (const m of [beam, beam2]) { const w = 0.45 + 0.55 * near; m.scale.x = m.scale.z = w; }
     renderer.render(scene, camera);
 
     if (fpsEl) { fpsAcc += dt; fpsN++; if (now - fpsAt > 500) { fpsEl.textContent = `${Math.round(fpsN / fpsAcc)} fps · ${level}`; fpsAcc = 0; fpsN = 0; fpsAt = now; } }
@@ -396,6 +557,42 @@ function chartTex(seed, color) {
   return t;
 }
 
+// A rising beam of light with bright pulses climbing it (from the end of the 10118 video).
+function movingLight(color, opacity) {
+  return new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 }, uOn: { value: 0 }, uSpeed: { value: 0.4 }, uColor: { value: new THREE.Color(color) } },
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `uniform float uTime; uniform float uOn; uniform float uSpeed; uniform vec3 uColor; varying vec2 vUv;
+      void main(){
+        float y = vUv.y;
+        float pulse = pow(fract(y * 3.0 - uTime * uSpeed), 10.0);
+        float a = uOn * ${opacity.toFixed(3)} * (0.22 + 0.9 * pulse) * smoothstep(1.0, 0.3, y) * smoothstep(0.0, 0.05, y);
+        gl_FragColor = vec4(uColor * (1.0 + pulse), a);
+      }`,
+  });
+}
+
+// A chart script's code on a glass panel, and maths floating free (the video's look; made-up text).
+function codeTex(seed) {
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 166;
+  const g = cv.getContext("2d");
+  g.fillStyle = "rgba(30,50,80,0.45)"; g.fillRect(0, 0, 256, 166);
+  const lines = ["fn signal(round) {", "  let ema = avg(close, 21)", "  if close > ema && rsi < 70", "    return UP", "  else if close < ema", "    return DOWN", "  hold()", "}", "// next round: 15m", "send(call, key)"];
+  g.font = "12px monospace";
+  lines.forEach((l, i) => { g.fillStyle = i % 4 === 3 ? "#b98cff" : i % 3 ? "#5be3a6" : "#9fd0ff"; g.fillText(l.slice(0, 26 - (seed * 3 + i) % 6), 10, 18 + i * 15); });
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function mathTex(seed) {
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 128;
+  const g = cv.getContext("2d");
+  const f = ["σ = √(Σ(x−μ)² / n)", "EMA = α·x + (1−α)·EMA", "P(up) = e^z / (1+e^z)"][seed % 3];
+  g.font = "italic 22px serif"; g.fillStyle = "#e8f0ff"; g.fillText(f, 12, 56);
+  g.strokeStyle = "rgba(232,240,255,0.5)"; g.beginPath(); g.moveTo(12, 78); g.lineTo(230, 78); g.stroke();
+  g.font = "14px serif"; g.fillText(["n = 96 rounds", "α = 2/(21+1)", "z = w·x + b"][seed % 3], 12, 104);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
 // A soft round glow, drawn once.
 let radialTex = null;
 function radial() {
@@ -408,42 +605,3 @@ function radial() {
   return (radialTex = new THREE.CanvasTexture(cv));
 }
 
-// The stargate in engraved line art: concentric bands of fine ornament (from the skull mandala we were
-// shown, with D3MON's own motifs: ticks, triangles, flower-of-life petals), each band its own ring.
-function buildGate(parent, full) {
-  const bands = [
-    { r: 1.0, color: C.callers, make: r => ticks(r, full ? 120 : 72, 0.06) },
-    { r: 0.9, color: C.bots, make: r => circle(r).concat(circle(r - 0.025)) },
-    { r: 0.84, color: C.scripts, make: r => triangles(r, 9) },
-    { r: 0.74, color: C.callers, make: r => petals(r, 12) },
-    { r: 0.66, color: C.bots, make: r => ticks(r, 36, 0.03).concat(circle(r)) },
-  ];
-  return bands.map((b, i) => {
-    const ring = new THREE.Group();
-    const seg = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(b.make(b.r), 3)),
-      new THREE.LineBasicMaterial({ color: b.color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
-    seg.userData.o = 0.9;
-    ring.add(seg);
-    parent.add(ring);
-    return { ring, lock: (i * Math.PI) / 9 };
-  });
-  function circle(r, n = 96) { const out = []; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, b = ((i + 1) / n) * Math.PI * 2; out.push(Math.cos(a) * r, Math.sin(a) * r, 0, Math.cos(b) * r, Math.sin(b) * r, 0); } return out; }
-  function ticks(r, n, len) { const out = []; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, l = i % 6 ? len : len * 2; out.push(Math.cos(a) * r, Math.sin(a) * r, 0, Math.cos(a) * (r - l), Math.sin(a) * (r - l), 0); } return out; }
-  function triangles(r, n) {
-    const out = [];
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2, s = 0.06, cx = Math.cos(a) * r, cy = Math.sin(a) * r;
-      const pts = [0, 1, 2].map(k => { const t = a + (k * Math.PI * 2) / 3; return [cx + Math.cos(t) * s, cy + Math.sin(t) * s]; });
-      for (let k = 0; k < 3; k++) out.push(...pts[k], 0, ...pts[(k + 1) % 3], 0);
-    }
-    return out;
-  }
-  function petals(r, n) {
-    const out = [];
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2, cx = Math.cos(a) * (r - 0.06), cy = Math.sin(a) * (r - 0.06), pr = 0.065;
-      for (let k = 0; k < 16; k++) { const t0 = (k / 16) * Math.PI * 2, t1 = ((k + 1) / 16) * Math.PI * 2; out.push(cx + Math.cos(t0) * pr, cy + Math.sin(t0) * pr, 0, cx + Math.cos(t1) * pr, cy + Math.sin(t1) * pr, 0); }
-    }
-    return out;
-  }
-}
