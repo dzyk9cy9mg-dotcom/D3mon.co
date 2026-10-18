@@ -2,7 +2,7 @@
 
 The redesign of D3MON.CO as an immersive 3D world: the Callers / Bots / Chart Scripts triangle rising into a pyramid, with the Battle of the Bots arena inside and the trade floor at the peak.
 
-**Status: planning.** Nothing here is built or served by the site yet. The real build will be a separate preview page (`/world`), delivered as pull requests.
+**Status: building.** The preview page `/world` is live behind the construction page: today it's the complete 2D version with live data. The 3D world is added in the next pull requests.
 
 | Document | What's in it |
 | --- | --- |

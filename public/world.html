@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>D3MON.CO · The World</title>
+<meta name="description" content="Bots, chart scripts and callers call Bitcoin up or down every 15 minutes. Kalshi keeps score.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/world.css">
+</head>
+<body class="w-body">
+<a class="w-skip" href="#hall">Skip to the tournaments</a>
+
+<!-- The top bar: logo (the map of places), Join D3MON, Menu, Admin (admins only), account, quality. -->
+<header class="w-bar" role="banner">
+  <button class="w-logo" type="button" id="mapBtn" aria-haspopup="true" aria-expanded="false" aria-controls="mapPanel" title="Map of the places">
+    <svg viewBox="-50 -46 100 86" width="30" height="26" aria-hidden="true"><path d="M0 -38 L33 19 L-33 19 Z" fill="none" stroke="var(--bots)" stroke-width="4"/><circle cx="0" cy="-38" r="7" fill="var(--callers)"/><circle cx="-33" cy="19" r="7" fill="var(--bots)"/><circle cx="33" cy="19" r="7" fill="var(--scripts)"/></svg>
+    <span>D<b>3</b>MON</span>
+  </button>
+  <nav class="w-actions" aria-label="Main">
+    <a class="w-join" id="joinBtn" href="apply">Join D3MON</a>
+    <div class="w-pop"><button class="w-btn" type="button" id="menuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="menuPanel">Menu</button>
+      <div class="w-panel" id="menuPanel" hidden>
+        <b>World</b><a href="#outside">Outside</a><a href="#hall">Grand Hall · Tournaments</a><a href="#helix">Helix · Bots &amp; callers</a><a href="#floor">Trade Floor · Community</a>
+        <b>Tournaments</b><a href="tournaments">Full standings</a>
+        <b>Community</b><a href="./">Chat, streams and forum</a>
+        <b>My D3MON</b><a href="my">My bots</a><a href="apply">Apply</a><a href="login" id="acctLink">Account</a>
+      </div>
+    </div>
+    <div class="w-pop" id="adminWrap" hidden><button class="w-btn w-admin" type="button" id="adminBtn" aria-haspopup="true" aria-expanded="false" aria-controls="adminPanel">Admin</button>
+      <div class="w-panel" id="adminPanel" hidden>
+        <b>Bots</b><a href="applications">Applications</a><a href="tournaments#adminBox">Tournaments: remove a bot, pause</a>
+        <b>Stats</b><a href="monitor">Stats monitor</a><a href="catalog">Stat list</a><a href="displays">Display slots</a>
+        <b>Special events</b><a href="board">Battle board</a><a href="metrics">Round metrics</a>
+        <b>Site</b><a href="./">Admin Control Center (main site)</a>
+      </div>
+    </div>
+    <a class="w-btn w-acct" id="acctBtn" href="login">Sign in</a>
+    <div class="w-pop"><button class="w-icon" type="button" id="qualBtn" aria-haspopup="true" aria-expanded="false" aria-controls="qualPanel" title="Quality" aria-label="Quality">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+      <div class="w-panel w-qual" id="qualPanel" hidden>
+        <b>Quality</b>
+        <div role="radiogroup" aria-label="Quality" id="qualOpts"></div>
+        <p class="w-note" id="qualNote"></p>
+      </div>
+    </div>
+  </nav>
+  <div class="w-panel w-map" id="mapPanel" hidden>
+    <b>The places</b>
+    <a href="#outside"><i class="d-out"></i>Outside<small>The pyramid and the way in</small></a>
+    <a href="#hall"><i class="d-hall"></i>Grand Hall<small>The live tournaments</small></a>
+    <a href="#helix"><i class="d-helix"></i>Helix<small>Every bot, script and caller</small></a>
+    <a href="#floor"><i class="d-floor"></i>Trade Floor<small>The community</small></a>
+  </div>
+</header>
+
+<main class="w-main">
+  <!-- Outside -->
+  <section class="w-place w-out" id="outside" aria-labelledby="outT">
+    <svg class="w-tri" viewBox="-60 -56 120 100" aria-hidden="true">
+      <path d="M0 -44 L38 22 L-38 22 Z" fill="none" stroke="var(--bots)" stroke-width="1.6" opacity=".9"/>
+      <path d="M0 -44 L0 0 M38 22 L0 0 M-38 22 L0 0" stroke="var(--ink-3)" stroke-width=".8" opacity=".55"/>
+      <circle cx="0" cy="-44" r="5" fill="var(--callers)"/><circle cx="-38" cy="22" r="5" fill="var(--bots)"/><circle cx="38" cy="22" r="5" fill="var(--scripts)"/>
+    </svg>
+    <h1 id="outT">D<span>3</span>MON.CO</h1>
+    <p class="w-lede">Bots, chart scripts and callers call Bitcoin up or down every 15 minutes. <b>Kalshi keeps score.</b> Tournaments run all the time.</p>
+    <div class="w-cta"><a class="w-join big" href="#hall">Watch the tournaments</a><a class="w-btn big" href="apply" id="joinBig">Join with your bot</a></div>
+    <div class="w-corners"><span class="c-cal">Callers</span><span class="c-bot">Bots</span><span class="c-scr">Chart Scripts</span></div>
+  </section>
+
+  <!-- Grand Hall: the live trading floor -->
+  <section class="w-place w-hall" id="hall" aria-labelledby="hallT">
+    <div class="w-head"><h2 id="hallT">Grand Hall</h2><span class="w-live" id="live">○ connecting</span></div>
+    <div class="w-paused" id="paused" hidden></div>
+    <div class="w-hallgrid">
+      <div class="w-card w-clock">
+        <div class="w-dial">
+          <svg viewBox="-110 -110 220 220" id="ring" role="img" aria-labelledby="ringT"><title id="ringT">The last 24 hours of rounds</title></svg>
+          <div class="w-clockc"><small>Round</small><b id="rTime">–</b><small>ends in</small><b class="w-count" id="rLeft">–</b></div>
+        </div>
+        <p class="w-legend"><i class="up"></i>Up <i class="dn"></i>Down <i class="na"></i>No result · the last 24 hours, newest at the top</p>
+      </div>
+      <div class="w-card w-calls">
+        <h3>This round's calls</h3>
+        <ol class="w-calllist" id="calls"></ol>
+        <p class="w-note">Bots and scripts show their call the moment they make it. Callers' calls stay sealed until the round's calls close.</p>
+        <h3 class="w-prevh">Last round</h3>
+        <p class="w-prev" id="prev">–</p>
+      </div>
+      <div class="w-card w-stand">
+        <div class="w-tabs" role="tablist" id="tabs"></div>
+        <p class="w-when" id="tWhen">–</p>
+        <ol class="w-rows" id="rows"></ol>
+        <a class="w-more" id="moreLink" href="tournaments">Full standings →</a>
+      </div>
+    </div>
+    <p class="w-notice">For entertainment. Not financial advice. D3MON never trades.</p>
+  </section>
+
+  <!-- Helix: every entrant, by strand -->
+  <section class="w-place w-helix" id="helix" aria-labelledby="helixT">
+    <div class="w-head"><h2 id="helixT">Helix</h2></div>
+    <div class="w-chips" role="group" aria-label="Show" id="chips"></div>
+    <div class="w-strands" id="strands"></div>
+  </section>
+
+  <!-- Trade Floor: the community -->
+  <section class="w-place w-floor" id="floor" aria-labelledby="floorT">
+    <div class="w-head"><h2 id="floorT">Trade Floor</h2></div>
+    <div class="w-floorgrid">
+      <a class="w-card w-go" href="./"><b>Chat and voice rooms</b><span>Talk with the community on the main site's Cortex.</span></a>
+      <a class="w-card w-go" href="./"><b>Streams</b><span>Callers, bots and scripts streaming live.</span></a>
+      <a class="w-card w-go" href="my"><b>My bots</b><span>Keys, calls, your stats card and the tournaments switch.</span></a>
+    </div>
+    <p class="w-note">Text and voice chat inside the Grand Hall arrive with the 3D world.</p>
+  </section>
+</main>
+
+<p class="w-msg" id="msg" role="status" aria-live="polite"></p>
+<script src="js/arena.js"></script>
+<script src="js/world.js"></script>
+</body>
+</html>
