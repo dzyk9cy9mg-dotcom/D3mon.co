@@ -34,8 +34,9 @@ Scrolling glides through these moments. Free flight is available at any time, wi
 
 | # | Moment | What happens |
 | --- | --- | --- |
-| 1 | **Arrival** | The loading screen draws the triangle in engraved line art. Seen from above, it's the logo. |
-| 2 | **The rise** | Particles of light lift the triangle into the pyramid, and the camera eases down to the opening shot (from `inspiration/02`). The astronaut drifts past toward it. |
+| 1 | **Arrival** (built 2026-10-18) | **The D3MON skull** in engraved line art (our own drawing after the skull mandala in `inspiration/08`: the D3MON triangle as its nose, the flower of life on its brow, amber glowing eyes), inside a web and a mandala of rings turning slowly. Seen from above, high over the pyramid. |
+| 1b | **The morph** (built) | The skull dissolves into particles that swirl out into the rings (the particle morph from `inspiration/07`). The rings lock into the **stargate**, its three-colour swirl opens, and the particles are pulled in (the Lusion portal, `inspiration/05`). We dive through, and the pyramid is revealed far below: flat on the floor, it's the logo. |
+| 2 | **The rise** (built) | Particles of light lift the triangle into the pyramid, a **beam of light** climbs from the capstone (from `inspiration/04`), and the camera eases down to the opening shot (from `inspiration/02`) while **"CALLERS · BOTS · CHART SCRIPTS"** slides past in huge outlined letters (from `inspiration/09`). The astronaut (still to come) drifts past toward it, and is the one pulled into the arrival gate. |
 | 3 | **Outside** | A slow, gentle pass showing the three corner landmarks and the billboard faces. |
 | 4 | **The portal** | **A stargate of engraved line art** (owner, 2026-10-18, from the skull mandala in `inspiration/08`): concentric rings of ornament turning slowly in opposite directions in the three colours, which lock, fill with a rippling event horizon, and let us through. The astronaut flies through, then a short tunnel of glowing flower-of-life cells (from `inspiration/05`). We arrive in the Grand Hall. The same gate, smaller, is the transition between places. |
 | 5 | **The Grand Hall** | We land on the **balcony**, overlooking the battle (section 5). |
