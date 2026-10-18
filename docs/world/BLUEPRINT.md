@@ -252,3 +252,7 @@ Each step is its own pull request, tested, with the server update walked through
 ## 12. Still to confirm
 
 Nothing that changes the design. Streams: YouTube, Twitch and Kick play on the walls, and X, Discord and others show as "Watch live" cards (decided 2026-10-17).
+
+## Navigation: the journey is the menu (owner, 2026-10-18)
+
+The owner loves gliding up the helix and riding the centre beam into the VIP Room, and wants **the whole site navigated like that**: the camera travels along the world's own structures (the helix ramp, the beam as a lift, the walkways) from one place to the next, instead of cutting between pages. Every new place gets a path in and out that follows something you can see. The 2D version and reduce motion keep plain links and cuts.
