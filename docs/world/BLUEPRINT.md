@@ -82,12 +82,32 @@ The battle is the main event inside the pyramid: **a grand room** (owner's wish)
   - **Tap a card** to see the entrant's details, then tap again to open their cinematic profile (section 7).
 - **The Helix balcony** is a ring at the Helix's middle where visitors browse from.
 
-### The Trade Floor (the peak)
+### The VIP Room (the peak)
+
+Changed 2026-10-18 (owner): the peak is a **paid room**, not the free community space.
 
 - The chamber at the very top, under a **golden geometric crown** (from `inspiration/04`).
-- A glass floor looks down through the Helix into the Grand Hall.
-- Wall screens show the community chat, the current round and live streams.
-- It's the community's space, and **ad-free**.
+- It works like the Grand Hall's trading floor, but only members with access get in. **Featured callers lead the trading**, backed by **featured bots and chart scripts**, and members trade along with them.
+- Members see the featured callers' calls **the moment they're made**. Everywhere else those calls stay sealed until the calls close.
+- The featured callers, bots and scripts have their **streams** on the walls.
+- **Its own text chat and voice chat, private to members with access** (owner, 2026-10-18).
+- A glass floor looks down through the Helix into the Grand Hall. **Ad-free.**
+- Access: an admin grants it for a number of days after the member pays outside the site (built: `/vip`, `server/arena/vip.js`). Built-in card payments (Stripe) come later.
+- The community's chat, voice and streams move to the **Grand Hall**, which gets its own text and voice chat.
+
+### Chat, voice and video in both rooms (owner, 2026-10-18)
+
+| | Grand Hall | VIP Room |
+| --- | --- | --- |
+| Text chat | **The Demon Discord**, mirrored both ways | D3MON's own chat, members with access only |
+| Voice chat | The Demon Discord's voice channels | D3MON's own voice room, members with access only |
+| Video streams | Every entrant's stream on the walls | The featured entrants' streams |
+
+- **Video streams are embedded, never hosted:** YouTube, Twitch and Kick play inside the room; X, Discord and others show as "Watch live" cards. D3MON's server never carries video, which keeps costs low.
+- **The Grand Hall is where everyone trades every day** (owner, 2026-10-18): the always-on tournaments run there, and special-event battles happen in the same hall when one is on.
+- **The Grand Hall's chat is the Demon Discord** (the main page's Discord window, two-way through WidgetBot): one community in Discord and on the site, phone notifications, and Discord's voice channels as the hall's voice chat.
+- **The VIP Room keeps its own chat and voice**, on D3MON's server, so they close by themselves when a member's paid access ends. A Discord channel couldn't do that without removing people by hand.
+- Built with each room in the 3D build order (Grand Hall in step 4, VIP Room in step 5). The 2D `/world` and `/vip` pages get them at the same time.
 
 ## 5. The battle
 
