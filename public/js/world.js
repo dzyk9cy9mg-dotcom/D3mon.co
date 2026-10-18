@@ -49,10 +49,34 @@
   function renderQuality() {
     $("qualOpts").innerHTML = LEVELS.map(([k, name]) => `<label><input type="radio" name="q" value="${k}" ${k === choice ? "checked" : ""}> ${name}${k === "auto" ? ` <small>(${auto.level === "2d" ? "2D" : auto.level === "mobile-lite" ? "Mobile Lite" : "Lite"})</small>` : ""}</label>`).join("");
     const why = choice === "auto" && auto.reasons.length ? ` Auto chose 2D because ${auto.reasons.join(", ")}.` : "";
-    $("qualNote").textContent = `You're seeing the 2D version. The 3D world arrives in the next updates and will use this setting.${why}`;
-    document.body.dataset.level = level();
+    const slow = choice === "auto" && slowFps ? ` Auto switched to 2D because 3D ran at about ${slowFps} frames a second here.` : "";
+    const lv = level();
+    $("qualNote").textContent = lv === "2d" ? `You're seeing the 2D version.${why}${slow}` : `You're seeing the 3D version (${lv === "full" ? "Full" : lv === "mobile-lite" ? "Mobile Lite" : "Lite"}). Choose 2D for a lighter page.`;
+    document.body.dataset.level = lv;
   }
-  $("qualOpts").addEventListener("change", e => { choice = e.target.value; store.set("d3w.quality", choice); renderQuality(); });
+  $("qualOpts").addEventListener("change", e => { choice = e.target.value; store.set("d3w.quality", choice); slowFps = 0; renderQuality(); world3d(); });
+
+  // ---------- the 3D world: loaded only when the level isn't 2D ----------
+  let slowFps = 0, scene3d = null, loading = null;
+  try { slowFps = +(sessionStorage.getItem("d3w.slow") || 0) || 0; } catch (e) {}
+  if (slowFps && choice === "auto") auto.level = "2d";
+  async function world3d() {
+    const lv = level();
+    if (scene3d) { scene3d.stop(); scene3d = null; }
+    if (lv === "2d") return;
+    const mine = (loading = Symbol());
+    try {
+      const m = await import("./world3d.js");
+      if (mine !== loading || level() === "2d") return;
+      scene3d = m.start({ level: lv, reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches, showFps: new URLSearchParams(location.search).has("fps"),
+        onSlow: fps => {
+          if (choice !== "auto") return; // a level chosen by hand stays
+          try { sessionStorage.setItem("d3w.slow", String(fps)); } catch (e) {}
+          slowFps = fps; auto.level = "2d"; renderQuality(); world3d();
+        } });
+      if (!scene3d) { auto.level = "2d"; renderQuality(); }
+    } catch (e) { console.error("3D world:", e); auto.level = "2d"; renderQuality(); }
+  }
 
   // ---------- menus ----------
   const pops = [["mapBtn", "mapPanel"], ["menuBtn", "menuPanel"], ["adminBtn", "adminPanel"], ["qualBtn", "qualPanel"]];
@@ -149,6 +173,7 @@
 
   // ---------- start ----------
   renderQuality();
+  world3d();
   renderStandings();
   renderHelix();
   (async () => {

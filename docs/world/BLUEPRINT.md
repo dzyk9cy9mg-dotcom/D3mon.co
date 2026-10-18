@@ -28,16 +28,32 @@ The D3MON triangle is a **pyramid of light in deep space**, with three levels in
 - **Motion:** slow, weighted, with momentum; nothing snaps. Particles of light carry each change from one place to the next (from `inspiration/07`).
 - **Sound:** off until the visitor turns it on. An eerie, echoing score with no water-like sounds. A deep cue for the lock moment.
 
+### Light that moves, and glass screens (owner, 2026-10-18, from the end of the 10118 video)
+
+The owner likes how the light moves at the end of that video, and the look of its screens. They're part of the design everywhere:
+
+- **Rising beams:** tall beams in amber, blue and violet, with pulses of light running up them. Built: one at each corner of the pyramid, plus the capstone beam.
+- **Sweeping arcs:** thin lines of light that sweep up and around in curves, a bright head with a fading tail, like a comet. Built: three around the pyramid, one per colour.
+- **The energy of the three (owner, 2026-10-18): "these three are connecting and producing energy through all the three parts and the people on the website."** Built in the outside: **hundreds of little lights** (amber, blue and violet for the three, white for the people) drift in from all around on slightly wandering paths, most from the direction of a corner, the rest from anywhere; they gather in the centre, rise up the pyramid's core together, and the beam launches from the capstone into the dark sky. Each light loops in again from somewhere new, so it never stops: "many people coming together, and energy coming together" (owner). **Next:** inside the Grand Hall, the members online (their lights in the stands) send their own small streams into the centre too, so the people are part of the energy; each lock moment sends a surge up the core.
+- **Flares** where beams meet: the capstone already glows; more at crossings in the halls.
+- **Where they're used next:**
+  - the **lift between places** (Grand Hall → Helix → VIP Room) rides up on rising beams with arcs sweeping past;
+  - the **lock moment** every 15 minutes sends a pulse up every beam in the Grand Hall;
+  - **transitions** use a quick sweep of arcs across the screen.
+- **Glass screens:** layers of glass panels at different depths, thin glowing borders, candlestick charts, gauges, small tables and floating lines of code and maths. The Grand Hall's walls and the VIP Room's screens use this look, filled with our live data: the round ring, this round's calls, the standings and the stats cards.
+- **No stars:** the owner doesn't like them. The sky stays the plain D3MON black, and the gold stars at the end of that video are left out.
+
 ## 3. The journey
 
 Scrolling glides through these moments. Free flight is available at any time, with "back to route". A **level switch** (Hall · Helix · Trade Floor) jumps straight to a level. The **astronaut** (our own, never Lusion's) is the guide at the key moments.
 
 | # | Moment | What happens |
 | --- | --- | --- |
-| 1 | **Arrival** | The loading screen draws the triangle in engraved line art. Seen from above, it's the logo. |
-| 2 | **The rise** | Particles of light lift the triangle into the pyramid, and the camera eases down to the opening shot (from `inspiration/02`). The astronaut drifts past toward it. |
+| 1 | **Arrival** (built 2026-10-18) | **The D3MON skull** in engraved line art (our own drawing after the skull mandala in `inspiration/08`: the D3MON triangle as its nose, the flower of life on its brow, amber glowing eyes), inside a web and a mandala of rings turning slowly. Seen from above, high over the pyramid. |
+| 1b | **The morph** (built) | The skull dissolves into particles that swirl out into the rings (the particle morph from `inspiration/07`). The rings lock into the **stargate**, its three-colour swirl opens, and the particles are pulled in (the Lusion portal, `inspiration/05`). We dive through, and the pyramid is revealed far below: flat on the floor, it's the logo. |
+| 2 | **The rise** (built) | Particles of light lift the triangle into the pyramid, a **beam of light** climbs from the capstone (from `inspiration/04`), and the camera eases down to the opening shot (from `inspiration/02`) while **"CALLERS · BOTS · CHART SCRIPTS"** slides past in huge outlined letters (from `inspiration/09`). The astronaut (still to come) drifts past toward it, and is the one pulled into the arrival gate. |
 | 3 | **Outside** | A slow, gentle pass showing the three corner landmarks and the billboard faces. |
-| 4 | **The portal** | The astronaut flies through a ring of light in the three colours and a short tunnel of glowing flower-of-life cells (from `inspiration/05`). We arrive in the Grand Hall. |
+| 4 | **The portal** | **A stargate of engraved line art** (owner, 2026-10-18, from the skull mandala in `inspiration/08`): concentric rings of ornament turning slowly in opposite directions in the three colours, which lock, fill with a rippling event horizon, and let us through. The astronaut flies through, then a short tunnel of glowing flower-of-life cells (from `inspiration/05`). We arrive in the Grand Hall. The same gate, smaller, is the transition between places. |
 | 5 | **The Grand Hall** | We land on the **balcony**, overlooking the battle (section 5). |
 | 6 | **The Helix** | A smooth lift up to the Helix balcony. Scrolling turns the Helix past a steady camera (section 4). |
 | 7 | **The Trade Floor** | A smooth lift to the peak, under the golden crown. The community space. |
@@ -224,7 +240,7 @@ Each step is its own pull request, tested, with the server update walked through
    - the page, device levels and the Quality switch;
    - the new **top bar and Menu**, with the applicant and admin buttons;
    - the complete 2D version with the live panels.
-3. **The 3D world, outside:** space, floor, the pyramid, the corners, the opening and the portal.
+3. **The 3D world, outside** (first version done 2026-10-18: `public/js/world3d.js`, three.js 0.169.0 in `public/vendor/`): space, the flower-of-life floor, the pyramid rising from the flat logo triangle, the corner landmarks, particles along the edges, the opening shot and the **stargate** on the front face (engraved rings turning, locking, and the event horizon opening). Loaded only above 2D; Auto drops to 2D if it runs slower than about 22 frames a second; `/world?fps` shows the frame rate.
 4. **The Grand Hall:** the clock, stations, stream walls, spotlight screen, balcony and the lock moment.
 5. **The Helix and the Trade Floor:** filtering, cards to profiles, the descent at battle start, and the astronaut.
 6. **Rich profiles,** using generated art first.
