@@ -35,7 +35,7 @@ describe("tournaments: the join switch", () => {
   test("an entrant starts out of the tournaments", async () => {
     const r = await guest.get(path(bot));
     assert.equal(r.status, 200);
-    assert.deepEqual(r.json.tournaments, { entrantId: bot, eligible: true, on: false, from: null, playingNow: false });
+    assert.deepEqual(r.json.tournaments, { entrantId: bot, eligible: true, on: false, from: null, playingNow: false, removed: false });
   });
 
   test("only the owner can flip the switch", async () => {
@@ -404,6 +404,62 @@ describe("tournaments: standings", () => {
     const T = arena().tournaments, id = "hourly-2026-10-10T13", H1 = H0 + 3600000;
     for (let n = 4; n < 8; n++) settle(n, "up");
     assert.ok(T.finalizeDue(H1 + 3600000 + MIN).includes(id), "no grace wait when everything is settled");
+  });
+
+  test("admins can remove a bot, from the round in progress, and the owner can't rejoin", async () => {
+    const id = "hourly-2026-10-10T14", H2 = H0 + 2 * 3600000, rm = body => hs.req("PUT", `/api/v1/entrants/${ids.Charlie}/tournaments/removal`, body);
+    for (let n = 8; n < 12; n++) settle(n, "down");
+    arena().tournaments.now = () => H2 + Q + 5 * MIN; // in round 2 of this hour
+    assert.equal((await owners.Alpha.req("PUT", `/api/v1/entrants/${ids.Charlie}/tournaments/removal`, { removed: true, reason: "x" })).status, 403);
+    assert.equal((await rm({ removed: true })).json.error.field, "reason");
+    const r = await rm({ removed: true, reason: "Sent calls from two accounts" });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.tournaments.removed, true);
+    assert.equal(r.json.tournaments.removal.from, H2 + Q);
+    assert.equal((await rm({ removed: true, reason: "again" })).json.tournaments.unchanged, true);
+    const pub = (await new Client(srv.base).get(`/api/v1/entrants/${ids.Charlie}/tournaments`)).json.tournaments;
+    assert.equal(pub.removed, true);
+    assert.equal(pub.removal, undefined, "the reason is for the owner and admins");
+    assert.equal((await owners.Charlie.get(`/api/v1/entrants/${ids.Charlie}/tournaments`)).json.tournaments.removal.reason, "Sent calls from two accounts");
+    const T = arena().tournaments;
+    assert.equal(T.inAt(ids.Charlie, H2), true, "the round before stays");
+    assert.equal(T.inAt(ids.Charlie, H2 + Q), false);
+    // Leaving and rejoining doesn't get round the removal.
+    await owners.Charlie.req("PUT", `/api/v1/entrants/${ids.Charlie}/tournaments`, { on: false });
+    assert.equal((await owners.Charlie.req("PUT", `/api/v1/entrants/${ids.Charlie}/tournaments`, { on: true })).json.error.code, "removed");
+    const admin = (await hs.get("/api/v1/tournaments/admin")).json;
+    assert.deepEqual(admin.removed.map(x => [x.entrant.name, x.reason]), [["Charlie", "Sent calls from two accounts"]]);
+    assert.equal((await owners.Alpha.get("/api/v1/tournaments/admin")).status, 403);
+    // Restored from the next round, then the owner can join again.
+    assert.equal((await rm({ removed: false })).json.tournaments.removed, false);
+    assert.equal((await owners.Charlie.req("PUT", `/api/v1/entrants/${ids.Charlie}/tournaments`, { on: true })).status, 200);
+    arena().tournaments.now = () => H2 + 3600000 + MIN;
+    const rows = (await get(hs, id)).json.tournament.standings;
+    assert.equal(rows.find(x => x.entrant.name === "Charlie").played, 3, "every round but the one it was removed in");
+    assert.equal(T.inAt(ids.Charlie, H2 + Q), false, "the removed round stays out after the restore");
+    assert.equal(T.inAt(ids.Charlie, H2 + 2 * Q), true);
+  });
+
+  test("admins can pause all tournaments: those rounds count for nobody", async () => {
+    const H3 = H0 + 3 * 3600000, id = "hourly-2026-10-10T15", pause = (c, body) => c.req("PUT", "/api/v1/tournaments/pause", body);
+    for (let n = 12; n < 16; n++) settle(n, "up");
+    arena().tournaments.now = () => H3 + Q + MIN;
+    assert.equal((await pause(owners.Alpha, { paused: true, reason: "x" })).status, 403);
+    assert.equal((await pause(hs, { paused: true })).json.error.field, "reason");
+    const p = await pause(hs, { paused: true, reason: "Kalshi outage" });
+    assert.deepEqual(p.json.paused, { since: H3 + Q, reason: "Kalshi outage" });
+    assert.deepEqual((await new Client(srv.base).get("/api/v1/tournaments")).json.paused, { since: H3 + Q, reason: "Kalshi outage" }, "everyone sees the pause");
+    arena().tournaments.now = () => H3 + 2 * Q + MIN;
+    assert.deepEqual((await pause(hs, { paused: false })).json, { paused: null });
+    arena().tournaments.now = () => H3 + 3600000 + MIN;
+    const t = (await get(hs, id)).json.tournament;
+    assert.equal(t.pausedRounds, 2, "the round paused in and the round the resume came in");
+    assert.equal(t.settledRounds, 2);
+    assert.ok(t.standings.every(x => x.played <= 2));
+    assert.equal(T().pausedAt(H3), false);
+    assert.equal(T().pausedAt(H3 + 3 * Q), false);
+    assert.equal((await hs.get("/api/v1/tournaments/admin")).json.pauses.length, 2);
+    function T() { return arena().tournaments; }
   });
 
   test("unknown and future tournaments are 404", async () => {

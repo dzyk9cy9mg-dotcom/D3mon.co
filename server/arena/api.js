@@ -146,6 +146,8 @@ export function createArena({ store, accounts, cfg }) {
 
     if (route === "GET /rounds") return ok(roundsView(url));
     if (route === "GET /tournaments") return ok(tournaments.current());
+    if (route === "GET /tournaments/admin") return ok(tournaments.adminView(ctx));
+    if (route === "PUT /tournaments/pause") { writer(); return ok(tournaments.pause(ctx, await body())); }
     if ((m = route.match(/^GET \/tournaments\/([A-Za-z0-9-]{6,40})$/))) return ok({ tournament: tournaments.standings(m[1]) });
     if (route === "GET /kalshi") {
       if (!isAdmin(ctx)) throw new ApiError(ctx.uid ? 403 : 401, "not_granted", "Only HardSmoke can see the Kalshi status.");
@@ -178,6 +180,7 @@ export function createArena({ store, accounts, cfg }) {
     if ((m = route.match(/^DELETE \/entrants\/([A-Za-z0-9]+)\/keys\/([A-Za-z0-9]+)$/))) { writer(); return ok({ key: keys.revoke(ctx, m[1], m[2]) }); }
     if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)\/board$/))) return ok(calls.board(ctx, m[1]));
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9-]+)\/tournaments$/))) return ok({ tournaments: tournaments.view(ctx, m[1]) });
+    if ((m = route.match(/^PUT \/entrants\/([A-Za-z0-9]+)\/tournaments\/removal$/))) { writer(); return ok({ tournaments: tournaments.remove(ctx, m[1], await body()) }); }
     if ((m = route.match(/^PUT \/entrants\/([A-Za-z0-9]+)\/tournaments$/))) { writer(); return ok({ tournaments: tournaments.set(ctx, m[1], await body()) }); }
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9-]+)\/card$/))) return ok(stats.card(ctx, m[1]));
     if (route === "GET /stat-catalog") return ok(catalog.view(ctx));

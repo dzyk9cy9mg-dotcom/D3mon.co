@@ -199,3 +199,5 @@
 .arena .tstand a{color:var(--ink);text-decoration:none}
 .arena .tstand a:hover b{color:var(--acc)}
 .arena .tnotice{margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);font:500 12px var(--mono);letter-spacing:.06em;color:var(--ink-2)}
+.arena .tpause{border-color:var(--dn)}
+.arena .tpause h2{color:var(--dn)}
