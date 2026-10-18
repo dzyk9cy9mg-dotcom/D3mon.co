@@ -196,3 +196,52 @@ describe("npm run kalshi:check shows the call prices", () => {
     assert.match(out, /Call prices will work/);
   });
 });
+
+describe("Kalshi's placeholder asks in the candles", () => {
+  test("an ask far from the traded price (nobody offering) gives way to the traded price", async () => {
+    const { paidForCandle } = await import("../server/arena/prices.js");
+    // The real first minute seen on the server: YES ask opened at 99.9¢ while trades opened at 55¢.
+    const first = parseCandle({ end_period_ts: 1792363560, price: { open_dollars: "0.5500", close_dollars: "0.4700" }, yes_ask: { open_dollars: "0.9990", close_dollars: "0.4800" }, yes_bid: { open_dollars: "0.0000", close_dollars: "0.4700" } });
+    assert.deepEqual(paidForCandle("up", first.open), { paid: 0.55, from: "trade" });
+    assert.deepEqual(paidForCandle("down", first.open), { paid: 0.45, from: "trade" }, "no YES bid, so NO's ask falls back too");
+    assert.deepEqual(paidForCandle("up", first.close), { paid: 0.48, from: "ask" }, "a real ask is kept");
+    assert.deepEqual(paidForCandle("down", first.close), { paid: 0.53, from: "ask" });
+    assert.equal(paidForCandle("up", { yesAsk: null, noAsk: null, last: null }), null);
+  });
+});
+
+describe("correcting a candle price written before the placeholder rule", () => {
+  let k, srv, hs, odin, bot, token;
+  const R = Math.floor(Date.now() / Q) * Q - 2 * Q, ticker = "KXBTC15M-FIX-00";
+  before(async () => {
+    k = await fakeKalshi();
+    srv = await startServer({ kalshiUrl: k.base });
+    [hs, odin] = [new Client(srv.base), new Client(srv.base)];
+    await hs.register("hardsmoke", "smoke-pass-1", "HardSmoke");
+    await odin.register("odin", "odin-pass-12", "Odin");
+    const b = (await hs.post("/api/v1/battles", { title: "Fix", startsAt: R, rounds: 8, status: "open" })).json.battle;
+    const a = (await odin.post(`/api/v1/battles/${b.id}/applications`, { kind: "bot", name: "Early", creatorName: "Odin" })).json.application;
+    bot = (await hs.post(`/api/v1/applications/${a.id}/review`, { decision: "approve" })).json.application.entrantId;
+    token = (await odin.post(`/api/v1/entrants/${bot}/keys`, {})).json.token;
+  });
+  after(async () => { await srv.stop(); k.server.close(); });
+
+  test("the old 99.9¢ price gets a correcting line at the traded price, once; the old line stays", async () => {
+    const A = srv.app.arena;
+    A.calls.now = () => R + 20000; // in the first minute
+    const r = await fetch(`${srv.base}/api/v1/bot/calls`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ schema: "d3mon.call/v1", market: "KXBTC15M", direction: "up", round: new Date(R).toISOString() }) });
+    assert.equal(r.status, 201);
+    A.calls.now = () => Date.now();
+    const call = A.ledger.lines.find(l => l.t === "call" && l.entrantId === bot);
+    // What the first version wrote: the placeholder ask.
+    const [old] = A.ledger.append([{ t: "call_price", callId: call.id, entrantId: bot, round: R, side: "yes", paid: 0.999, quotedAt: R, source: "candle", ticker }], null);
+    k.settled = [{ ticker, status: "finalized", result: "yes", open_time: iso(R), close_time: iso(R + Q), strike_type: "greater_or_equal", floor_strike: 1, expiration_value: "2" }];
+    k.candles[ticker] = [{ end_period_ts: (R + MIN) / 1000, price: { open_dollars: "0.5500", close_dollars: "0.4700" }, yes_ask: { open_dollars: "0.9990", close_dollars: "0.4800" }, yes_bid: { open_dollars: "0.0000", close_dollars: "0.4700" } }];
+    await A.kalshi.poll();
+    assert.equal(await A.prices.backfill(), 1);
+    const p = A.prices.forCall(call.id);
+    assert.deepEqual([p.paid, p.from, p.corrects], [0.55, "trade", old.id]);
+    assert.ok(A.ledger.lines.some(l => l.id === old.id), "the old line is still in the history");
+    assert.equal(await A.prices.backfill(), 0, "checked once");
+  });
+});

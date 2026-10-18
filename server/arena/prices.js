@@ -10,7 +10,9 @@
 //   "candle"    for calls made before this existed, or when Kalshi couldn't be reached: Kalshi's one-minute
 //               price history for that round, using the last minute that ended before the call
 // Ledger line: { t: "call_price", callId, entrantId, round, side: "yes" | "no", paid, yesBid, yesAsk, noBid,
-//                noAsk, quotedAt, source, ticker?, lagMs? }   (prices in dollars, 0 to 1)
+//                noAsk, quotedAt, source, ticker?, lagMs?, from?: "trade", corrects?: <id of the line it replaces> }
+//                (prices in dollars, 0 to 1). Lines are never rewritten: a correction is a new line, and the
+//                latest line for a call is the one that counts.
 //
 // Kalshi's market objects carry prices as dollar strings ("yes_ask_dollars": "0.6200", seen on
 // 2026-10-15) and, in older answers, as whole cents ("yes_ask": 62). Both are read; dollars win.
@@ -71,6 +73,16 @@ export function paidFor(dir, b) {
   return b.noAsk ?? (b.last !== null && b.last !== undefined ? r4(1 - b.last) : null);
 }
 
+// For Kalshi's candles: when nobody is offering, an ask reads as a placeholder (99.9¢ or 0.1¢, seen on the
+// server on 2026-10-18 in a round's first and last minutes). If the ask is that far from what people
+// actually traded at in the same minute, the traded price is used instead.
+const PLACEHOLDER_GAP = 0.15;
+export function paidForCandle(dir, b) {
+  const ask = (dir === "up" ? b?.yesAsk : b?.noAsk) ?? null, traded = paidFor(dir, { yesAsk: null, noAsk: null, last: b?.last ?? null });
+  if (ask !== null && (traded === null || Math.abs(ask - traded) <= PLACEHOLDER_GAP)) return { paid: ask, from: "ask" };
+  return traded !== null ? { paid: traded, from: "trade" } : null;
+}
+
 // Paper profit on one $1 contract: right pays $1.
 export const paper = (paid, correct) => r4(correct ? 1 - paid : -paid);
 
@@ -81,7 +93,8 @@ export class Prices {
     this.snapshot = null; // the last quote read for the open round, with its time
     this.state = { lastQuoteAt: null, lastBackfillAt: null, lastError: null, priced: 0 };
     this.timers = [];
-    const index = lines => { for (const l of lines) if (l.t === "call_price" && !this.byCall.has(l.callId)) this.byCall.set(l.callId, l); };
+    const index = lines => { for (const l of lines) if (l.t === "call_price") this.byCall.set(l.callId, l); }; // the latest counts
+    this.rechecked = new Set(); // candle prices checked against the placeholder rule since this process started
     index(ledger.lines);
     ledger.on("append", lines => {
       index(lines);
@@ -117,8 +130,9 @@ export class Prices {
   }
 
   #write(l, b, source, quotedAt, extra = {}) {
-    if (this.byCall.has(l.id)) return this.byCall.get(l.id);
-    const paid = paidFor(l.dir, b);
+    if (this.byCall.has(l.id) && !extra.corrects) return this.byCall.get(l.id);
+    let paid = paidFor(l.dir, b);
+    if (source === "candle") { const c = paidForCandle(l.dir, b); paid = c ? c.paid : null; if (c?.from === "trade") extra = { ...extra, from: "trade" }; }
     if (paid === null) return null;
     const [saved] = this.ledger.append([{ t: "call_price", callId: l.id, entrantId: l.entrantId, round: l.round, side: l.dir === "up" ? "yes" : "no", paid,
       yesBid: b.yesBid, yesAsk: b.yesAsk, noBid: b.noBid, noAsk: b.noAsk, quotedAt, source, ...extra }], null);
@@ -139,13 +153,20 @@ export class Prices {
     return null; // the backfill will price it from the candles
   }
 
+  // Candle prices written before the placeholder rule (2026-10-18) are checked once more: if the rule gives a
+  // different price, a correcting line is appended.
+  #needsRecheck(l) {
+    const p = this.byCall.get(l.id);
+    return !!p && p.source === "candle" && !p.from && !p.corrects && !this.rechecked.has(l.id);
+  }
+
   // Calls without a price, in rounds that have ended and that Kalshi settled (so we know the market's ticker).
   unpriced(now = this.now()) {
     const out = new Map(); // round -> { ticker, lines }
     for (const [key, lines] of this.calls.byRound) {
       const [market, r] = key.split("|"), round = +r;
       if (market !== MARKET || round + ROUND_MS > now || round < now - BACKFILL_LOOKBACK_MS) continue;
-      const todo = lines.filter(l => !this.byCall.has(l.id));
+      const todo = lines.filter(l => !this.byCall.has(l.id) || this.#needsRecheck(l));
       if (!todo.length) continue;
       const score = (this.metrics.scores.get(key) || []).find(s => s.source === "kalshi" && s.ticker);
       if (score) out.set(round, { ticker: score.ticker, lines: todo });
@@ -164,6 +185,14 @@ export class Prices {
       for (const l of lines) {
         const before = candles.filter(c => c.end <= l.at).pop();
         const [b, quotedAt] = before ? [before.close, before.end] : [candles[0].open, candles[0].end - 60000];
+        const old = this.byCall.get(l.id);
+        if (old) { // a recheck: only write if the rule changes the price
+          this.rechecked.add(l.id);
+          const c = paidForCandle(l.dir, b);
+          if (!c || c.paid === old.paid) continue;
+          if (this.#write(l, b, "candle", quotedAt, { ticker, corrects: old.id })) written++;
+          continue;
+        }
         if (this.#write(l, b, "candle", quotedAt, { ticker })) written++;
       }
     }
