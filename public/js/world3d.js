@@ -234,10 +234,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const gateCentre = new THREE.Vector3(0, H * 0.3, 0).add(front.a.clone().add(front.b).multiplyScalar(0.35));
   const faceNormal = new THREE.Vector3().subVectors(front.b, front.a).cross(new THREE.Vector3().subVectors(apex, front.a)).normalize();
   const gate = new THREE.Group();
-  gate.position.copy(gateCentre).addScaledVector(faceNormal, 0.04);
+  gate.position.copy(gateCentre).addScaledVector(faceNormal, 0.16);
   gate.lookAt(gateCentre.clone().add(faceNormal));
   scene.add(gate);
-  const gateRings = buildGate(gate, full, 1);
+  const gateRings = buildGate(gate, full, 1, 0.9);
   const gateSwirl = new THREE.Mesh(new THREE.CircleGeometry(0.62, 64), swirlMat());
   gate.add(gateSwirl);
 
@@ -397,7 +397,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     // --- the front gate ---
     const openF = smooth(span(p, 0.86, 0.97));
     gate.scale.setScalar(rise);
-    gate.position.copy(gateCentre).setY(gateCentre.y * rise).addScaledVector(faceNormal, 0.04);
+    gate.position.copy(gateCentre).setY(gateCentre.y * rise).addScaledVector(faceNormal, 0.16);
     spinRings(gateRings, time, openF, 1, (0.5 + 0.5 * span(p, 0.6, 0.8)) * (1 + openF * 0.6));
     gateSwirl.material.uniforms.uTime.value = time;
     gateSwirl.material.uniforms.uOpen.value = openF;
@@ -426,13 +426,18 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   raf = requestAnimationFrame(frame);
 
   // The rings turn slowly, each the opposite way to the one beside it, and settle into place as they lock.
+  // Until they lock, they also tilt slowly like a gyroscope, so the gate reads as a real 3D object.
   function spinRings(rings, time, lock, scale, glow) {
+    const free = (1 - lock) * (reducedMotion ? 0 : 1);
     rings.forEach((g, i) => {
       const spin = (i % 2 ? -1 : 1) * (0.12 + i * 0.05) * (reducedMotion ? 0 : 1);
       g.ring.rotation.z = g.lock + time * spin * (1 - lock);
+      g.ring.rotation.x = Math.sin(time * 0.45 + i * 1.7) * 0.38 * free;
+      g.ring.rotation.y = Math.cos(time * 0.37 + i * 1.1) * 0.38 * free;
       g.ring.scale.setScalar(scale);
-      g.ring.children.forEach(c => { c.material.opacity = c.material.userData.o0 * glow; });
+      g.ring.children.forEach(c => { if (c.material.userData.o0 !== undefined) c.material.opacity = c.material.userData.o0 * glow; });
     });
+    rings.chevrons.forEach((ch, k) => { ch.material.opacity = 0.2 + 0.8 * smooth(clamp01(lock * 9 - k)); }); // they light one by one
   }
 
   return {
@@ -537,7 +542,7 @@ function sampleSegments(segs, n) {
 }
 
 // The stargate in engraved line art: concentric bands of fine ornament, each band its own ring.
-function buildGate(parent, full, size) {
+function buildGate(parent, full, size, depth = 0) {
   const bands = [
     { r: 1.0, color: C.callers, make: r => ticks(r, full ? 144 : 96, 0.06) },
     { r: 0.92, color: C.bots, make: r => circle(r).concat(circle(r - 0.02 * size)) },
@@ -545,12 +550,52 @@ function buildGate(parent, full, size) {
     { r: 0.77, color: C.callers, make: r => petals(r, 16) },
     { r: 0.69, color: C.bots, make: r => ticks(r, 48, 0.03).concat(circle(r)) },
   ];
-  return bands.map((b, i) => {
+  // Each band is a real ring with depth: a glowing tube carrying its engraved ornament, at its own depth.
+  const rings = bands.map((b, i) => {
     const ring = new THREE.Group();
     ring.add(new THREE.LineSegments(geo(new Float32Array(b.make(b.r * size))), lineMat(b.color, 0.9)));
+    const tube = new THREE.Mesh(new THREE.TorusGeometry(b.r * size, (i === 0 ? 0.016 : 0.01) * size, 8, 128), glowMat(b.color, 0.55));
+    tube.material.userData.o0 = 0.55;
+    ring.add(tube);
+    ring.position.z = (2 - i) * 0.05 * size;
     parent.add(ring);
     return { ring, lock: (i * Math.PI) / 9 };
   });
+  // The gate itself: a heavy metal frame around the rings, with nine chevrons that light up as it locks.
+  const frame = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0x3a4f66, metalness: 0.8, roughness: 0.3, emissive: 0x0a1826 });
+  frame.add(new THREE.Mesh(new THREE.TorusGeometry(1.1 * size, 0.07 * size, 18, 160), metal));
+  frame.add(new THREE.Mesh(new THREE.TorusGeometry(1.1 * size, 0.074 * size, 4, 160), new THREE.MeshBasicMaterial({ color: 0x4da3ff, wireframe: true, transparent: true, opacity: 0.18, depthWrite: false })));
+  rings.chevrons = [];
+  for (let k = 0; k < 9; k++) {
+    const a = (k / 9) * Math.PI * 2 + Math.PI / 2, ch = new THREE.Group();
+    const block = new THREE.Mesh(new THREE.BoxGeometry(0.11 * size, 0.16 * size, 0.12 * size), metal);
+    const glow = new THREE.Mesh(new THREE.ConeGeometry(0.05 * size, 0.1 * size, 3), glowMat(C.callers, 0.25));
+    glow.rotation.z = Math.PI; glow.position.z = 0.065 * size;
+    ch.add(block, glow);
+    ch.position.set(Math.cos(a) * 1.1 * size, Math.sin(a) * 1.1 * size, 0);
+    ch.rotation.z = a - Math.PI / 2;
+    frame.add(ch);
+    rings.chevrons.push(glow);
+  }
+  const key = new THREE.PointLight(0xbfdcff, 6, 4 * size, 2); // lights the metal from the front
+  key.position.set(0.6 * size, 0.8 * size, 1.2 * size);
+  frame.add(key);
+  frame.add(new THREE.Mesh(new THREE.TorusGeometry(1.03 * size, 0.008 * size, 6, 160), glowMat(C.bots, 0.7))); // the lit inner edge
+  // A tunnel behind the gate, its rings shrinking into the pyramid, so you look into it, not at it.
+  if (depth) {
+    for (let k = 1; k <= 7; k++) {
+      const t = k / 7, r = (1 - 0.45 * t) * 0.98 * size;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.006 * size, 6, 96), glowMat([C.callers, C.bots, C.scripts][k % 3], 0.5 * (1 - t) + 0.08));
+      ring.position.z = -t * depth;
+      frame.add(ring);
+    }
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(0.98 * size, 0.53 * size, depth, 48, 1, true), new THREE.MeshBasicMaterial({ color: 0x0b1622, side: THREE.BackSide, transparent: true, opacity: 0.85, depthWrite: false }));
+    wall.rotation.x = Math.PI / 2; wall.position.z = -depth / 2;
+    frame.add(wall);
+  }
+  parent.add(frame);
+  return rings;
   function ticks(r, n, len) { const o = []; len *= size; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, l = i % 6 ? len : len * 2; o.push(Math.cos(a) * r, Math.sin(a) * r, 0, Math.cos(a) * (r - l), Math.sin(a) * (r - l), 0); } return o; }
   function triangles(r, n) {
     const o = [], s = 0.06 * size;
