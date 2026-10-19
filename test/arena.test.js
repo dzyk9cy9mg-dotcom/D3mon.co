@@ -177,7 +177,7 @@ describe("Arena API", () => {
 
     test("the public sees an entrant's profile; the owner and admins also see the private details", async () => {
       const pub = (await guest.get("/api/v1/entrants/valhalla")).json.entrant;
-      assert.deepEqual(Object.keys(pub).sort(), ["approvedAt", "battles", "creatorName", "discordServer", "id", "kind", "name", "slug", "status"]);
+      assert.deepEqual(Object.keys(pub).sort(), ["approvedAt", "badges", "battles", "creatorName", "discordServer", "id", "kind", "name", "shopUrl", "slug", "status", "streamUrl", "tagline"]);
       const own = (await odin.get(`/api/v1/entrants/${pub.id}`)).json.entrant;
       assert.equal(own.altAccount, "@odin_alt");
       assert.equal(own.mine, true);

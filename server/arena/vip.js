@@ -7,8 +7,14 @@
 // a member access for a number of days, extends it, or ends it. Access ends by itself when its time runs
 // out. Admins always have access. Who's featured is an admin's choice and public; the room itself isn't.
 //
+// Capstone sessions (owner, 2026-10-19): scheduled trading sessions in the room, whenever the team chooses, an
+// hour or longer, led by the featured callers with bots and scripts backing them. Admins add and cancel them; the
+// schedule is public so the front page can count down to the next one.
+//
 // Ledger lines: { t: "vip_access", uid, until, note }   until = now when access is ended by hand
 //               { t: "vip_featured", entrantIds }
+//               { t: "vip_session", title, startsAt, minutes, leads }   its ledger id is the session's id
+//               { t: "vip_session_cancel", session }
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
 import { MARKET } from "./calls.js";
@@ -21,6 +27,12 @@ const GRANT = {
   days: { type: "integer", required: true, min: 1, max: 366 },
   note: { type: "string", max: 200 },
 };
+const SESSION = {
+  title: { type: "string", required: true, min: 3, max: 80 },
+  startsAt: { type: "integer", required: true, min: Date.UTC(2024, 0, 1), max: Date.UTC(2100, 0, 1) },
+  minutes: { type: "integer", min: 15, max: 720, default: 60 },
+  leads: { type: "string", max: 200 }, // who leads it, in the admins' words ("Freya Calls with Valhalla and Halo-7")
+};
 const FEATURED = { entrantIds: { type: "array", of: { type: "string", pattern: /^[A-Za-z0-9]{8,40}$/, max: 40 }, max: MAX_FEATURED, unique: true, required: true } };
 
 export class Vip {
@@ -28,10 +40,13 @@ export class Vip {
     Object.assign(this, { ledger, registry, calls, feed, accounts, now });
     this.access = new Map(); // uid -> vip_access lines, in write order
     this.featured = []; // entrant ids, from the latest vip_featured line
+    this.sessions = new Map(); // ledger id -> vip_session line (cancelled ones removed)
     const index = lines => {
       for (const l of lines) {
         if (l.t === "vip_access") { if (!this.access.has(l.uid)) this.access.set(l.uid, []); this.access.get(l.uid).push(l); }
         if (l.t === "vip_featured") this.featured = l.entrantIds;
+        if (l.t === "vip_session") this.sessions.set(l.id, l);
+        if (l.t === "vip_session_cancel") this.sessions.delete(l.session);
       }
     };
     index(ledger.lines);
@@ -107,6 +122,31 @@ export class Vip {
     this.ledger.append([{ t: "vip_access", uid, until: now, note: "ended by an admin" }], ctx.uid, now);
     this.feed.publish("vip", "vip.updated", () => ({}));
     return this.list(ctx).find(x => x.uid === uid);
+  }
+
+  // GET /vip/sessions: the schedule, public: sessions not yet over, soonest first, and the last few that ended.
+  sessionList() {
+    const now = this.now(), all = [...this.sessions.values()].map(l => ({ id: l.id, title: l.title, startsAt: l.startsAt, minutes: l.minutes, endsAt: l.startsAt + l.minutes * 60000, leads: l.leads || "" }));
+    return { upcoming: all.filter(s => s.endsAt > now).sort((a, b) => a.startsAt - b.startsAt), past: all.filter(s => s.endsAt <= now).sort((a, b) => b.startsAt - a.startsAt).slice(0, 5), now };
+  }
+
+  // POST /vip/sessions { title, startsAt, minutes, leads }
+  addSession(ctx, body) {
+    this.#requireAdmin(ctx);
+    const f = check(body, SESSION);
+    if (f.startsAt + f.minutes * 60000 <= this.now()) throw new ApiError(400, "invalid_argument", "That session would already be over.", "startsAt");
+    const [l] = this.ledger.append([{ t: "vip_session", ...f, leads: f.leads || "" }], ctx.uid, this.now());
+    this.feed.publish("vip", "vip.updated", () => ({}));
+    return this.sessionList().upcoming.find(s => s.id === l.id);
+  }
+
+  // DELETE /vip/sessions/:id: cancels a session (its line stays in the ledger).
+  cancelSession(ctx, id) {
+    this.#requireAdmin(ctx);
+    if (!this.sessions.has(id)) throw new ApiError(404, "not_found", "No such session.");
+    this.ledger.append([{ t: "vip_session_cancel", session: id }], ctx.uid, this.now());
+    this.feed.publish("vip", "vip.updated", () => ({}));
+    return this.sessionList();
   }
 
   // PUT /vip/featured { entrantIds }: who's featured, in this order.

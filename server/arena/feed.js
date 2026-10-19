@@ -55,6 +55,14 @@ export class Feed {
     }
   }
 
+  // "Who's here now" (owner, 2026-10-19): how many people have a page open on the live feed, and how many of
+  // them are signed in. Counts only, never who (privacy by default). A person with several tabs counts once.
+  presence() {
+    const people = new Set(), members = new Set();
+    for (const s of this.streams) { people.add(s.ctx.uid || `ip:${s.ip}`); if (s.ctx.uid) members.add(s.ctx.uid); }
+    return { here: people.size, members: members.size };
+  }
+
   // Ends the streams of a session that signed out.
   endSession(sessionKey) {
     for (const s of this.streams) if (sessionKey && s.ctx.sessionKey === sessionKey) s.res.end();

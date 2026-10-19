@@ -121,7 +121,7 @@
 
   function renderCalls() {
     const c = S.calls;
-    $("calls").innerHTML = c && c.calls.length ? c.calls.map(x => `<li class="${kindClass(x.kind)}"><a href="card?e=${encodeURIComponent(x.slug)}">${esc(x.name)}</a>
+    $("calls").innerHTML = c && c.calls.length ? c.calls.map(x => `<li class="${kindClass(x.kind)}"><a href="profile?e=${encodeURIComponent(x.slug)}">${esc(x.name)}</a>
         <span class="w-k">${x.kind === "caller" ? "caller" : x.kind === "script" ? "script" : "bot"}</span>
         <span class="w-d">${x.sealed ? '<span class="w-seal">● sealed</span>' : dirHtml(x.direction)}${x.price ? ` <span class="w-paid" title="Kalshi's price for this side when the call was made">@${Math.round(x.price.paid * 100)}¢</span>` : ""}</span><time>${esc(time(x.receivedAt))}</time></li>`).join("")
       : `<li class="w-empty">No calls yet this round.</li>`;
@@ -141,7 +141,7 @@
     if (t.paused) $("paused").textContent = `Tournaments paused: ${t.paused.reason}`;
     $("tWhen").innerHTML = `${esc(t.title)} · ends in <b>${esc(left(t.endsAt - Date.now()))}</b> · ${t.settledRounds} of ${t.rounds} rounds scored`;
     const top = t.standings.slice(0, 10);
-    $("rows").innerHTML = top.length ? top.map(r => `<li><span class="w-rank">${r.rank}</span><a href="card?e=${encodeURIComponent(r.entrant.slug)}">${esc(r.entrant.name)}</a>
+    $("rows").innerHTML = top.length ? top.map(r => `<li><span class="w-rank">${r.rank}</span><a href="profile?e=${encodeURIComponent(r.entrant.slug)}">${esc(r.entrant.name)}</a>
         <span class="w-k">${r.entrant.kind}</span><span class="w-score"><b>${r.correct}</b> right · ${pct(r.accuracy)}</span></li>`).join("")
       : `<li class="w-empty">No bots in this tournament yet. Owners switch it on in <a href="my">My bots</a>.</li>`;
   }
@@ -153,6 +153,68 @@
     const lead = S.daily?.standings?.[0];
     $("tkLead").textContent = lead ? `${lead.entrant.name} · ${lead.correct} right` : "No one yet";
   }
+  // ---------- HardSmoke's battles, the capstone, and who's here (docs/world/USERS.md) ----------
+  const PT = { timeZone: "America/Los_Angeles" };
+  const whenPT = ms => `${new Date(ms).toLocaleString("en-US", { ...PT, weekday: "short", hour: "numeric", minute: "2-digit" })} PT`;
+  const until = ms => { const m = Math.max(0, Math.ceil((ms - serverNow()) / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `in ${d}d ${h}h` : h ? `in ${h}h ${m % 60}m` : `in ${m}m`; };
+  const KIND_NAME = { bot: "bot", caller: "caller", script: "chart script" };
+  // The battle to show: one that's on now, else the next one, else the last one if it ended in the past day.
+  function eventBattle() {
+    const now = serverNow(), list = (S.battles || []).filter(b => b.status !== "draft");
+    return list.find(b => b.startsAt <= now && now < b.endsAt)
+      || list.filter(b => b.startsAt > now).sort((a, b) => a.startsAt - b.startsAt)[0]
+      || list.filter(b => b.endsAt <= now && now - b.endsAt < 86400000).sort((a, b) => b.endsAt - a.endsAt)[0] || null;
+  }
+  function renderEvents() {
+    const b = eventBattle(), s = S.sessions?.upcoming?.[0], now = serverNow(), out = [];
+    if (b) {
+      const live = b.startsAt <= now && now < b.endsAt, ended = now >= b.endsAt;
+      const open = b.status === "open" && b.startsAt > now;
+      out.push(`<div class="w-event" data-short="${esc(`${live ? "Battle live now" : ended ? "Last battle" : "Next battle"} · ${whenPT(b.startsAt)}`)}"><small>${live ? '<i class="w-livedot"></i>Battle live now' : ended ? "Last battle" : "Next battle"}</small><b>${esc(b.title)}</b>
+        <span>${esc(whenPT(b.startsAt))} · ${live ? `${b.rounds} rounds` : ended ? "results in" : esc(until(b.startsAt))} · ${b.entrants.length} entered</span>
+        <span class="w-evgo">${open ? `<a href="apply?battle=${encodeURIComponent(b.id)}">Apply to battle →</a>` : ""}<a href="#hall" data-glide="hall">${live ? "Watch it →" : "See it →"}</a></span></div>`);
+    }
+    if (s) out.push(`<div class="w-event w-ev-cap" data-short="${esc(`Capstone · ${whenPT(s.startsAt)}`)}"><small>${s.startsAt <= now ? '<i class="w-livedot"></i>Capstone session on now' : "Next capstone session"}</small><b>${esc(s.title)}</b>
+        <span>${esc(whenPT(s.startsAt))} · ${s.startsAt <= now ? `${s.minutes} min` : esc(until(s.startsAt))}${s.leads ? ` · ${esc(s.leads)}` : ""}</span>
+        <span class="w-evgo"><a href="vip">Get access →</a></span></div>`);
+    $("events").innerHTML = out.join("");
+    $("events").hidden = !out.length;
+    renderEventCard(b);
+  }
+  // The hall's card for the battle: when, who's in it, where to watch, and how it's going (ranked as the
+  // tournaments: only rounds Kalshi settled count).
+  function renderEventCard(b) {
+    $("eventCard").hidden = !b;
+    if (!b) return;
+    const now = serverNow(), r = S.results?.battle?.id === b.id ? S.results : null, open = b.status === "open" && b.startsAt > now;
+    const state = now < b.startsAt ? `Starts ${esc(whenPT(b.startsAt))} · ${esc(until(b.startsAt))}` : now < b.endsAt ? `<i class="w-livedot"></i>Live now · ends ${esc(time(b.endsAt))}` : r?.status === "final" ? "Final results" : "Ended · waiting for Kalshi's last results";
+    const winners = new Set(r?.winners || []);
+    const lineup = b.entrants.length ? b.entrants.map(e => `<a class="w-chip ${kindClass(e.kind)}" href="profile?e=${encodeURIComponent(e.slug)}">${esc(e.name)}<small>${esc(KIND_NAME[e.kind] || e.kind)}</small></a>`).join("") : `<span class="w-empty">No one has entered yet.</span>`;
+    const streams = (b.streams || []).map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)} ↗</a>`).join("");
+    const rows = r && r.status !== "upcoming" ? r.standings.slice(0, 6).map(x => `<li><span class="w-rank">${x.rank}</span><a href="profile?e=${encodeURIComponent(x.entrant.slug)}">${esc(x.entrant.name)}</a>${winners.has(x.entrant.id) ? '<span class="w-win">Winner</span>' : ""}<span class="w-score"><b>${x.correct}</b> right · ${pct(x.accuracy)}</span></li>`).join("") : "";
+    $("eventCard").innerHTML = `<div class="w-evhead"><div><small class="w-k">HardSmoke's special event</small><h3>${esc(b.title)}</h3><p class="w-when">${state} · ${b.rounds} rounds</p></div>${open ? `<a class="w-join" href="apply?battle=${encodeURIComponent(b.id)}">Apply to battle</a>` : ""}</div>
+      <div class="w-evcols"><div><h4>In this battle</h4><div class="w-chiprow">${lineup}</div></div>
+      <div><h4>Watch</h4><div class="w-streams">${streams || '<span class="w-empty">Stream links appear here when the battle is on.</span>'}</div></div></div>
+      ${rows ? `<h4>${r.status === "final" ? "Results" : "So far"}</h4><ol class="w-rows">${rows}</ol><p class="w-note">${esc(r.scoring)} ${esc(r.notice)}</p>` : ""}`;
+  }
+  function renderHere() {
+    const p = S.presence;
+    $("tkHere").textContent = p ? String(p.here) : "–";
+    $("hereHall").textContent = p ? String(p.here) : "–";
+  }
+  function renderChatPeek() {
+    const msgs = (S.chatMain?.messages || []).slice(-3);
+    $("chatPeek").innerHTML = msgs.map(m => `<li><b>${esc(m.name)}</b> ${esc(m.text)}</li>`).join("");
+  }
+  async function loadEvents() {
+    const [b, sess] = await Promise.all([api("GET", "battles").catch(() => null), api("GET", "vip/sessions").catch(() => null)]);
+    if (b) S.battles = b.battles;
+    if (sess) S.sessions = sess;
+    const ev = eventBattle();
+    S.results = ev && ev.startsAt <= serverNow() ? await api("GET", `battles/${ev.id}/results`).catch(() => null) : null;
+    renderEvents();
+  }
+  async function loadPresence() { try { S.presence = await api("GET", "presence"); } catch (e) {} renderHere(); }
   const left = ms => { const m = Math.max(0, Math.ceil(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; };
 
   // The 3D Grand Hall shows the same live data on its screens, ring and spokes.
@@ -196,7 +258,7 @@
       S.chatMain = await api("GET", "hall/chat?limit=40"); // the main floor: the hall's screen, and the channel list
       if (!S.chatMain.channels.some(c => c.id === S.chatChannel)) S.chatChannel = "main";
       S.chat = S.chatChannel === "main" ? S.chatMain : await api("GET", `hall/chat?limit=40&channel=${encodeURIComponent(S.chatChannel)}`);
-      renderChat(); push3d();
+      renderChat(); renderChatPeek(); push3d();
     } catch (e) {}
   }
   function openChat() { $("chatPanel").hidden = false; renderChat(); $("chatList").scrollTop = $("chatList").scrollHeight; (S.me ? $("chatIn") : $("chatSignIn")).focus(); }
@@ -225,8 +287,8 @@
     S.rounds = rounds.rounds; S.calls = calls; S.prev = prev;
     // Only the 3D hall shows these (Kalshi's prices now, the events, the hourly tournament); a failure here never stops the page.
     await api("GET", "market").then(m => (S.market = m)).catch(() => {}); // the live bar shows it too
+    await loadEvents(); // the next battle and capstone session, for everyone (and the 3D hall's event screen)
     if (scene3d) await Promise.all([
-      api("GET", "battles").then(b => (S.battles = b.battles)),
       api("GET", "tournaments").then(c => api("GET", `tournaments/${c.tournaments.find(t => t.kind === "hourly").id}`)).then(t => (S.hourly = t.tournament)),
     ].map(p => p.catch(() => {})));
     await Promise.all([loadVideo(), loadChat()]);
@@ -239,7 +301,7 @@
     $("chips").innerHTML = [["all", "All"], ...STRANDS].map(([k, name]) => `<button type="button" data-strand="${k}" aria-pressed="${k === S.strand}">${name}</button>`).join("");
     $("strands").innerHTML = STRANDS.filter(([k]) => S.strand === "all" || S.strand === k).map(([k, name, cls]) => {
       const list = S.entrants.filter(e => e.kind === k);
-      return `<div class="w-strand ${cls}"><h3>${name} <small>${list.length}</small></h3><div class="w-cards">${list.length ? list.map(e => `<a class="w-ecard" href="card?e=${encodeURIComponent(e.slug)}"><b>${esc(e.name)}</b><span>by ${esc(e.creatorName)}</span></a>`).join("") : `<p class="w-empty">None yet.</p>`}</div></div>`;
+      return `<div class="w-strand ${cls}"><h3>${name} <small>${list.length}</small></h3><div class="w-cards">${list.length ? list.map(e => `<a class="w-ecard" href="profile?e=${encodeURIComponent(e.slug)}"><b>${esc(e.name)}</b><span>by ${esc(e.creatorName)}</span></a>`).join("") : `<p class="w-empty">None yet.</p>`}</div></div>`;
     }).join("");
   }
 
@@ -250,6 +312,9 @@
   $("chatForm").addEventListener("submit", e => { e.preventDefault(); sendChat(); });
   // In 3D, "Enter the Grand Hall" glides down to the hall's screens; in 2D (and "Skip the intro") it's a plain jump.
   $("enterBtn").addEventListener("click", e => { if (scene3d?.glide) { e.preventDefault(); scene3d.glide("hall"); } });
+  $("tkChat").addEventListener("click", () => openChat());
+  // "Watch it" on the front page goes to the hall's event card (the 2D hall, below the 3D glide).
+  $("events").addEventListener("click", e => { const a = e.target.closest("a[data-glide]"); if (a) { e.preventDefault(); $("eventCard").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); } });
   document.addEventListener("click", async e => {
     if (e.target === $("videoPanel")) return closeVideo(); // a click outside the video closes it
     const b = e.target.closest("button");
@@ -279,6 +344,8 @@
       tickClock();
       setInterval(tickClock, 1000);
       setInterval(() => loadHall().catch(() => {}), 20000); // new calls reach the hall (and its 3D screens) within 20 s
+      loadPresence(); setInterval(loadPresence, 30000); // who's here now
+      setInterval(renderEvents, 30000); // the countdowns
       // Just after each round closes, load again: once for the calls it reveals (the lock moment), and once more
       // for Kalshi's result, which comes a few seconds after the close.
       const atClose = () => { const now = serverNow(), next = Math.floor(now / Q) * Q + Q; setTimeout(() => { loadHall().catch(() => {}); setTimeout(() => loadHall().catch(() => {}), 11000); atClose(); }, next - now + 1500); };
@@ -298,6 +365,6 @@
       if (type === "hall.video") return loadVideo().then(push3d);
       clearTimeout(t); t = setTimeout(() => loadHall().catch(() => {}), 400);
     },
-      on => { $("live").textContent = on ? "● live" : "○ reconnecting"; $("live").classList.toggle("on", on); });
+      on => { $("live").textContent = on ? "● live" : "○ reconnecting"; $("live").classList.toggle("on", on); if (on) loadPresence(); }); // count this visitor too, once connected
   })();
 })();
