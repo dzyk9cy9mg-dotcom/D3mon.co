@@ -21,6 +21,19 @@
     <p class="empty">Sign in with HardSmoke's account or another admin account. <a href="login">Sign in</a></p>
   </section>
 
+  <section class="panel" id="videoAdmin" hidden>
+    <h2>Grand Hall video</h2>
+    <p class="tag">Paste a YouTube link (a video, a Short or a live stream). The hall's live event screen shows it, and a click plays it. Only the video itself is kept, never the link's tracking.</p>
+    <p id="videoNow" class="meta">Nothing on the screen.</p>
+    <form id="videoForm" autocomplete="off">
+      <div class="row">
+        <div class="field"><label for="vUrl">YouTube link</label><input id="vUrl" maxlength="300" placeholder="https://youtube.com/shorts/…" required></div>
+        <div class="field"><label for="vTitle">Title on the screen (optional)</label><input id="vTitle" maxlength="80"></div>
+      </div>
+      <div class="actions" style="margin-top:10px"><button class="btn" type="submit">Show in the hall</button><button class="btn ghost" type="button" id="vClear">Take it down</button></div>
+    </form>
+  </section>
+
   <section class="panel" id="listBox" hidden>
     <h2>Slots</h2>
     <div class="list" id="slots"></div>

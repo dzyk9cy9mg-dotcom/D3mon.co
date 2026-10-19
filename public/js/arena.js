@@ -135,7 +135,7 @@
   // Links only: each page checks roles on the server. Its sections become the 3D site's rooms.
   const MENU = [["./", "Home"], ["tournaments", "Tournaments"], ["vip", "VIP Room"], ["my", "My bots"], ["apply", "Apply"]];
   const ADMIN_MENU = [
-    ["Bots and stats", [["applications", "Applications"], ["vip", "VIP access"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Display slots"]]],
+    ["Bots and stats", [["applications", "Applications"], ["vip", "VIP access"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Displays and hall video"]]],
     ["Old battle show", [["metrics", "Round metrics"], ["board", "Battle board"]]],
   ];
   function menuBar() {

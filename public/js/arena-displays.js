@@ -1,6 +1,6 @@
 // /displays: HardSmoke sets up display slots (which bots, which stats, layout, order) and previews them
-// with the same widget pages use. Thin client over GET /api/v1/display-slots, PUT /api/v1/display-slots/:key,
-// /api/v1/entrants and /api/v1/battles.
+// with the same widget pages use, and puts a video on the Grand Hall's screen. Thin client over GET /api/v1/display-slots,
+// PUT /api/v1/display-slots/:key, /api/v1/entrants, /api/v1/battles and /api/v1/hall/video.
 (function () {
   "use strict";
   const { api, esc, kindName, session } = window.Arena;
@@ -129,9 +129,26 @@
     } catch (x) { msg(x.message); }
   });
 
+  // ---------- the Grand Hall's video (GET/PUT/DELETE /api/v1/hall/video) ----------
+  function renderVideo(v) {
+    $("videoNow").innerHTML = v ? `On the screen now: <b>${esc(v.title || "(no title)")}</b> · ${esc(v.kind === "short" ? "Short" : v.kind === "live" ? "live stream" : "video")} · <a href="${esc(v.watch)}" target="_blank" rel="noopener">open on YouTube ↗</a>` : "Nothing on the screen.";
+    $("vClear").disabled = !v;
+  }
+  $("videoForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    try {
+      const { video } = await api("PUT", "hall/video", { url: $("vUrl").value.trim(), title: $("vTitle").value.trim() });
+      renderVideo(video); $("vUrl").value = ""; msg("The hall's screen shows it now.", true);
+    } catch (x) { msg(x.message); }
+  });
+  $("vClear").addEventListener("click", async () => {
+    try { renderVideo((await api("DELETE", "hall/video")).video); msg("Taken down.", true); } catch (x) { msg(x.message); }
+  });
+
   (async () => {
     const me = await session();
     if (!me || (me.role !== "admin" && me.role !== "owner")) { $("denied").hidden = false; return; }
     try { await load(); $("listBox").hidden = false; } catch (x) { msg(x.message); }
+    try { renderVideo((await api("GET", "hall/video")).video); $("videoAdmin").hidden = false; } catch (x) { msg(x.message); }
   })();
 })();

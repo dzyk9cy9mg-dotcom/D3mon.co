@@ -17,7 +17,7 @@ const CORNERS = { callers: new THREE.Vector3(0, 0, -R), bots: new THREE.Vector3(
 const smooth = t => t * t * (3 - 2 * t);
 const clamp01 = v => Math.min(1, Math.max(0, v));
 
-export function start({ level = "lite", reducedMotion = false, showFps = false, onSlow = () => {} } = {}) {
+export function start({ level = "lite", reducedMotion = false, showFps = false, onSlow = () => {}, onVideo = () => {} } = {}) {
   const full = level === "full", phone = level === "mobile-lite";
   let renderer;
   try {
@@ -352,13 +352,20 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const eventScreen = liveScreen(0xff7a45, at1(-3), g => {
     const now = live.serverNow(), bs = (live.battles || []).filter(b => b.status !== "draft");
     const on = bs.find(b => b.startsAt <= now && now < b.startsAt + b.rounds * Q && !b.over), next = bs.filter(b => b.startsAt > now).sort((a, b) => a.startsAt - b.startsAt)[0];
-    title(g, on ? "LIVE EVENT" : "SPECIAL EVENTS", on ? "Happening now in the Grand Hall" : "Battles with a host and a stream");
+    title(g, on ? "LIVE EVENT" : live.video ? "ON SCREEN" : "SPECIAL EVENTS", on ? "Happening now in the Grand Hall" : live.video ? "From the D3MON hosts" : "Battles with a host and a stream");
     g.font = `22px ${FONT}`;
     if (on) {
       g.fillStyle = INK; g.font = `700 30px ${HEAD}`; g.fillText(clip(on.title, 22), 22, 124);
       g.font = `22px ${FONT}`; g.fillText(`Round ${Math.min(on.rounds, Math.floor((now - on.startsAt) / Q) + 1)} of ${on.rounds}`, 22, 172);
       g.fillText(`${(on.entrants || []).length} in the lineup`, 22, 208);
-      g.fillStyle = DIM; g.fillText("Its live stream plays here", 22, 256);
+      g.fillStyle = live.video ? INK : DIM; g.fillText(live.video ? "▶ Click to watch" : "Its live stream plays here", 22, 256);
+    } else if (live.video) { // the hall's video (GET /hall/video), played in a panel when this screen is clicked
+      g.fillStyle = "#ff3d3d"; g.beginPath(); g.roundRect(22, 96, 92, 64, 14); g.fill();
+      g.fillStyle = "#fff"; g.beginPath(); g.moveTo(58, 112); g.lineTo(58, 144); g.lineTo(86, 128); g.closePath(); g.fill();
+      g.fillStyle = INK; g.font = `700 26px ${HEAD}`; g.fillText(clip(live.video.title || (live.video.kind === "short" ? "A new Short" : "Watch now"), 22), 134, 124);
+      g.fillStyle = DIM; g.font = `20px ${FONT}`; g.fillText(live.video.kind === "live" ? "Live on YouTube" : live.video.kind === "short" ? "YouTube Short" : "YouTube video", 134, 154);
+      g.fillStyle = INK; g.font = `24px ${FONT}`; g.fillText("▶ Click this screen to watch", 22, 232);
+      if (next) { g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText(`Next event: ${clip(next.title, 24)}`, 22, 280); }
     } else if (next) {
       g.fillStyle = INK; g.fillText(`Next: ${clip(next.title, 26)}`, 22, 124);
       g.fillStyle = DIM; g.fillText(new Date(next.startsAt).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }), 22, 162);
@@ -811,7 +818,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   };
   const onDown = e => {
     if (!atLevel || atLevel.menu || e.button !== 0 || e.pointerType === "touch" || e.target.closest("a, button, input, select, textarea, label, .w-panel")) return;
-    drag = { L: atLevel, x: e.clientX, turn: atLevel.turn, moved: false };
+    drag = { L: atLevel, x: e.clientX, turn: atLevel.turn, moved: false }; dragged = false;
   };
   const onMove = e => {
     if (!drag) return;
@@ -825,7 +832,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const onUp = () => {
     if (!drag) return;
     if (drag.moved) snap(drag.L);
-    drag = null; document.body.classList.remove("w3d-dragging");
+    dragged = drag.moved; drag = null; document.body.classList.remove("w3d-dragging");
   };
   // Pointing at the menu screen: a ray from the camera through the pointer finds the line under it.
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -839,8 +846,22 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     return i >= 0 && i < MENU.length ? i : -1;
   };
   const setHover = i => { if (i !== menuHover) { menuHover = i; menuScreen.redraw(); } document.body.classList.toggle("w3d-pick", i >= 0); };
-  const onMenuMove = e => { if (atLevel?.menu) setHover(menuAt(e)); else if (menuHover >= 0) setHover(-1); };
-  const onMenuClick = e => { if (e.target.closest("a, button, input, .w-panel")) return; const i = menuAt(e); if (i >= 0) go(MENU[i][1]); };
+  // Pointing at the live event screen while the hall's video is up: click it to watch.
+  const videoAt = e => {
+    if (!live.video || atLevel?.ring !== ring1) return false;
+    ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    return !!ray.intersectObject(eventScreen.mesh)[0];
+  };
+  let dragged = false; // a drag that ends over the screen isn't a click on it
+  const onMenuMove = e => {
+    if (atLevel?.menu) setHover(menuAt(e)); else { if (menuHover >= 0) setHover(-1); document.body.classList.toggle("w3d-pick", !drag?.moved && videoAt(e)); }
+  };
+  const onMenuClick = e => {
+    if (e.target.closest("a, button, input, .w-panel, .w-video")) return;
+    if (!dragged && videoAt(e)) { onVideo(live.video); return; }
+    const i = menuAt(e); if (i >= 0) go(MENU[i][1]);
+  };
   const onMenuKey = e => {
     if (!atLevel?.menu) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setHover((Math.max(0, menuHover) + (e.key === "ArrowDown" ? 1 : MENU.length - 1)) % MENU.length); }
