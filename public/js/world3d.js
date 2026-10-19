@@ -184,10 +184,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // the same movements as d3mon.css: three outer rings tumbling (14 s round X, 11 s round Y, 8 s back round X),
   // each also spinning in its own plane (30 s, 16 s back, 10 s), the inner dashed ring (22 s back), the triangle
   // (40 s) and the pulsing heart (2.4 s). Its lines are a little bolder than the page's, as it's drawn smaller.
-  // It always faces the camera, as it faces you on the main page. From the overhead opening it is the main
-  // page's size at the heart of the triangle; as the pyramid rises it settles on the beam in the clear space
-  // between the hall's live screens and the level above, near the triangle's centre seen from the front.
+  // It lies on the floor at the foot of the beam (owner, 2026-10-19), facing up, its triangle's corners toward
+  // the pyramid's, so from the overhead opening it looks just as it does on the main page and the beam rises
+  // out of its heart. Its lines glow (additive), and its rings tumble up out of the floor.
   const sigil = new THREE.Group();
+  sigil.rotation.x = -Math.PI / 2; sigil.position.y = 0.05;
   scene.add(sigil);
   const SVG_DEFS = '<defs><linearGradient id="t" x1="0" y1="-70" x2="0" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB547"/><stop offset=".55" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient><radialGradient id="c"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".6"/><stop offset="1" stop-color="#4DA3FF" stop-opacity="0"/></radialGradient></defs>';
   const sigilLayer = (body, z, parent = sigil, additive = false) => {
@@ -202,21 +203,21 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   };
   const gimbal = () => { const g = new THREE.Group(); sigil.add(g); return g; };
   const sg = {
-    halo: sigilLayer('<circle r="98" fill="url(#c)"/>', -0.08, sigil, true),
-    back: sigilLayer('<circle r="74" fill="#05080C" fill-opacity=".55" stroke="#1A2A36"/>', -0.06),
+    halo: sigilLayer('<circle r="98" fill="url(#c)"/>', -0.02, sigil, true),
+    back: sigilLayer('<circle r="74" fill="#05080C" fill-opacity=".5" stroke="#1A2A36"/>', -0.015),
     g1: gimbal(), g2: gimbal(), g3: gimbal(),
   };
-  sg.s3 = sigilLayer('<circle r="94" fill="none" stroke="#8FA3B2" stroke-opacity=".6" stroke-width="1.6" stroke-dasharray="1.6 5"/>', 0, sg.g1);
-  sg.s1 = sigilLayer('<circle r="84" fill="none" stroke="url(#t)" stroke-width="2.6" stroke-dasharray="36 10 4 10"/>', 0, sg.g2);
-  sg.s2 = sigilLayer('<polygon points="0,-66 57.2,-33 57.2,33 0,66 -57.2,33 -57.2,-33" fill="none" stroke="#4DA3FF" stroke-opacity=".7" stroke-width="1.8"/>', 0, sg.g3);
-  sg.s4 = sigilLayer('<circle r="44" fill="none" stroke="#8FA3B2" stroke-opacity=".5" stroke-width="1.4" stroke-dasharray="2 4"/>', 0.02);
-  sg.tri = sigilLayer('<polygon points="0,-62 53.7,31 -53.7,31" fill="rgba(77,163,255,.06)" stroke="url(#t)" stroke-width="3"/><line x1="0" y1="-62" x2="0" y2="0" stroke="#FFB547" stroke-opacity=".35"/><line x1="53.7" y1="31" x2="0" y2="0" stroke="#B98CFF" stroke-opacity=".35"/><line x1="-53.7" y1="31" x2="0" y2="0" stroke="#4DA3FF" stroke-opacity=".35"/><circle cx="0" cy="-62" r="5" fill="#FFB547"/><circle cx="-53.7" cy="31" r="5" fill="#4DA3FF"/><circle cx="53.7" cy="31" r="5" fill="#B98CFF"/>', 0.03);
-  sg.heart = sigilLayer('<circle r="20" fill="#05080C" stroke="#4DA3FF" stroke-width="1.4"/>', 0.04);
-  sg.pl = sigilLayer('<circle r="8" fill="#4DA3FF"/>', 0.05);
-  sg.dot = sigilLayer('<circle r="4" fill="#DCE7EE"/>', 0.06);
+  sg.s3 = sigilLayer('<circle r="94" fill="none" stroke="#8FA3B2" stroke-opacity=".6" stroke-width="1.6" stroke-dasharray="1.6 5"/>', 0, sg.g1, true);
+  sg.s1 = sigilLayer('<circle r="84" fill="none" stroke="url(#t)" stroke-width="2.6" stroke-dasharray="36 10 4 10"/>', 0, sg.g2, true);
+  sg.s2 = sigilLayer('<polygon points="0,-66 57.2,-33 57.2,33 0,66 -57.2,33 -57.2,-33" fill="none" stroke="#4DA3FF" stroke-opacity=".7" stroke-width="1.8"/>', 0, sg.g3, true);
+  sg.s4 = sigilLayer('<circle r="44" fill="none" stroke="#8FA3B2" stroke-opacity=".5" stroke-width="1.4" stroke-dasharray="2 4"/>', 0.005, sigil, true);
+  sg.tri = sigilLayer('<polygon points="0,-62 53.7,31 -53.7,31" fill="rgba(77,163,255,.06)" stroke="url(#t)" stroke-width="3"/><line x1="0" y1="-62" x2="0" y2="0" stroke="#FFB547" stroke-opacity=".35"/><line x1="53.7" y1="31" x2="0" y2="0" stroke="#B98CFF" stroke-opacity=".35"/><line x1="-53.7" y1="31" x2="0" y2="0" stroke="#4DA3FF" stroke-opacity=".35"/><circle cx="0" cy="-62" r="5" fill="#FFB547"/><circle cx="-53.7" cy="31" r="5" fill="#4DA3FF"/><circle cx="53.7" cy="31" r="5" fill="#B98CFF"/>', 0.008, sigil, true);
+  sg.heart = sigilLayer('<circle r="20" fill="#05080C" stroke="#4DA3FF" stroke-width="1.4"/>', 0.01);
+  sg.pl = sigilLayer('<circle r="8" fill="#4DA3FF"/>', 0.012, sigil, true);
+  sg.dot = sigilLayer('<circle r="4" fill="#DCE7EE"/>', 0.014, sigil, true);
   const spin = (t, s) => (t / s) * Math.PI * 2; // one turn every s seconds
   // ---------- inside, rising up: the 10118 video (owner, 2026-10-18; its booths with people and its stars left out) ----------
-  // Rings of glass chart screens, a glass ramp spiralling up with hexagon bot pods along it, floating code and
+  // Rings of glass chart screens, a glass ramp spiralling up, floating code and
   // maths for the chart scripts near the top, and the people online as little lights in the stands.
   const tower = new THREE.Group();
   scene.add(tower);
@@ -245,7 +246,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // Chart screens in two rings, and code and maths for the chart scripts higher up: all kept well inside the
   // ramp, so nothing crosses it.
   // The lower ring is the Grand Hall's live screens (below); the rest are charts.
-  screens.push(panel(chartTex(10, C.bots), 0.52, 0.32, C.bots, Math.PI / 2, inr(1.6) * 0.64, 1.6, 1, false, ring2)); // the rest of this level is below, with the live screens
+  screens.push(panel(chartTex(10, C.bots), 0.46, 0.28, C.bots, Math.PI / 2, inr(1.6) * 0.64, 1.6, 1, false, ring2)); // the rest of this level is below, with the live screens
   // ---------- the Grand Hall's live screens: the everyday trading room (docs/world/SITEMAP.md) ----------
   // This round with its clock and every call as it arrives, the tournament standings, the last round's result,
   // and the place kept for the D3MON Discord, which becomes the hall's chat and voice. world.js hands the data
@@ -392,7 +393,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
 
   // The second level is also the chart scripts' (the strand of the three that reads the charts): the top scripts
   // in the tournament, how to bring one, and a script's code, round the chart. It turns round like the level below.
-  const L2 = { ring: ring2, y: 1.6, r: inr(1.6) * 0.64, w: 0.52 };
+  const L2 = { ring: ring2, y: 1.6, r: inr(1.6) * 0.64, w: 0.46 }; // eight screens, the circle complete like the hall's
   const scriptsScreen = liveScreen(C.scripts, FRONT + Math.PI / 2, g => {
     const t = live.standings, rows = (t?.standings || []).filter(r => r.entrant.kind === "script").slice(0, 5);
     title(g, "CHART SCRIPTS", t ? `Top scripts · ${clip(t.title, 24)}` : "Loading…");
@@ -412,7 +413,41 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     ["1. Join D3MON with your script", "2. Make its key on My bots", "3. Send its call each round"].forEach((l, i) => g.fillText(l, 22, 124 + i * 40));
     g.fillStyle = DIM; g.font = `18px ${FONT}`; g.fillText("Start at d3mon.co/apply", 22, 290);
   }, L2);
-  screens.push(panel(codeTex(0), 0.52, 0.34, C.scripts, FRONT + Math.PI, L2.r, L2.y, 0.95, true, ring2));
+  screens.push(panel(codeTex(0), 0.46, 0.3, C.scripts, FRONT + Math.PI, L2.r, L2.y, 0.95, true, ring2));
+  // Between them (owner, 2026-10-19: complete the circle): the scripts' calls this round and how they did last
+  // round, another chart and the maths behind a script.
+  const scriptRoundScreen = liveScreen(C.scripts, FRONT + Math.PI / 4, g => {
+    const now = live.serverNow(), cur = Math.floor(now / Q) * Q;
+    title(g, "SCRIPTS THIS ROUND", `${hhmm(cur)}–${hhmm(cur + Q)} · shown as they call`);
+    const calls = (live.calls?.round === cur ? live.calls.calls : []).filter(c => c.kind === "script").slice(0, 6);
+    g.font = `22px ${FONT}`;
+    if (!calls.length) { g.fillStyle = DIM; g.fillText("No script has called yet.", 22, 120); return; }
+    calls.forEach((c, i) => {
+      const y = 112 + i * 34;
+      g.fillStyle = c.direction === "up" ? UP : DOWN; g.fillText(arrow(c.direction), 22, y);
+      g.fillStyle = INK; g.fillText(clip(c.name || "?", 18), 56, y);
+      g.fillStyle = DIM; g.textAlign = "right"; g.fillText(c.price ? `@${Math.round(c.price.paid * 100)}¢` : "", 490, y); g.textAlign = "left";
+    });
+  }, L2);
+  const scriptLastScreen = liveScreen(C.scripts, FRONT - Math.PI / 4, g => {
+    const p = live.prev;
+    title(g, "SCRIPTS LAST ROUND", p ? `${hhmm(p.round)}–${hhmm(p.round + Q)}` : "");
+    if (!p) return;
+    g.font = `22px ${FONT}`;
+    if (!p.result) { g.fillStyle = DIM; g.fillText("Waiting for Kalshi's result…", 22, 120); return; }
+    const calls = p.calls.filter(c => c.kind === "script").slice(0, 6);
+    if (!calls.length) { g.fillStyle = DIM; g.fillText("No script called last round.", 22, 120); return; }
+    calls.forEach((c, i) => {
+      const y = 112 + i * 34;
+      g.fillStyle = c.correct ? UP : DOWN; g.fillText(c.correct ? "✓" : "✗", 22, y);
+      g.fillStyle = INK; g.fillText(clip(c.name || "?", 18), 56, y);
+      g.fillStyle = DIM; g.textAlign = "right";
+      g.fillText(c.paperPerContract === undefined ? "" : `${c.paperPerContract >= 0 ? "+" : "−"}${Math.round(Math.abs(c.paperPerContract) * 100)}¢`, 490, y); g.textAlign = "left";
+    });
+    g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Paper results per $1. Not financial advice.", 22, 306);
+  }, L2);
+  screens.push(panel(chartTex(7, C.scripts), 0.46, 0.28, C.scripts, FRONT + (3 * Math.PI) / 4, L2.r, L2.y, 1, false, ring2));
+  screens.push(panel(mathTex(1), 0.46, 0.23, C.scripts, FRONT - (3 * Math.PI) / 4, L2.r, L2.y, 0.95, true, ring2));
 
   // The very top level is one screen that comes up in front of you to choose where to go next (owner,
   // 2026-10-19): the start of moving through the whole site from inside the world. Click a line on the screen.
@@ -434,7 +469,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       g.fillStyle = DIM; g.textAlign = "right"; g.fillText("→", 486, top + 30); g.textAlign = "left";
     });
   }, { ring: ring3, y: 2.3, r: inr(2.3) * 0.62, w: 0.6 });
-  const liveScreens = [roundScreen, standingsScreen, lastScreen, scriptsScreen, menuScreen, spotA, spotB, eventScreen, marketScreen, hourlyScreen, callersScreen];
+  const liveScreens = [roundScreen, standingsScreen, lastScreen, scriptsScreen, scriptRoundScreen, scriptLastScreen, menuScreen, spotA, spotB, eventScreen, marketScreen, hourlyScreen, callersScreen];
   try { document.fonts?.ready.then(() => liveScreens.forEach(x => x.redraw())); } catch (e) {}
   const GREY = new THREE.Color(0x2a3a4c), WHITE = new THREE.Color(0xffffff), GREEN = new THREE.Color(0x37e08a), RED = new THREE.Color(0xff4d5e);
   // The hall reacts to what really happens (owner, 2026-10-19): every new call flies in as a comet in its
@@ -504,18 +539,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const walkers = new THREE.Points(new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(walkPos, 3)),
     add(new THREE.PointsMaterial({ color: 0xe8f0ff, size: 0.05, map: radial(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9));
   tower.add(walkers);
-  // Hexagon pods for the bots, standing on the ramp like stations, each with a glowing heart.
-  const pods = [];
-  for (let i = 0; i < 5; i++) {
-    const t = 0.3 + i * 0.13, P = rampAt(t, 0), pod = new THREE.Group();
-    const hex = new THREE.CylinderGeometry(0.045, 0.045, 0.08, 6);
-    pod.add(new THREE.Mesh(hex, add(new THREE.MeshBasicMaterial({ color: 0x5be3ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.16)));
-    pod.add(new THREE.LineSegments(new THREE.EdgesGeometry(hex), glassLine(0x5be3ff, 0.95)));
-    const heart = new THREE.Sprite(add(new THREE.SpriteMaterial({ map: radial(), color: 0x7fe9ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9));
-    heart.scale.setScalar(0.11); pod.add(heart);
-    pod.position.copy(P).setY(P.y + 0.045);
-    tower.add(pod); pods.push(pod);
-  }
+  // The hexagon pods that stood on the ramp were taken out (owner, 2026-10-19: cleaner); stops for moving
+  // through the site can go here once those places are rooms in the world.
   // The VIP Room is the crystal capstone: the whole tip of the pyramid above the landing, built from the
   // pyramid's own corners so it's perfectly straight, glowing brighter toward the top, with the featured
   // callers as three gold lights inside. No screens up here: it stays clean (owner, 2026-10-18).
@@ -585,7 +610,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   }
 
   // ---------- particles flowing along the edges, and lifting during the rise ----------
-  const flowN = full ? 420 : phone ? 90 : 200;
+  const flowN = full ? 220 : phone ? 50 : 110; // fewer and softer (owner, 2026-10-19: subtle)
   const flowPos = new Float32Array(flowN * 3), flowCol = new Float32Array(flowN * 3), flowT = new Float32Array(flowN), flowE = new Uint8Array(flowN);
   for (let i = 0; i < flowN; i++) {
     flowE[i] = i % edges.length; flowT[i] = Math.random();
@@ -593,7 +618,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     flowCol.set([c.r, c.g, c.b], i * 3);
   }
   const flowGeo = new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(flowPos, 3)).setAttribute("color", new THREE.BufferAttribute(flowCol, 3));
-  const flow = new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: full ? 0.07 : 0.09, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, map: radial(), alphaTest: 0.01 }));
+  const flow = new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: full ? 0.07 : 0.09, vertexColors: true, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, map: radial(), alphaTest: 0.01 }));
   scene.add(flow);
 
   // ---------- moving light: random beams rising in the dark, and comets flying around ----------
@@ -615,7 +640,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     m.material.uniforms.uSpeed.value = 0.25 + Math.random() * 0.5;
     Object.assign(m.userData, { born: time, life: 4 + Math.random() * 6 });
   }
-  const cometN = full ? 14 : phone ? 5 : 10, TRAIL = full ? 48 : phone ? 24 : 36;
+  const cometN = full ? 10 : phone ? 4 : 8, TRAIL = full ? 48 : phone ? 24 : 36;
   const comets = [];
   const cPos = new Float32Array(cometN * TRAIL * 3), cCol = new Float32Array(cometN * TRAIL * 3), cSize = new Float32Array(cometN * TRAIL);
   const cGeo = new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(cPos, 3)).setAttribute("color", new THREE.BufferAttribute(cCol, 3)).setAttribute("size", new THREE.BufferAttribute(cSize, 1));
@@ -639,7 +664,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       const tilt = (Math.random() - 0.5) * 0.9, spin = Math.random() * Math.PI * 2;
       const u = new THREE.Vector3(Math.cos(spin), 0, Math.sin(spin)), v = new THREE.Vector3(-Math.sin(spin), 0, Math.cos(spin)).applyAxisAngle(u, tilt);
       Object.assign(c, { orbit: true, live: false, born: time, life: 5 + Math.random() * 5, u, v, r: 4.5 + Math.random() * 5, y: 1 + Math.random() * 4, a0: Math.random() * Math.PI * 2,
-        speed: (Math.random() < 0.5 ? -1 : 1) * (0.22 + Math.random() * 0.25), start: true, fired: true, size: 0.05 + Math.random() ** 2 * 0.25, color: new THREE.Color(pick()) });
+        speed: (Math.random() < 0.5 ? -1 : 1) * (0.22 + Math.random() * 0.25), start: true, fired: true, size: 0.04 + Math.random() ** 2 * 0.16, color: new THREE.Color(pick()).multiplyScalar(0.6) });
+      c.born += 2 + Math.random() * 6; // a rest before it shows, so only a few are out at once
       return;
     }
     c.orbit = false;
@@ -650,9 +676,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const start = { a: aK - dir * turns * Math.PI * 2, r: 5 + Math.random() * 7, y: 0.8 + Math.random() * 4.5 };
     Object.assign(c, {
       born: time, tIn: call ? 2.4 + Math.random() : 3.5 + Math.random() * 3.5, aK, tBase: 0.9 + Math.random() * 0.6, vUp: 2.2 + Math.random() * 1.8, fired: false,
-      start, corner, size: call ? 0.34 : 0.06 + Math.random() ** 2 * 0.34, live: !!call, // a real call: bigger and quicker
-      color: new THREE.Color(call ? (call.sealed ? 0xffffff : C[keys[k]]) : Math.random() < 0.25 ? 0xffffff : C[keys[k]]),
+      start, corner, size: call ? 0.34 : 0.05 + Math.random() ** 2 * 0.2, live: !!call, // a real call: bigger, brighter and quicker
+      color: new THREE.Color(call ? (call.sealed ? 0xffffff : C[keys[k]]) : Math.random() < 0.25 ? 0xffffff : C[keys[k]]).multiplyScalar(call ? 1 : 0.6),
     });
+    if (!call) c.born += 2 + Math.random() * 6; // the ambient ones rest between flights, so the sky stays calm
   }
   const SKY = 40; // how far the laser reaches into the sky
   const centre = new THREE.Vector3(0, BASE_Y, 0);
@@ -876,7 +903,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   if (showFps) { fpsEl = document.createElement("div"); fpsEl.className = "w3d-fps"; document.body.append(fpsEl); }
   const tmp = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), clock = new THREE.Clock();
   let raf = 0, last = performance.now(), frames = [], judged = false, started = performance.now(), fpsAcc = 0, fpsN = 0, fpsAt = last;
-  let clockAt = 0, spotAt = 0, resultFx = null;
+  let clockAt = 0, clockRound = 0, spotAt = 0, resultFx = null;
   const minFrame = full ? 0 : 1000 / 40; // Lite caps at about 40 frames a second
   function frame(now) {
     raf = requestAnimationFrame(frame);
@@ -910,7 +937,6 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     for (const [m, o] of fades) m.opacity = o * inside;
     const bob = reducedMotion ? 0 : 1;
     screens.forEach((g, i) => { g.position.y = g.userData.y + Math.sin(time * 0.6 + i) * 0.02 * bob; });
-    pods.forEach((g, i) => { g.rotation.y = time * 0.5 * bob + i; g.children[2].material.opacity = inside * (0.6 + 0.4 * Math.sin(time * 2.4 + i * 1.7)); });
     for (let i = 0; i < walkN; i++) { walkT[i] = (walkT[i] + dt * 0.035 * bob) % 1; walkPos.set(rampAt(walkT[i]).toArray().map((v, k) => (k === 1 ? v + 0.03 : v)), i * 3); }
     walkers.geometry.attributes.position.needsUpdate = true;
     featured.forEach((f, i) => { f.material.opacity = inside * (0.7 + 0.3 * Math.sin(time * 1.8 + i * 2.1)); });
@@ -918,7 +944,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     ticks.forEach((t, i) => { t.material.opacity = inside * (t.userData.on ?? 1) * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(time * 1.4 - i * 0.35))); });
     spokes.forEach((l, i) => { l.material.opacity = inside * (l.userData.on ?? 1) * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 2 + i * 1.3))); });
     nodes.forEach((n, i) => { n.material.opacity = inside * (n.userData.on ?? 1) * (0.6 + 0.4 * Math.sin(time * 2 + i * 1.3)); });
-    if (inside > 0.01 && time - clockAt >= 1) { clockAt = time; roundScreen.redraw(); if (Math.floor(live.serverNow() / 12000) !== spotAt) { spotAt = Math.floor(live.serverNow() / 12000); spotA.redraw(); spotB.redraw(); eventScreen.redraw(); } } // the round clock ticks
+    if (inside > 0.01 && time - clockAt >= 1) { clockAt = time; roundScreen.redraw(); if (Math.floor(live.serverNow() / Q) !== clockRound) { clockRound = Math.floor(live.serverNow() / Q); scriptRoundScreen.redraw(); } if (Math.floor(live.serverNow() / 12000) !== spotAt) { spotAt = Math.floor(live.serverNow() / 12000); spotA.redraw(); spotB.redraw(); eventScreen.redraw(); } } // the round clock ticks
     const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
     for (const m of [beam, beamGlow, beam2]) { m.scale.set(1, beamLen, 1); m.position.set(m === beam2 ? 0.05 : 0, 0.15 + beamLen / 2, m === beam2 ? 0.03 : 0); }
     beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
@@ -973,11 +999,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const near = clamp01((Math.hypot(camera.position.x, camera.position.z) - 0.35) / 1.6);
     core.material.opacity *= 0.25 + 0.75 * near; beamGlow.material.opacity *= near;
     for (const m of [beam, beam2]) { const w = 0.2 + 0.8 * near; m.scale.x = m.scale.z = w; }
-    sigil.quaternion.copy(camera.quaternion);
-    sigil.position.set(0, 1.18 * rise, 0);
-    sigil.scale.setScalar(1.12 - 0.76 * smooth(clamp01(p / 0.33)));
-    const sigilO = 0.3 + 0.7 * near; // dimmed when the camera rides the beam right past it
-    sigil.traverse(o => { if (o.isMesh) o.material.opacity = o === sg.pl ? (1 - 0.45 * ((1 - Math.cos(spin(reducedMotion ? 0 : time, 2.4))) / 2)) * sigilO : sigilO; });
+    sigil.scale.setScalar(1.12 - 0.22 * smooth(clamp01(p / 0.33))); // the main page's size, then just inside the ring of ticks
+    sg.pl.material.opacity = 1 - 0.45 * ((1 - Math.cos(spin(reducedMotion ? 0 : time, 2.4))) / 2);
     renderer.render(scene, camera);
 
     if (fpsEl) { fpsAcc += dt; fpsN++; if (now - fpsAt > 500) { fpsEl.textContent = `${Math.round(fpsN / fpsAcc)} fps · ${level}`; fpsAcc = 0; fpsN = 0; fpsAt = now; } }
