@@ -182,21 +182,25 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const glassLine = (color, o) => add(new THREE.LineBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), o);
   // Screens face outward, toward the path the camera travels (and the glass we look in through); text is
   // one-sided so it never reads mirrored.
-  function panel(tex, w, h, color, at, r, y, o = 1, text = false) {
+  function panel(tex, w, h, color, at, r, y, o = 1, text = false, parent = tower) {
     const g = new THREE.Group();
-    g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), add(new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: text ? THREE.FrontSide : THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), o)));
+    g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), add(new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: text ? THREE.FrontSide : THREE.DoubleSide, blending: text ? THREE.NormalBlending : THREE.AdditiveBlending, depthWrite: false }), o))); // text screens hide what's behind them, so they stay readable
     g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, h)), glassLine(color, 0.9)));
     g.position.set(Math.cos(at) * r, y, Math.sin(at) * r);
     g.lookAt(Math.cos(at) * r * 2, y, Math.sin(at) * r * 2);
     g.userData.y = y;
-    tower.add(g);
+    parent.add(g);
     return g;
   }
   const screens = [];
+  // Each level's screens sit on a ring that turns, so a visitor stopped at that level can bring each one round
+  // to face them (the ◀ ▶ controls); the camera itself never turns.
+  const ring1 = new THREE.Group(), ring2 = new THREE.Group();
+  tower.add(ring1, ring2);
   // Chart screens in two rings, and code and maths for the chart scripts higher up: all kept well inside the
   // ramp, so nothing crosses it.
   // The lower ring is the Grand Hall's live screens (below); the rest are charts.
-  for (let i = 0; i < 3; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.52, 0.32, C[keys[(i + 1) % 3]], (i / 3) * Math.PI * 2 + 1.2, inr(1.6) * 0.64, 1.6));
+  for (let i = 0; i < 3; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.52, 0.32, C[keys[(i + 1) % 3]], (i / 3) * Math.PI * 2 + Math.PI / 2, inr(1.6) * 0.64, 1.6, 1, false, ring2));
   for (let i = 0; i < 2; i++) screens.push(panel(i % 2 ? mathTex(i) : codeTex(i), 0.38, i % 2 ? 0.19 : 0.25, i % 2 ? 0xdce7ee : C.scripts, i * Math.PI + 0.6, inr(2.25) * 0.6, 2.25, 0.95, true));
   screens.slice(-2).forEach((g, i) => { if (i % 2) g.children[1].visible = false; }); // the maths floats free, with no frame
   // ---------- the Grand Hall's live screens: the everyday trading room (docs/world/SITEMAP.md) ----------
@@ -212,10 +216,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   function liveScreen(color, at, draw) {
     const cv = document.createElement("canvas"); cv.width = 512; cv.height = 320;
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-    panel(tex, 0.5, 0.3125, color, at, inr(0.85) * 0.68, 0.85, 1, true);
+    panel(tex, 0.5, 0.3125, color, at, inr(0.85) * 0.68, 0.85, 1, true, ring1);
     const sc = { redraw() {
       const g = cv.getContext("2d");
-      g.clearRect(0, 0, 512, 320); g.fillStyle = "rgba(24,46,72,0.62)"; g.fillRect(0, 0, 512, 320);
+      g.clearRect(0, 0, 512, 320); g.fillStyle = "rgba(14,30,48,0.9)"; g.fillRect(0, 0, 512, 320);
       g.fillStyle = hex(color); g.fillRect(0, 0, 512, 4);
       draw(g); tex.needsUpdate = true;
     } };
@@ -549,22 +553,57 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // ---------- the way in: through the front glass, down to the core ----------
   const front = { a: CORNERS.bots, b: CORNERS.scripts };
   const faceNormal = new THREE.Vector3().subVectors(front.b, front.a).cross(new THREE.Vector3().subVectors(apex, front.a)).setY(0).normalize();
+  // The levels the camera holds at (see the camera path), each with its ring of screens.
+  const LEVELS = [{ from: 0.7, to: 0.77, ring: ring1 }, { from: 0.83, to: 0.89, ring: ring2 }];
+  // ◀ ▶ while stopped at a level: turn its ring of screens one screen at a time (keys and swipes too).
+  const nav = document.createElement("div");
+  nav.className = "w3d-nav"; nav.hidden = true;
+  nav.innerHTML = '<button type="button" data-d="-1" aria-label="Previous screen">◀</button><span>Look around</span><button type="button" data-d="1" aria-label="Next screen">▶</button>';
+  document.body.append(nav);
+  const stepsOf = ring => {
+    const angles = ring.children.map(g => Math.atan2(g.position.z, g.position.x)), front = Math.PI / 2;
+    return angles.map(a => a - front).sort((x, y) => y - x); // left to right, as the turn that brings each to the front
+  };
+  for (const L of LEVELS) { L.turn = 0; L.steps = stepsOf(L.ring); L.wrap = L.ring === ring2; }
+  let atLevel = null;
+  function turn(dir) {
+    const L = atLevel;
+    if (!L) return;
+    if (L.wrap) { L.turn -= dir * (2 * Math.PI / L.steps.length); return; } // an even ring: round and round (▶ brings the one on the right)
+    const i = L.steps.findIndex(a => Math.abs(a - L.turn) < 1e-3);
+    const next = i < 0 ? (dir > 0 ? L.steps.findIndex(a => a < L.turn) : L.steps.findLastIndex(a => a > L.turn)) : i + dir;
+    if (next >= 0 && next < L.steps.length) L.turn = L.steps[next];
+  }
+  nav.addEventListener("click", e => { const b = e.target.closest("button"); if (b) turn(+b.dataset.d); });
+  const onKey = e => { if (atLevel && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); turn(e.key === "ArrowLeft" ? -1 : 1); } };
+  addEventListener("keydown", onKey);
+  let touchX = null, touchY = null;
+  const onTouchStart = e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; };
+  const onTouchEnd = e => {
+    if (touchX === null || !atLevel) return;
+    const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) turn(dx < 0 ? 1 : -1);
+    touchX = null;
+  };
+  addEventListener("touchstart", onTouchStart, { passive: true });
+  addEventListener("touchend", onTouchEnd, { passive: true });
+
   const flash = document.createElement("div");
   flash.className = "w3d-flash";
   document.body.append(flash);
 
   const side = new THREE.Vector3().crossVectors(faceNormal, new THREE.Vector3(0, 1, 0)); // across the front, so the beam sits to one side
   // ---------- the camera path ----------
+  const hold = (from, to, pos, look) => [from, to].map(at => ({ at, pos: pos.clone(), look: look.clone(), up: new THREE.Vector3(0, 1, 0) }));
   const shots = [
     { at: 0, pos: new THREE.Vector3(0, 15.5, 0.001), look: new THREE.Vector3(0, 0, 0), up: new THREE.Vector3(0, 0, -1) },
     { at: 0.3, pos: new THREE.Vector3(0, 10.5, 9.5), look: new THREE.Vector3(0, 1.4, 0), up: new THREE.Vector3(0, 1, 0) },
     { at: 0.56, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
-    { at: 0.74, pos: new THREE.Vector3(0, 0.95, 0).addScaledVector(faceNormal, 2.0), look: new THREE.Vector3(0, 0.85, 0), // facing the hall's live screens
-       up: new THREE.Vector3(0, 1, 0) },
-    // then up beside the ramp, past the screens and pods, to the code and maths near the top
-    { at: 0.88, pos: new THREE.Vector3(0, 1.8, 0).addScaledVector(faceNormal, 0.82), look: new THREE.Vector3(0, 2.0, 0).addScaledVector(faceNormal, -0.5).addScaledVector(side, 0.5), up: new THREE.Vector3(0, 1, 0) },
+    // the camera holds at each level of screens, so a visitor can stop and look around them (◀ ▶)
+    ...hold(0.7, 0.77, new THREE.Vector3(0, 0.95, 0).addScaledVector(faceNormal, 2.0), new THREE.Vector3(0, 0.85, 0)), // the hall's live screens
+    ...hold(0.83, 0.89, new THREE.Vector3(0, 1.68, 0).addScaledVector(faceNormal, 1.55), new THREE.Vector3(0, 1.6, 0)), // the level above
     // at the top of the helix, into the centre beam and up it like a lift, under the crystal...
-    { at: 0.94, pos: new THREE.Vector3(0, VIP_Y - 0.5, 0).addScaledVector(faceNormal, 0.16), look: new THREE.Vector3(0, VIP_Y + 0.4, 0).addScaledVector(faceNormal, -0.4), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.95, pos: new THREE.Vector3(0, VIP_Y - 0.5, 0).addScaledVector(faceNormal, 0.16), look: new THREE.Vector3(0, VIP_Y + 0.4, 0).addScaledVector(faceNormal, -0.4), up: new THREE.Vector3(0, 1, 0) },
     // ...then out through the glass to the end: the crystal capstone, the VIP Room, whole and glowing
     { at: 1, pos: new THREE.Vector3(0, VIP_Y + 0.35, 0).addScaledVector(faceNormal, 2.7).addScaledVector(side, 0.6), look: new THREE.Vector3(0, VIP_Y + 0.6, 0), up: new THREE.Vector3(0, 1, 0) },
   ];
@@ -581,7 +620,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   function readScroll() {
     const r = outside.getBoundingClientRect(), span = Math.max(1, r.height - innerHeight);
     target = clamp01(-r.top / span);
-    if (reducedMotion) target = [0, 0.56, 0.74, 1].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a)); // cut between shots, no flying
+    if (reducedMotion) target = [0, 0.56, 0.735, 0.86, 1].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a)); // cut between shots, no flying
     document.body.style.setProperty("--w3d-p", String(clamp01(-r.top / span)));
     const past = r.bottom < innerHeight * 0.6;
     document.body.classList.toggle("w3d-past", past);
@@ -663,10 +702,13 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     flowGeo.attributes.position.needsUpdate = true;
 
     // A short burst of light as we pass through, gone again once we're in.
-    const through = clamp01((p - 0.64) / 0.1), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
+    const through = clamp01((p - 0.89) / 0.06), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
     flash.style.opacity = String(past ? 0 : burst * 0.85);
 
     moveLights(time, H * rise);
+    atLevel = past ? null : LEVELS.find(L => p >= L.from - 0.005 && p <= L.to + 0.005) || null;
+    nav.hidden = !atLevel;
+    for (const L of LEVELS) L.ring.rotation.y += (L.turn - L.ring.rotation.y) * (reducedMotion ? 1 : Math.min(1, dt * 4));
     formFloor(time);
     const s = shotAt(p);
     camera.position.copy(s.pos);
@@ -696,7 +738,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       removeEventListener("resize", resize);
       renderer.dispose();
       scene.traverse(o => { o.geometry?.dispose?.(); if (o.material) [].concat(o.material).forEach(m => { m.map?.dispose?.(); m.dispose(); }); });
-      canvas.remove(); flash.remove(); fpsEl?.remove();
+      removeEventListener("keydown", onKey); removeEventListener("touchstart", onTouchStart); removeEventListener("touchend", onTouchEnd);
+      canvas.remove(); flash.remove(); nav.remove(); fpsEl?.remove();
       delete document.body.dataset.three;
       document.body.style.removeProperty("--w3d-p");
       document.body.classList.remove("w3d-past");
