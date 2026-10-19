@@ -149,3 +149,9 @@ body[data-three="on"] .w-card{background:rgba(10,17,24,.86);backdrop-filter:blur
 .w3d-fps{position:fixed;left:10px;bottom:10px;z-index:50;font:12px var(--mono);color:var(--up);background:rgba(0,0,0,.6);padding:3px 7px}
 @media (prefers-reduced-motion:reduce){#w3d{transition:none}}
 .w-paid{font:12px var(--mono);color:var(--ink-2)}
+/* ◀ ▶ while the 3D camera is stopped at a level of screens */
+.w3d-nav{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:10px;padding:6px;background:rgba(10,17,24,.82);border:1px solid var(--line);backdrop-filter:blur(6px)}
+.w3d-nav[hidden]{display:none}
+.w3d-nav button{width:44px;height:40px;font:16px var(--mono);color:var(--ink);background:var(--surface);border:1px solid var(--line);cursor:pointer}
+.w3d-nav button:hover{border-color:var(--ink-3)}
+.w3d-nav span{font:600 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
