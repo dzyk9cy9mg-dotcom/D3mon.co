@@ -179,6 +179,42 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const beamGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1, 12, 1, true), edgeMat(C.callers, 0.18));
   scene.add(beam, beamGlow);
   const palette = [C.callers, C.bots, C.scripts, 0xffffff];
+  // ---------- the main page's emblem at the heart of the triangle (owner, 2026-10-19) ----------
+  // The same drawing as the gyroscope in the main page's triangle (index.html .sigil.gim), layer for layer, with
+  // the same movements as d3mon.css: three outer rings tumbling (14 s round X, 11 s round Y, 8 s back round X),
+  // each also spinning in its own plane (30 s, 16 s back, 10 s), the inner dashed ring (22 s back), the triangle
+  // (40 s) and the pulsing heart (2.4 s). Its lines are a little bolder than the page's, as it's drawn smaller.
+  // It always faces the camera, as it faces you on the main page. From the overhead opening it is the main
+  // page's size at the heart of the triangle; as the pyramid rises it settles on the beam in the clear space
+  // between the hall's live screens and the level above, near the triangle's centre seen from the front.
+  const sigil = new THREE.Group();
+  scene.add(sigil);
+  const SVG_DEFS = '<defs><linearGradient id="t" x1="0" y1="-70" x2="0" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB547"/><stop offset=".55" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient><radialGradient id="c"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".6"/><stop offset="1" stop-color="#4DA3FF" stop-opacity="0"/></radialGradient></defs>';
+  const sigilLayer = (body, z, parent = sigil, additive = false) => {
+    const cv = document.createElement("canvas"); cv.width = cv.height = 512;
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    const im = new Image();
+    im.onload = () => { cv.getContext("2d").drawImage(im, 0, 0, 512, 512); tex.needsUpdate = true; };
+    im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-100 -100 200 200">${SVG_DEFS}${body}</svg>`);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+    m.position.z = z; m.userData.o = 1; parent.add(m);
+    return m;
+  };
+  const gimbal = () => { const g = new THREE.Group(); sigil.add(g); return g; };
+  const sg = {
+    halo: sigilLayer('<circle r="98" fill="url(#c)"/>', -0.08, sigil, true),
+    back: sigilLayer('<circle r="74" fill="#05080C" fill-opacity=".55" stroke="#1A2A36"/>', -0.06),
+    g1: gimbal(), g2: gimbal(), g3: gimbal(),
+  };
+  sg.s3 = sigilLayer('<circle r="94" fill="none" stroke="#8FA3B2" stroke-opacity=".6" stroke-width="1.6" stroke-dasharray="1.6 5"/>', 0, sg.g1);
+  sg.s1 = sigilLayer('<circle r="84" fill="none" stroke="url(#t)" stroke-width="2.6" stroke-dasharray="36 10 4 10"/>', 0, sg.g2);
+  sg.s2 = sigilLayer('<polygon points="0,-66 57.2,-33 57.2,33 0,66 -57.2,33 -57.2,-33" fill="none" stroke="#4DA3FF" stroke-opacity=".7" stroke-width="1.8"/>', 0, sg.g3);
+  sg.s4 = sigilLayer('<circle r="44" fill="none" stroke="#8FA3B2" stroke-opacity=".5" stroke-width="1.4" stroke-dasharray="2 4"/>', 0.02);
+  sg.tri = sigilLayer('<polygon points="0,-62 53.7,31 -53.7,31" fill="rgba(77,163,255,.06)" stroke="url(#t)" stroke-width="3"/><line x1="0" y1="-62" x2="0" y2="0" stroke="#FFB547" stroke-opacity=".35"/><line x1="53.7" y1="31" x2="0" y2="0" stroke="#B98CFF" stroke-opacity=".35"/><line x1="-53.7" y1="31" x2="0" y2="0" stroke="#4DA3FF" stroke-opacity=".35"/><circle cx="0" cy="-62" r="5" fill="#FFB547"/><circle cx="-53.7" cy="31" r="5" fill="#4DA3FF"/><circle cx="53.7" cy="31" r="5" fill="#B98CFF"/>', 0.03);
+  sg.heart = sigilLayer('<circle r="20" fill="#05080C" stroke="#4DA3FF" stroke-width="1.4"/>', 0.04);
+  sg.pl = sigilLayer('<circle r="8" fill="#4DA3FF"/>', 0.05);
+  sg.dot = sigilLayer('<circle r="4" fill="#DCE7EE"/>', 0.06);
+  const spin = (t, s) => (t / s) * Math.PI * 2; // one turn every s seconds
   // ---------- inside, rising up: the 10118 video (owner, 2026-10-18; its booths with people and its stars left out) ----------
   // Rings of glass chart screens, a glass ramp spiralling up with hexagon bot pods along it, floating code and
   // maths for the chart scripts near the top, and the people online as little lights in the stands.
@@ -900,6 +936,13 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       } else orb.material.opacity = 0;
       if (t >= IN + UP + OUT) { resultFx = null; wave.material.opacity = 0; orb.material.opacity = 0; }
     }
+    { // the emblem: CSS rotate() is clockwise and its rotateX tips the top away, so both are negative here
+      const t = reducedMotion ? 0 : time, k = (1 - Math.cos(spin(t, 2.4))) / 2;
+      sg.g1.rotation.x = -spin(t, 14); sg.g2.rotation.y = spin(t, 11); sg.g3.rotation.x = spin(t, 8);
+      sg.s3.rotation.z = -spin(t, 30); sg.s1.rotation.z = spin(t, 16); sg.s2.rotation.z = -spin(t, 10);
+      sg.s4.rotation.z = spin(t, 22); sg.tri.rotation.z = -spin(t, 40);
+      sg.pl.scale.setScalar(1 + 0.35 * k);
+    }
     marks.children.forEach((m, i) => { if (m.isMesh) m.rotation.y = time * (0.15 + i * 0.03); });
 
     // Particles flow from the corners to the apex and along the base; during the rise they lift too.
@@ -930,6 +973,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const near = clamp01((Math.hypot(camera.position.x, camera.position.z) - 0.35) / 1.6);
     core.material.opacity *= 0.25 + 0.75 * near; beamGlow.material.opacity *= near;
     for (const m of [beam, beam2]) { const w = 0.2 + 0.8 * near; m.scale.x = m.scale.z = w; }
+    sigil.quaternion.copy(camera.quaternion);
+    sigil.position.set(0, 1.18 * rise, 0);
+    sigil.scale.setScalar(1.12 - 0.76 * smooth(clamp01(p / 0.33)));
+    const sigilO = 0.3 + 0.7 * near; // dimmed when the camera rides the beam right past it
+    sigil.traverse(o => { if (o.isMesh) o.material.opacity = o === sg.pl ? (1 - 0.45 * ((1 - Math.cos(spin(reducedMotion ? 0 : time, 2.4))) / 2)) * sigilO : sigilO; });
     renderer.render(scene, camera);
 
     if (fpsEl) { fpsAcc += dt; fpsN++; if (now - fpsAt > 500) { fpsEl.textContent = `${Math.round(fpsN / fpsAcc)} fps · ${level}`; fpsAcc = 0; fpsN = 0; fpsAt = now; } }
