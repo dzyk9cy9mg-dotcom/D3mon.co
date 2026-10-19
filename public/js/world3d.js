@@ -252,6 +252,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // and the place kept for the D3MON Discord, which becomes the hall's chat and voice. world.js hands the data
   // in with hall(); the ring of ticks is the round clock and the spokes are this round's calls.
   const live = { calls: null, prev: null, standings: null, rounds: [], serverNow: () => Date.now() };
+  let thumbImg = null; // the hall video's thumbnail (see hallData)
   const Q = 15 * 60000, hhmm = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   const hex = c => "#" + c.toString(16).padStart(6, "0"), KIND = { caller: C.callers, bot: C.bots, script: C.scripts };
   const UP = "#37e08a", DOWN = "#ff4d5e", INK = "#dce7ee", DIM = "#8aa0b4";
@@ -360,12 +361,24 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       g.fillText(`${(on.entrants || []).length} in the lineup`, 22, 208);
       g.fillStyle = live.video ? INK : DIM; g.fillText(live.video ? "▶ Click to watch" : "Its live stream plays here", 22, 256);
     } else if (live.video) { // the hall's video (GET /hall/video), played in a panel when this screen is clicked
-      g.fillStyle = "#ff3d3d"; g.beginPath(); g.roundRect(22, 96, 92, 64, 14); g.fill();
-      g.fillStyle = "#fff"; g.beginPath(); g.moveTo(58, 112); g.lineTo(58, 144); g.lineTo(86, 128); g.closePath(); g.fill();
-      g.fillStyle = INK; g.font = `700 26px ${HEAD}`; g.fillText(clip(live.video.title || (live.video.kind === "short" ? "A new Short" : "Watch now"), 22), 134, 124);
-      g.fillStyle = DIM; g.font = `20px ${FONT}`; g.fillText(live.video.kind === "live" ? "Live on YouTube" : live.video.kind === "short" ? "YouTube Short" : "YouTube video", 134, 154);
-      g.fillStyle = INK; g.font = `24px ${FONT}`; g.fillText("▶ Click this screen to watch", 22, 232);
-      if (next) { g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText(`Next event: ${clip(next.title, 24)}`, 22, 280); }
+      const v = live.video, im = thumbImg?.dataset.id === v.id && thumbImg.complete && thumbImg.naturalWidth ? thumbImg : null;
+      const short = v.kind === "short", w = short ? 112 : 264, h = 198, x = 22, y = 92; // a Short is tall
+      g.fillStyle = "#000"; g.fillRect(x, y, w, h);
+      if (im) { // YouTube's hqdefault is 4:3 with the picture letterboxed: crop to 16:9, or to the Short's 9:16 middle
+        const iw = im.naturalWidth, ih = im.naturalHeight;
+        if (short) { const cw = ih * 9 / 16; g.drawImage(im, (iw - cw) / 2, 0, cw, ih, x, y, w, h); }
+        else { const ch = iw * 9 / 16; g.drawImage(im, 0, (ih - ch) / 2, iw, ch, x, y + (h - w * 9 / 16) / 2, w, w * 9 / 16); }
+      }
+      g.strokeStyle = "rgba(255,255,255,0.25)"; g.lineWidth = 2; g.strokeRect(x, y, w, h);
+      const cx = x + w / 2, cy = y + h / 2; // the play badge over the picture
+      g.fillStyle = "#ff3d3d"; g.beginPath(); g.roundRect(cx - 34, cy - 24, 68, 48, 12); g.fill();
+      g.fillStyle = "#fff"; g.beginPath(); g.moveTo(cx - 9, cy - 13); g.lineTo(cx - 9, cy + 13); g.lineTo(cx + 15, cy); g.closePath(); g.fill();
+      const tx = x + w + 20, words = (v.title || (short ? "A new Short" : "Watch now")).split(" "), lines = [""];
+      g.font = `700 24px ${HEAD}`;
+      for (const word of words) { const t = lines.at(-1) ? `${lines.at(-1)} ${word}` : word; if (g.measureText(t).width > 490 - tx && lines.at(-1)) lines.push(word); else lines[lines.length - 1] = t; }
+      g.fillStyle = INK; lines.slice(0, 3).forEach((l, i) => g.fillText(clip(l, 30), tx, y + 26 + i * 30));
+      g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText(v.kind === "live" ? "Live on YouTube" : short ? "YouTube Short" : "YouTube video", tx, y + 132);
+      g.fillStyle = INK; g.font = `21px ${FONT}`; g.fillText("▶ Click to watch", tx, y + 178);
     } else if (next) {
       g.fillStyle = INK; g.fillText(`Next: ${clip(next.title, 26)}`, 22, 124);
       g.fillStyle = DIM; g.fillText(new Date(next.startsAt).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }), 22, 162);
@@ -494,6 +507,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   let firstData = true, resultRound = null, resultPending = null;
   function hallData(d) {
     Object.assign(live, d);
+    if (live.video && thumbImg?.dataset.id !== live.video.id) { // the hall video's thumbnail, served by D3MON itself so WebGL may draw it
+      thumbImg = new Image(); thumbImg.dataset.id = live.video.id;
+      thumbImg.onload = () => eventScreen.redraw();
+      thumbImg.src = live.video.thumb;
+    }
     for (const c of live.calls?.calls || []) {
       if (seenCalls.has(c.id)) continue;
       seenCalls.add(c.id);
