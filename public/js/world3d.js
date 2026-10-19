@@ -274,10 +274,18 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const title = (g, text, sub) => { g.fillStyle = INK; g.font = `700 24px ${HEAD}`; g.fillText(text, 22, 42); if (sub) { g.fillStyle = DIM; g.font = `18px ${FONT}`; g.fillText(sub, 22, 68); } };
   const arrow = d => (d === "up" ? "▲" : "▼");
   const FRONT = Math.PI / 2; // facing the way in, so the first ones are read on the way in
+  // The lock moment, every 15 minutes (BLUEPRINT section 5): the hall dims in the last 10 seconds while the
+  // round screen counts down; at the close the emblem flashes and the round's calls flip from sealed to green or
+  // red on the spokes for a few seconds; Kalshi's result follows with its pulse up the beam.
+  const LOCK_DIM = 10000, LOCK_SHOW = 6000;
   const S1 = (2 * Math.PI) / 10, at1 = k => FRONT + (k + 0.5) * S1; // ten screens all the way round the hall
   const roundScreen = liveScreen(C.callers, at1(0), g => {
     const now = live.serverNow(), cur = Math.floor(now / Q) * Q, left = Math.max(0, cur + Q - now);
     title(g, "THIS ROUND", `${hhmm(cur)}–${hhmm(cur + Q)} · Bitcoin up or down`);
+    if (left < LOCK_DIM) { // the lock moment: the last seconds count down big
+      g.fillStyle = INK; g.font = `700 150px ${HEAD}`; g.textAlign = "center"; g.fillText(String(Math.ceil(left / 1000)), 256, 240);
+      g.fillStyle = DIM; g.font = `20px ${FONT}`; g.fillText("Calls close", 256, 292); g.textAlign = "left"; return;
+    }
     g.fillStyle = INK; g.font = `700 40px ${FONT}`; g.textAlign = "right";
     g.fillText(`${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, "0")}`, 490, 50); g.textAlign = "left";
     const calls = (live.calls?.round === cur ? live.calls.calls : []).slice(0, 6);
@@ -498,9 +506,16 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       t.material.color.copy(res === "now" ? WHITE : res === "up" ? GREEN : res === "down" ? RED : GREY);
       t.userData.on = res ? 1 : 0.35;
     });
-    // The spokes are this round's calls streaming into the core: the caller, bot or script's colour at the
-    // end, the line green or red by the call (white while a caller's is sealed). Unused ones go dim.
-    const calls = live.calls?.round === cur ? live.calls.calls : [];
+    paintSpokes();
+  }
+  // The spokes are this round's calls streaming into the core: the caller, bot or script's colour at the end,
+  // the line green or red by the call (white while a caller's is sealed). Unused ones go dim. For a few seconds
+  // after the lock they hold the round that just closed, its sealed calls flipped to their direction.
+  function paintSpokes() {
+    const now = live.serverNow(), cur = Math.floor(now / Q) * Q, just = cur - Q;
+    const calls = now - cur < LOCK_SHOW
+      ? (live.prev?.round === just ? live.prev.calls : live.calls?.round === just ? live.calls.calls : [])
+      : live.calls?.round === cur ? live.calls.calls : [];
     nodes.forEach((n, i) => {
       const c = calls[i];
       n.userData.on = c ? 1 : 0.12; spokes[i].userData.on = c ? 1 : 0.1;
@@ -944,7 +959,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     ticks.forEach((t, i) => { t.material.opacity = inside * (t.userData.on ?? 1) * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(time * 1.4 - i * 0.35))); });
     spokes.forEach((l, i) => { l.material.opacity = inside * (l.userData.on ?? 1) * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 2 + i * 1.3))); });
     nodes.forEach((n, i) => { n.material.opacity = inside * (n.userData.on ?? 1) * (0.6 + 0.4 * Math.sin(time * 2 + i * 1.3)); });
-    if (inside > 0.01 && time - clockAt >= 1) { clockAt = time; roundScreen.redraw(); if (Math.floor(live.serverNow() / Q) !== clockRound) { clockRound = Math.floor(live.serverNow() / Q); scriptRoundScreen.redraw(); } if (Math.floor(live.serverNow() / 12000) !== spotAt) { spotAt = Math.floor(live.serverNow() / 12000); spotA.redraw(); spotB.redraw(); eventScreen.redraw(); } } // the round clock ticks
+    if (inside > 0.01 && time - clockAt >= 1) { clockAt = time; roundScreen.redraw(); paintSpokes(); if (Math.floor(live.serverNow() / Q) !== clockRound) { clockRound = Math.floor(live.serverNow() / Q); scriptRoundScreen.redraw(); } if (Math.floor(live.serverNow() / 12000) !== spotAt) { spotAt = Math.floor(live.serverNow() / 12000); spotA.redraw(); spotB.redraw(); eventScreen.redraw(); } } // the round clock ticks
     const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
     for (const m of [beam, beamGlow, beam2]) { m.scale.set(1, beamLen, 1); m.position.set(m === beam2 ? 0.05 : 0, 0.15 + beamLen / 2, m === beam2 ? 0.03 : 0); }
     beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
@@ -1000,6 +1015,15 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     core.material.opacity *= 0.25 + 0.75 * near; beamGlow.material.opacity *= near;
     for (const m of [beam, beam2]) { const w = 0.2 + 0.8 * near; m.scale.x = m.scale.z = w; }
     sigil.scale.setScalar(1.12 - 0.22 * smooth(clamp01(p / 0.33))); // the main page's size, then just inside the ring of ticks
+    { // the lock moment: dim in the last seconds, back up over a second and a half after; the emblem flashes at the close
+      const since = live.serverNow() % Q, toLock = Q - since;
+      const dim = reducedMotion ? 0 : Math.max(toLock < LOCK_DIM ? smooth(1 - toLock / LOCK_DIM) : 0, since < 1500 ? 1 - since / 1500 : 0);
+      const flash = reducedMotion || since > 1800 ? 0 : (1 - since / 1800) ** 2, k = 1 - 0.5 * dim;
+      core.material.opacity *= k * (1 + 1.5 * flash); glow.material.opacity = 0.32 * k;
+      for (const m of [...ticks, ...nodes]) m.material.opacity *= k;
+      for (const l of spokes) l.material.opacity *= k;
+      sg.halo.scale.setScalar(1 + 0.8 * flash);
+    }
     sg.pl.material.opacity = 1 - 0.45 * ((1 - Math.cos(spin(reducedMotion ? 0 : time, 2.4))) / 2);
     renderer.render(scene, camera);
 
