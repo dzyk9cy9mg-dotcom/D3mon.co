@@ -173,7 +173,8 @@
   function renderChat() {
     const box = $("chatList"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
     const msgs = S.chat?.messages || [];
-    box.innerHTML = msgs.length ? msgs.map(m => `<li><b style="color:${KIND_C[m.as] || KIND_C.member}">${esc(m.name)}</b>${m.direction ? `<i class="${m.direction === "up" ? "up" : "dn"}">${m.direction === "up" ? "▲" : "▼"}</i>` : ""} ${esc(m.text)}<time>${new Date(m.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time></li>`).join("") : `<li class="w-empty">No messages yet. Say hello.</li>`;
+    $("chatSub").textContent = S.chat?.discord ? "The trading floor, shared with the Cortex and the D3MON Discord" : "The trading floor, shared with the Cortex";
+    box.innerHTML = msgs.length ? msgs.map(m => `<li>${m.from === "discord" ? `<span class="w-dc" title="From the D3MON Discord">Discord</span>` : ""}<b style="color:${m.from === "discord" ? "#8b93ff" : KIND_C[m.as] || KIND_C.member}">${esc(m.name)}</b>${m.direction ? `<i class="${m.direction === "up" ? "up" : "dn"}">${m.direction === "up" ? "▲" : "▼"}</i>` : ""} ${esc(m.text)}<time>${new Date(m.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time></li>`).join("") : `<li class="w-empty">No messages yet. Say hello.</li>`;
     if (atEnd) box.scrollTop = box.scrollHeight; // stay at the newest unless they scrolled up to read
   }
   async function loadChat() { try { S.chat = await api("GET", "hall/chat?limit=40"); renderChat(); push3d(); } catch (e) {} }

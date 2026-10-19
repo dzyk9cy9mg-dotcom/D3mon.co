@@ -56,6 +56,13 @@ export function loadConfig(overrides = {}) {
     // Step 5: poll Kalshi's public market data for round results. D3MON_KALSHI=off turns it off.
     kalshi: flag(env.D3MON_KALSHI, true),
     kalshiUrl: (env.D3MON_KALSHI_URL || "").replace(/\/+$/, ""), // tests point this at a stand-in
+    // The hall chat's link to one D3MON Discord channel (server/arena/discord.js). All three must be set; secrets
+    // stay in .env, never in the repo.
+    discordToken: (env.D3MON_DISCORD_BOT_TOKEN || "").trim(),
+    discordChannel: (env.D3MON_DISCORD_CHANNEL_ID || "").trim(),
+    discordWebhook: (env.D3MON_DISCORD_WEBHOOK_URL || "").trim(),
+    discordApi: (env.D3MON_DISCORD_API || "https://discord.com/api/v10").replace(/\/+$/, ""), // tests point this at a stand-in
+    discordPoll: flag(env.D3MON_DISCORD_POLL, true),
     ytThumbUrl: (env.D3MON_YT_THUMB_URL || "").replace(/\/+$/, ""), // YouTube's thumbnail host; tests point this at a stand-in
     saveDelayMs: 1000,
   };

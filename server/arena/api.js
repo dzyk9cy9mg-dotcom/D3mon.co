@@ -21,6 +21,7 @@ import { Tournaments } from "./tournaments.js";
 import { Vip } from "./vip.js";
 import { Hall } from "./hall.js";
 import { HallChat } from "./hallchat.js";
+import { DiscordBridge } from "./discord.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
 
@@ -72,6 +73,11 @@ export function createArena({ store, accounts, cfg }) {
   if (cfg.kalshi !== false) tournaments.start(); // no Kalshi, no results to save
   const vip = new Vip({ ledger, registry, calls, feed, accounts });
   const hallChat = new HallChat({ store, feed, userName });
+  // The hall chat and one D3MON Discord channel as one conversation, when the bot's settings are in .env.
+  const discord = DiscordBridge.configured(cfg)
+    ? new DiscordBridge({ store, hallChat, userName, token: cfg.discordToken, channel: cfg.discordChannel, webhook: cfg.discordWebhook, api: cfg.discordApi })
+    : null;
+  if (discord && cfg.discordPoll) discord.start();
   const hall = new Hall({ ledger, feed, ...(cfg.ytThumbUrl ? { thumbBase: cfg.ytThumbUrl } : {}) });
   const displays = new Displays({ store, registry, stats, catalog, feed });
   displays.seed();
@@ -158,7 +164,7 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /rounds") return ok(roundsView(url));
     if (route === "GET /market") return ok(prices.market());
     if ((m = route.match(/^GET \/rounds\/(\d{1,16})\/calls$/))) return ok(calls.roundCalls(ctx, m[1]));
-    if (route === "GET /hall/chat") return ok(hallChat.read(+url.searchParams.get("limit") || 30));
+    if (route === "GET /hall/chat") return ok({ ...hallChat.read(+url.searchParams.get("limit") || 30), discord: !!discord, ...(isAdmin(ctx) && discord ? { link: discord.status() } : {}) });
     if (route === "POST /hall/chat") { writer(); return ok(hallChat.send(ctx, await body()), 201); }
     if (route === "GET /hall/video") return ok(hall.view());
     if (route === "GET /hall/video/thumb") {
@@ -235,5 +241,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, hall, hallChat, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }
