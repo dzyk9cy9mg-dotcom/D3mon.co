@@ -949,9 +949,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   let raf = 0, last = performance.now(), frames = [], judged = false, started = performance.now(), fpsAcc = 0, fpsN = 0, fpsAt = last;
   let clockAt = 0, clockRound = 0, spotAt = 0, resultFx = null;
   const minFrame = full ? 0 : 1000 / 40; // Lite caps at about 40 frames a second
+  let held = false;
   function frame(now) {
     raf = requestAnimationFrame(frame);
-    if (document.hidden) return;
+    if (document.hidden || held) return; // held: a video is playing over the world, so it gets the machine to itself
     const past = document.body.classList.contains("w3d-past");
     if (now - last < (past ? 1000 / 15 : minFrame)) return; // behind the other places it only needs a slow idle
     const dt = Math.min(0.1, (now - last) / 1000);
@@ -1068,6 +1069,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
 
   return {
     hall: hallData,
+    hold(on) { held = !!on; if (!on) last = performance.now(); }, // stops and restarts the drawing (the video panel)
     stop() {
       cancelAnimationFrame(raf);
       removeEventListener("scroll", readScroll);
