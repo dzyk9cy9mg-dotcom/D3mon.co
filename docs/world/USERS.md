@@ -8,7 +8,7 @@ Read this before designing any page. It decides what goes first, what is free an
 - **The community.** They come to **hang out and trade together**: listen to music, chat in text and voice, stream and share their screens while they talk and trade.
 - **Subscribers.** Some pay.
 - **Capstone members.** People who pay for the **capstone trading sessions**: scheduled sessions where D3MON's callers lead, backed by bots and chart scripts, all three supporting the session.
-- **Every skill level.** Some read charts well; many don't, and that's why they like bots.
+- **Bot creators of all kinds who come to battle.** HardSmoke's **special events** (hosted battles) are a **major source of traffic**: creators bring their bots to test them against other bots.
 
 ## How D3MON makes money
 
@@ -20,7 +20,7 @@ Read this before designing any page. It decides what goes first, what is free an
 
 1. **Profiles sell.** The verified record from Kalshi comes first, clearly apart from self-reported claims, with a way to buy or get the product (the commission). Trust is the product.
 2. **The Grand Hall is a hangout first, then a scoreboard.** Chat, voice, music, streams and screen share are the first things you meet; "who's here" and "who's live" show on the front page.
-3. **Every skill level.** Plain words, a short explanation of each term on tap, and following a bot or caller for people who don't read charts. Charts and raw data one tap deeper.
+3. **HardSmoke's special events are a headline.** The next battle, who's entered and how to enter belong on the front page and in the hall (its live event screen and stream), and every battle sends creators to the shop windows. The battle code (`/apply`, `/applications`, `/board`, `/metrics`) is the base to build on.
 4. **The capstone is a scheduled, paid event:** a schedule ("next session, who leads it"), a countdown and a clear way to get access, shown from the front page.
 5. **Always "not financial advice"** next to performance, sales and paid sessions. D3MON never trades.
 
