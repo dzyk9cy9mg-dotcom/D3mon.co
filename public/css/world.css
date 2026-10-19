@@ -336,3 +336,54 @@ body[data-three="on"] .w-events{order:-1}
   body[data-three="on"] .w-hero{top:calc(100vh - 494px)}
   body[data-three="on"] .w-ticker{top:calc(100vh - 240px);padding:12px 16px 8px;row-gap:10px}
 }
+
+/* ---------- the cinematic profile (/profile?e=<slug>, docs/world/BLUEPRINT.md section 7) ----------
+   "I am NAME." in the kind's colour (--kc, set by profile.js), the generated emblem, corner brackets and HUD
+   labels, the tagline in a glass card, then the record and the recent calls. */
+.w-prof{background:radial-gradient(120% 80% at 75% 35%,color-mix(in srgb,var(--kc,#4DA3FF) 22%,#05080c) 0%,#05080c 60%) fixed,#05080c}
+.p-main{max-width:1180px;margin:0 auto;padding:0 24px 60px}
+.p-hero{position:relative;min-height:calc(100vh - 80px);display:grid;align-items:center;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.p-emblem{grid-column:2;grid-row:1;justify-self:center;width:min(42vw,560px);aspect-ratio:1;opacity:.95;filter:drop-shadow(0 0 30px color-mix(in srgb,var(--kc,#4DA3FF) 35%,transparent))}
+.p-frame{position:absolute;inset:16px 0 24px;pointer-events:none}
+.p-frame i{position:absolute;width:22px;height:22px;border:1px solid color-mix(in srgb,var(--kc,#4DA3FF) 50%,transparent)}
+.p-frame i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}.p-frame i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}.p-frame i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}.p-frame i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
+.p-hud{position:absolute;margin:0;font:500 11px/1.8 var(--mono);letter-spacing:.12em;color:#8193a8}
+.p-hud b{color:#C9D6E4;font-weight:500}
+.p-hud-tl{left:30px;top:38px}.p-hud-br{right:30px;bottom:46px;text-align:right}
+.p-text{grid-column:1;grid-row:1;max-width:560px;display:grid;gap:14px;align-content:center;padding:80px 0}
+.p-text .w-eyebrow{color:color-mix(in srgb,var(--kc,#4DA3FF) 70%,#fff)}
+.w-eyebrow i.off{background:#5b6b80;box-shadow:none}
+.p-text h1{margin:0;font:700 clamp(44px,6vw,80px)/1.04 var(--display);letter-spacing:.02em;color:var(--ink)}
+.p-text h1 em{display:block;font-style:normal;color:var(--kc,#4DA3FF);text-shadow:0 0 40px color-mix(in srgb,var(--kc,#4DA3FF) 45%,transparent);overflow-wrap:anywhere}
+.p-by{margin:0;font:400 17px/1.5 var(--body);color:#B4C3D4}.p-by b{color:var(--ink);font-weight:600}
+.p-badges{display:flex;flex-wrap:wrap;gap:8px}.p-badges:empty{display:none}
+.p-badge{padding:6px 12px;border-radius:999px;font:600 12px var(--body);color:#06101e;background:var(--gold)}
+.p-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:18px}.p-stats:empty{display:none}
+.p-stats div{display:grid;gap:4px}.p-stats small{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.p-stats b{font:600 24px var(--body);font-variant-numeric:tabular-nums;color:var(--ink)}
+.p-ver{margin:0;font:500 12px var(--mono);color:var(--ink-2)}.p-ver .pos{color:var(--up)}
+.p-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.p-actions .w-join,.p-actions .w-btn{min-height:46px;padding:0 22px;font-size:15px}
+.p-quote{position:absolute;right:24px;top:110px;width:300px;margin:0;padding:18px 20px;border-radius:16px;border:1px solid var(--edge);background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.p-quote[hidden]{display:none}
+.p-quote blockquote{margin:0;font:400 16px/1.5 var(--body);color:var(--ink)}
+.p-quote figcaption{margin-top:10px;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.p-sec{margin-top:36px}
+.p-sec h2{margin:0 0 6px;font:700 20px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.p-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:14px}
+.p-grid .stat{border-radius:14px;border:1px solid var(--edge);background:var(--glass)}
+.p-grid .stat.wide{grid-column:1/-1}
+.p-calls{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:6px}
+.p-calls li{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--edge);background:rgba(6,10,18,.6);font:15px var(--body)}
+.p-calls time{font:13px var(--mono);color:var(--ink-2)}
+@media (max-width:760px){
+  .p-main{padding:0 16px 48px}
+  .p-hero{grid-template-columns:1fr;min-height:0;padding-top:20px}
+  .p-emblem{grid-column:1;grid-row:1;width:min(78vw,340px)}
+  .p-text{grid-row:2;padding:10px 0 20px}
+  .p-quote{position:static;width:auto;grid-row:3}
+  .p-hud{display:none}.p-frame{inset:6px 0 0}
+  .p-calls li{grid-template-columns:1fr auto;}.p-calls time{grid-column:1/-1}
+}
+a.w-logo{text-decoration:none}
+.p-text h1 em{overflow-wrap:normal;white-space:nowrap;font-size:min(1em,calc(var(--fit,1) * 1em))}

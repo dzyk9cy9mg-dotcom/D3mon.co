@@ -150,12 +150,25 @@
     render();
   }
 
+  // The public profile (/profile?e=<slug>): the owner's tagline, shop link (with D3MON's referral code) and
+  // stream link. Saved with PUT /entrants/:id/profile; an empty field clears it.
+  function profileBox(e) {
+    return `<h3 class="sub">Profile <a class="meta" href="profile?e=${encodeURIComponent(e.slug)}">see it →</a></h3>
+      <form class="callbox" data-profile="${esc(e.id)}">
+        <label>Tagline <span class="meta">(up to 140 characters)</span><input name="tagline" maxlength="140" value="${esc(e.tagline || "")}" placeholder="Trend first, then the crowd."></label>
+        <label>Shop link <span class="meta">(https://…, with D3MON's referral code; shown as "Get ${esc(e.name)}")</span><input name="shopUrl" maxlength="300" value="${esc(e.shopUrl || "")}" placeholder="https://"></label>
+        <label>Stream link <span class="meta">(YouTube, Twitch, Kick or Discord)</span><input name="streamUrl" maxlength="300" value="${esc(e.streamUrl || "")}" placeholder="https://"></label>
+        <div class="actions"><button class="btn sm" type="submit">Save profile</button></div>
+      </form>`;
+  }
+
   function render() {
     $("none").hidden = S.entrants.length > 0;
     $("entrants").innerHTML = S.entrants.map(e => `<section class="panel" data-ent="${esc(e.id)}">
       <h2>${esc(e.name)} <span class="st">${esc(kindName(e.kind))}</span>${e.status !== "active" ? ` <span class="st rejected">${esc(e.status)}</span>` : ""}</h2>
       ${e.kind === "caller" ? callerBox(e) : keysBox(e)}
       ${tourBox(e)}
+      ${profileBox(e)}
       <h3 class="sub">Recent calls</h3>${callsTable(e)}
       ${statsBox(e)}
     </section>`).join("");
@@ -256,6 +269,17 @@
   });
 
   document.addEventListener("submit", async ev => {
+    const pf = ev.target.closest("[data-profile]");
+    if (pf) {
+      ev.preventDefault();
+      const id = pf.dataset.profile, v = n => pf.elements[n].value.trim();
+      try {
+        const e = (await api("PUT", `entrants/${id}/profile`, { tagline: v("tagline"), shopUrl: v("shopUrl"), streamUrl: v("streamUrl") })).entrant;
+        Object.assign(S.entrants.find(x => x.id === id), { tagline: e.tagline, shopUrl: e.shopUrl, streamUrl: e.streamUrl });
+        msg("Profile saved. It's public now.", true); render();
+      } catch (e) { msg(e.message); }
+      return;
+    }
     const ns = ev.target.closest("[data-newstat]");
     if (ns) {
       ev.preventDefault();
