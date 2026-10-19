@@ -198,6 +198,10 @@
       tickClock();
       setInterval(tickClock, 1000);
       setInterval(() => loadHall().catch(() => {}), 20000); // new calls reach the hall (and its 3D screens) within 20 s
+      // Just after each round closes, load again: once for the calls it reveals (the lock moment), and once more
+      // for Kalshi's result, which comes a few seconds after the close.
+      const atClose = () => { const now = serverNow(), next = Math.floor(now / Q) * Q + Q; setTimeout(() => { loadHall().catch(() => {}); setTimeout(() => loadHall().catch(() => {}), 11000); atClose(); }, next - now + 1500); };
+      atClose();
       const [e] = await Promise.all([api("GET", "entrants"), loadHall()]);
       S.entrants = e.entrants.filter(x => x.status === "active").sort((a, b) => a.name.localeCompare(b.name));
       push3d();
