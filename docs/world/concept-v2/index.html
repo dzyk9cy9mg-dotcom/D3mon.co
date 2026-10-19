@@ -1,0 +1,339 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>D3MON concept v2</title>
+<style>@font-face{font-family:Syncopate;font-weight:700;src:url(fonts/Syncopate-Bold.ttf)}@font-face{font-family:Syncopate;font-weight:400;src:url(fonts/Syncopate-Regular.ttf)}@font-face{font-family:Manrope;font-weight:200 800;src:url(fonts/Manrope-var.ttf)}@font-face{font-family:"IBM Plex Mono";font-weight:500;src:url(fonts/IBMPlexMono-Medium.ttf)}@font-face{font-family:"IBM Plex Mono";font-weight:400;src:url(fonts/IBMPlexMono-Regular.ttf)}</style>
+<style>
+:root{--gold:#E9C27A;--ink:#EEF4FA;--ink2:#93A4B8;--edge:rgba(170,205,255,.18)}
+html,body{margin:0;height:100%;background:#02040a;overflow:hidden;color:var(--ink);font-family:Manrope,system-ui,sans-serif}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.ui{position:fixed;inset:0;pointer-events:none}
+.glass{background:linear-gradient(180deg,rgba(150,195,255,.10),rgba(120,160,255,.035));border:1px solid var(--edge);box-shadow:inset 0 1px 0 rgba(220,235,255,.22),0 20px 60px rgba(0,0,0,.45);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%)}
+nav{position:absolute;top:28px;left:56px;right:56px;display:flex;align-items:center;justify-content:space-between}
+.mark{font:700 15px Syncopate,sans-serif;letter-spacing:.42em;background:linear-gradient(180deg,#fff,#b9c6d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mark i{font-style:normal;background:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C7333);-webkit-background-clip:text;background-clip:text;color:transparent}
+.links{display:flex;gap:6px;padding:6px;border-radius:999px}
+.links span{font:500 13px Manrope;letter-spacing:.02em;color:var(--ink2);padding:9px 16px;border-radius:999px}
+.links span.on{color:var(--ink);background:rgba(170,205,255,.10)}
+.enter{font:600 13px Manrope;padding:11px 20px;border-radius:999px;color:#06101e;background:linear-gradient(180deg,#F4F9FF,#B8CCE6);box-shadow:inset 0 1px 0 #fff,0 8px 30px rgba(140,190,255,.28)}
+.hero{position:absolute;left:56px;bottom:150px;max-width:620px}
+.eyebrow{font:500 12px "IBM Plex Mono",monospace;color:#9fc6ff;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
+.eyebrow b{width:7px;height:7px;border-radius:50%;background:#3EE6A0;box-shadow:0 0 12px #3EE6A0}
+h1{margin:18px 0 0;font:700 92px/0.95 Syncopate,sans-serif;letter-spacing:.06em;background:linear-gradient(180deg,#FFFFFF 10%,#C9D6E4 52%,#6F7E92 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1 i{font-style:normal;background:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C7333);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin-top:22px;font:400 19px/1.55 Manrope;color:var(--ink2);max-width:46ch}
+.sub b{color:var(--ink);font-weight:600}
+.ctas{display:flex;gap:12px;margin-top:30px}
+.ticker{position:absolute;left:56px;right:56px;bottom:40px;border-radius:16px;display:grid;grid-template-columns:repeat(4,1fr);padding:18px 26px}
+.ticker div{display:grid;gap:4px;padding-left:18px;border-left:1px solid rgba(170,205,255,.10)}
+.ticker div:first-child{border-left:0;padding-left:0}
+.ticker small{font:500 11px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}
+.ticker strong{font:600 22px Manrope;font-variant-numeric:tabular-nums}
+.up{color:#3EE6A0}.amb{color:#FFC46B}.blu{color:#8ec2ff}
+.tag{position:absolute;padding:12px 16px;border-radius:14px;display:grid;gap:3px}
+.tag small{font:500 11px "IBM Plex Mono";color:var(--ink2)}
+.tag strong{font:600 17px Manrope}
+.tag::before{content:"";position:absolute;width:8px;height:8px;border-radius:50%;left:-22px;top:50%;margin-top:-4px;background:currentColor;box-shadow:0 0 14px currentColor}
+.label{position:absolute;left:56px;top:110px;font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.08em}
+.label b{display:block;margin-top:10px;font:700 34px Syncopate;letter-spacing:.08em;color:var(--ink)}
+</style></head><body>
+<div class="ui" id="ui"></div>
+<script type="module">
+import * as THREE from "../../../public/vendor/three-0.169.0.module.min.js";
+import { EffectComposer } from "../../../public/vendor/three-addons-0.169.0/postprocessing/EffectComposer.js";
+import { RenderPass } from "../../../public/vendor/three-addons-0.169.0/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "../../../public/vendor/three-addons-0.169.0/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "../../../public/vendor/three-addons-0.169.0/postprocessing/OutputPass.js";
+import { ShaderPass } from "../../../public/vendor/three-addons-0.169.0/postprocessing/ShaderPass.js";
+
+await Promise.all([document.fonts.load('700 100px "Syncopate"'), document.fonts.load('600 40px Manrope'), document.fonts.load('500 20px "IBM Plex Mono"'), document.fonts.load('400 20px "IBM Plex Mono"')]);
+const Q = new URLSearchParams(location.search), shot = Q.get("shot") || "hero";
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(+Q.get("pr") || 1); renderer.setSize(W, H);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x02040a);
+scene.fog = new THREE.FogExp2(0x02040a, 0.026);
+const camera = new THREE.PerspectiveCamera(38, W / H, 0.05, 300);
+let rnd = 7; const rand = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647; // the same stills every time
+
+// ---- a cool studio for the glass and chrome to reflect (built in code) ----
+{
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.BoxGeometry(30, 14, 30), new THREE.MeshBasicMaterial({ color: 0x03060d, side: THREE.BackSide })));
+  const panel = (w, h, x, y, z, c, k) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(k), side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m); };
+  panel(16, 1.0, 0, 6.5, -6, 0xe6f0ff, 2.6);   // long cool softbox above
+  panel(3, 9, -13, 1, 4, 0x6aa8ff, 1.7);       // blue strip left
+  panel(3, 9, 13, 1, -3, 0xb68cff, 1.5);       // violet strip right
+  panel(6, 1.2, 0, 5, -14, 0xffb85c, 0.8);     // amber from behind
+  panel(8, 2, 0, 2, 14, 0xcfe0ff, 0.6);        // fill behind the camera
+  const pm = new THREE.PMREMGenerator(renderer);
+  scene.environment = pm.fromScene(env, 0.02).texture;
+  scene.environmentIntensity = 0.9;
+}
+
+// ---- materials ----
+const glass = new THREE.MeshPhysicalMaterial({ color: 0xe4f0ff, metalness: 0, roughness: 0.02, transmission: 1, thickness: 0.35, ior: 1.5, iridescence: 0.25, iridescenceIOR: 1.3, iridescenceThicknessRange: [200, 500], attenuationColor: new THREE.Color(0x7fb2ff), attenuationDistance: 3.2, specularIntensity: 1, envMapIntensity: 1.5, clearcoat: 1, clearcoatRoughness: 0.02, side: THREE.DoubleSide });
+const chrome = new THREE.MeshPhysicalMaterial({ color: 0xdfe6ee, metalness: 1, roughness: 0.12 });
+const gold = new THREE.MeshPhysicalMaterial({ color: 0xe0b46a, metalness: 1, roughness: 0.2, clearcoat: 0.4 });
+const emit = (c, k) => new THREE.MeshStandardMaterial({ color: 0x000000, emissive: new THREE.Color(c), emissiveIntensity: k });
+const glow = (c, k) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(k) });
+const COL = { amber: 0xffa53d, blue: 0x3d8bff, violet: 0xa36bff, white: 0xe8f3ff };
+
+// ---- the floor: black mirror with the Flower of Life engraved in pale light ----
+function folTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 2048; const g = c.getContext("2d");
+  g.fillStyle = "#000"; g.fillRect(0, 0, 2048, 2048);
+  const r = 64, cx = 1024, cy = 1024; g.lineWidth = 2;
+  for (let q = -18; q <= 18; q++) for (let s = -18; s <= 18; s++) {
+    const x = cx + r * (q + s / 2), y = cy + r * s * Math.sqrt(3) / 2, d = Math.hypot(x - cx, y - cy); if (d > 980) continue;
+    g.strokeStyle = `rgba(190,215,255,${0.9 * Math.pow(1 - d / 980, 1.5)})`; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+  }
+  for (const rr of [700, 760, 965]) { g.strokeStyle = "rgba(200,222,255,.55)"; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, rr, 0, Math.PI * 2); g.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+function fadeTexture() { const c = document.createElement("canvas"); c.width = c.height = 512; const g = c.getContext("2d"); const r = g.createRadialGradient(256, 256, 0, 256, 256, 256); r.addColorStop(0, "#dcdcdc"); r.addColorStop(0.45, "#dcdcdc"); r.addColorStop(1, "#000"); g.fillStyle = r; g.fillRect(0, 0, 512, 512); return new THREE.CanvasTexture(c); }
+const floor = new THREE.Mesh(new THREE.CircleGeometry(14, 128), new THREE.MeshPhysicalMaterial({ color: 0x010206, metalness: 0.2, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.08, transparent: true, alphaMap: fadeTexture(), emissive: 0xffffff, emissiveMap: folTexture(), emissiveIntensity: 0.28 }));
+floor.rotation.x = -Math.PI / 2; floor.renderOrder = 2; scene.add(floor);
+const below = new THREE.Mesh(new THREE.CircleGeometry(80, 64), new THREE.MeshBasicMaterial({ color: 0x010205 }));
+below.rotation.x = -Math.PI / 2; below.position.y = -0.02; scene.add(below);
+
+// ---- hologram screens: lines of light, drawn on canvas ----
+function holoTex(kind, seed) {
+  rnd = seed;
+  const c = document.createElement("canvas"); c.width = 640; c.height = 400; const g = c.getContext("2d");
+  g.clearRect(0, 0, 640, 400);
+  const line = "rgba(150,205,255,.95)";
+  g.strokeStyle = line; g.lineWidth = 3; g.strokeRect(6, 6, 628, 388);          // frame
+  g.lineWidth = 6; g.beginPath(); g.moveTo(6, 40); g.lineTo(6, 6); g.lineTo(46, 6); g.moveTo(594, 394); g.lineTo(634, 394); g.lineTo(634, 354); g.stroke(); // corner ticks
+  g.font = '500 20px "IBM Plex Mono"'; g.fillStyle = "rgba(170,215,255,.95)";
+  if (kind === "candles") {
+    g.fillText("BTC · 1m", 28, 40);
+    g.strokeStyle = "rgba(120,170,230,.45)"; g.lineWidth = 1.5; for (let y = 90; y < 380; y += 58) { g.beginPath(); g.moveTo(24, y); g.lineTo(616, y); g.stroke(); }
+    let p = 240;
+    for (let x = 40; x < 600; x += 22) { const o = p, cl = p + (rand() - 0.47) * 46, hi = Math.min(o, cl) - rand() * 22, lo = Math.max(o, cl) + rand() * 22, up = cl < o;
+      g.strokeStyle = g.fillStyle = up ? "#3EE6A0" : "#FF5A78"; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x, hi); g.lineTo(x, lo); g.stroke();
+      g.fillRect(x - 6, Math.min(o, cl), 12, Math.max(4, Math.abs(cl - o))); p = Math.max(110, Math.min(350, cl)); }
+  } else if (kind === "line") {
+    g.fillText("PAPER P/L · 24h", 28, 40);
+    g.strokeStyle = "rgba(120,170,230,.45)"; g.lineWidth = 1.5; for (let x = 24; x < 620; x += 74) { g.beginPath(); g.moveTo(x, 70); g.lineTo(x, 380); g.stroke(); }
+    g.strokeStyle = "#7fc4ff"; g.lineWidth = 4; g.beginPath(); let y = 320;
+    for (let x = 24; x <= 616; x += 8) { y = Math.max(90, Math.min(370, y + (rand() - 0.56) * 18)); x === 24 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke();
+    g.font = '600 46px Manrope'; g.fillStyle = "#3EE6A0"; g.fillText("+18.4", 450, 46);
+  } else if (kind === "code") {
+    const L = [["#c9a0ff", "const "], ["#e8f3ff", "call = await d3mon.call({"], ["#8ec2ff", "  side: "], ["#3EE6A0", "\"up\","], ["#8ec2ff", "  round: "], ["#ffc46b", "now.open"], ["#e8f3ff", "});"], ["#c9a0ff", "if "], ["#e8f3ff", "(edge > 0.04) send(call);"], ["#7f93ab", "// sealed until the close"]];
+    let yy = 50; g.font = '400 24px "IBM Plex Mono"';
+    [[0, 1], [2, 3], [4, 5], [6], [], [7, 8], [9]].forEach(row => { let x = 28; row.forEach(i => { g.fillStyle = L[i][0]; g.fillText(L[i][1], x, yy); x += g.measureText(L[i][1]).width; }); yy += 44; });
+  } else if (kind === "maths") {
+    g.font = 'italic 400 34px "IBM Plex Mono"'; g.fillStyle = "#e8f3ff";
+    g.fillText("e^(√(x²+c)) · Σ wᵢxᵢ", 28, 70); g.fillText("P(up) = 1 − ask(no)", 28, 140); g.fillText("edge = p − price", 28, 210);
+    g.strokeStyle = "#b98cff"; g.lineWidth = 3; g.beginPath(); g.moveTo(470, 360); g.lineTo(560, 230); g.lineTo(620, 360); g.closePath(); g.moveTo(560, 230); g.lineTo(540, 330); g.lineTo(470, 360); g.moveTo(540, 330); g.lineTo(620, 360); g.stroke();
+    g.font = 'italic 400 26px "IBM Plex Mono"'; g.fillStyle = "#b98cff"; g.fillText("d₃ = r", 470, 210);
+  } else if (kind === "gauge") {
+    g.fillText("CALLS THIS ROUND", 28, 40);
+    g.lineWidth = 18; g.strokeStyle = "rgba(120,170,230,.35)"; g.beginPath(); g.arc(170, 230, 110, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = "#3EE6A0"; g.beginPath(); g.arc(170, 230, 110, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.62); g.stroke();
+    g.font = '600 64px Manrope'; g.fillStyle = "#e8f3ff"; g.fillText("62%", 110, 252);
+    g.font = '500 22px "IBM Plex Mono"'; g.fillStyle = "#3EE6A0"; g.fillText("UP   41", 340, 190); g.fillStyle = "#FF5A78"; g.fillText("DOWN 25", 340, 240); g.fillStyle = "#8ec2ff"; g.fillText("SEALED 128", 340, 290);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+// Behind the glass, a screen is drawn as cut-out lines (alphaTest) so it still shows through the transmission.
+const holoMat = (tex, k = 1.25) => new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(k, k, k), alphaTest: 0.3, side: THREE.DoubleSide, fog: false });
+
+// ---- the pyramid ----
+const R = 3.1, Hh = 4.4, capH = 1.0, capR = R * capH / Hh;
+const corners = [60, 180, 300].map(a => { const t = a * Math.PI / 180; return new THREE.Vector3(Math.sin(t) * R, 0, Math.cos(t) * R); });
+// corners[0] right front, [1] back, [2] left front (seen from +z)
+const cornerCol = [COL.violet, COL.amber, COL.blue];
+const apex = new THREE.Vector3(0, Hh, 0);
+const world = new THREE.Group(); scene.add(world);
+const camTarget = new THREE.Vector3(); // screens turn to face it
+const holoKinds = ["candles", "code", "line", "maths", "gauge", "candles", "line", "code", "candles", "maths", "gauge", "line"];
+
+function tube(a, b, r, ca, cb, k) { // a lit tube from a to b, its colour running from ca to cb
+  const curve = new THREE.LineCurve3(a, b), geo = new THREE.TubeGeometry(curve, 24, r, 10, false);
+  const n = geo.attributes.position.count, col = new Float32Array(n * 3), A = new THREE.Color(ca), B = new THREE.Color(cb), tmp = new THREE.Color();
+  for (let i = 0; i < n; i++) { const t = Math.floor(i / 11) / 24; tmp.copy(A).lerp(B, t); col.set([tmp.r, tmp.g, tmp.b], i * 3); }
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(k, k, k) }));
+}
+function rod(a, b, r, m) { const d = b.clone().sub(a), c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 16), m); c.position.copy(a).add(b).multiplyScalar(0.5); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return c; }
+function burstTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 1024; const g = c.getContext("2d"); rnd = 31;
+  g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 14; i++) { const a = -Math.PI / 2 + (rand() - 0.5) * Math.PI * 1.25, len = 160 + rand() * 300, w = 0.02 + rand() * 0.035;
+    const gr = g.createLinearGradient(512, 512, 512 + Math.cos(a) * len, 512 + Math.sin(a) * len); gr.addColorStop(0, "rgba(220,238,255,.32)"); gr.addColorStop(1, "rgba(120,180,255,0)");
+    g.fillStyle = gr; g.beginPath(); g.moveTo(512, 512); g.lineTo(512 + Math.cos(a - w) * len, 512 + Math.sin(a - w) * len); g.lineTo(512 + Math.cos(a + w) * len, 512 + Math.sin(a + w) * len); g.closePath(); g.fill(); }
+  const h = g.createLinearGradient(0, 0, 1024, 0); h.addColorStop(0, "rgba(120,180,255,0)"); h.addColorStop(0.5, "rgba(200,228,255,.55)"); h.addColorStop(1, "rgba(120,180,255,0)");
+  g.fillStyle = h; g.globalAlpha = 0.35; g.fillRect(0, 510, 1024, 4); g.globalAlpha = 1; // a faint horizontal flare
+  const r = g.createRadialGradient(512, 512, 0, 512, 512, 120); r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(0.3, "rgba(200,228,255,.35)"); r.addColorStop(1, "rgba(120,180,255,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 1024, 1024);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const burstTex = burstTexture();
+
+function build(parent, mirror) {
+  const g = new THREE.Group(); parent.add(g);
+  // clear blue glass walls
+  // the walls stop under the crystal tip: a frustum, so the tip is its own crystal
+  const fr = new THREE.Mesh(new THREE.CylinderGeometry(capR, R, Hh - capH, 3, 1, true), glass);
+  fr.rotation.y = Math.PI / 3; fr.position.y = (Hh - capH) / 2; g.add(fr);
+  // neon edges: each corner's colour, running to white at the top
+  corners.forEach((c, i) => {
+    g.add(tube(c, apex.clone().lerp(c, capH / Hh), 0.016, cornerCol[i], COL.white, 2.4));
+    const n = (i + 1) % 3; g.add(tube(c, corners[n], 0.016, cornerCol[i], cornerCol[n], 2.0));
+  });
+  // thin chrome seams across the glass, and chrome feet
+  [0.25, 0.5, 0.75].forEach(f => { const y = (Hh - capH) * f, s = 1 - y / Hh;
+    corners.forEach((c, i) => { const a = c.clone().multiplyScalar(s).setY(y), b = corners[(i + 1) % 3].clone().multiplyScalar(s).setY(y); g.add(rod(a, b, 0.006, chrome)); }); });
+  corners.forEach((c, i) => {
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.06, 6), chrome); foot.position.copy(c).setY(0.03); g.add(foot);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.075, 24, 16), glow(cornerCol[i], 3.2)); orb.position.copy(c).setY(0.12); g.add(orb);
+  });
+  // the crystal tip: white-blue, lit from inside, with a thin gold collar
+  const capMat = new THREE.MeshPhysicalMaterial({ color: 0xeaf5ff, metalness: 0, roughness: 0.04, transmission: 0.9, thickness: 1.4, ior: 2.1, emissive: 0x9cc8ff, emissiveIntensity: 0.55, iridescence: 0.6, iridescenceIOR: 1.4, clearcoat: 1, envMapIntensity: 2 });
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(capR, capH, 3), capMat); cap.rotation.y = Math.PI / 3; cap.position.y = Hh - capH / 2; g.add(cap);
+  const capFacets = new THREE.LineSegments(new THREE.EdgesGeometry(cap.geometry), new THREE.LineBasicMaterial({ color: new THREE.Color(2.2, 2.6, 3.2) }));
+  capFacets.rotation.y = Math.PI / 3; capFacets.position.y = Hh - capH / 2; g.add(capFacets);
+  corners.forEach((c, i) => { const s = capH / Hh, a = c.clone().multiplyScalar(s).setY(Hh - capH), b = corners[(i + 1) % 3].clone().multiplyScalar(s).setY(Hh - capH); g.add(rod(a, b, 0.014, gold)); });
+  const heart = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), glow(0xe6f4ff, 7)); heart.position.y = Hh - capH * 0.62; g.add(heart);
+  const burst = new THREE.Sprite(new THREE.SpriteMaterial({ map: burstTex, color: new THREE.Color(1.3, 1.45, 1.8), blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, fog: false }));
+  burst.position.y = Hh - capH * 0.62; burst.scale.setScalar(mirror ? 2.4 : 3.2); burst.renderOrder = mirror ? 1 : 5; g.add(burst);
+  // the laser out of the top, the beams inside, and a tight core
+  g.add(rod(apex, apex.clone().setY(60), 0.012, glow(0xd8ecff, 2.6)));
+  g.add(rod(new THREE.Vector3(0, 0.4, 0), new THREE.Vector3(0, Hh - capH * 0.62, 0), 0.02, glow(0xffc47a, 2.0)));
+  g.add(rod(new THREE.Vector3(0.1, 0.4, 0.02), new THREE.Vector3(0.1, Hh - capH * 0.7, 0.02), 0.009, glow(COL.violet, 2.2)));
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.11, 32, 16), glow(0xffe2b0, 4)); core.position.y = 0.4; g.add(core);
+  // the Cortex emblem's rings, thin gold, tumbling round the core
+  [[0.62, 0.4, 0.2], [0.5, -0.5, 0.9], [0.4, 1.1, -0.3]].forEach(([r, a, b]) => { const t = new THREE.Mesh(new THREE.TorusGeometry(r, 0.008, 10, 160), gold); t.position.y = 0.4; t.rotation.set(a, b, 0); g.add(t); });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.01, 8, 200), glow(0x7fb6ff, 2.2)); ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; g.add(ring);
+  // layered hologram screens on three levels round the beams
+  if (!mirror) {
+    rnd = 99; let k = 0;
+    [[1.0, 5, 1.45, 0.62], [1.85, 3, 1.05, 0.5], [2.6, 2, 0.7, 0.38]].forEach(([y, n, rr, w]) => {
+      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + y, kind = holoKinds[k++ % holoKinds.length];
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.6, w), holoMat(holoTex(kind, 11 + k * 7)));
+        m.position.set(Math.sin(a) * rr, y + (rand() - 0.5) * 0.18, Math.cos(a) * rr); m.userData.face = 1; g.add(m);
+        // a second, fainter layer just behind, for depth
+        if (y < 2) {
+        const back = new THREE.Mesh(m.geometry, holoMat(holoTex(holoKinds[(k + 5) % holoKinds.length], 5 + k * 13), 0.7));
+        back.position.copy(m.position).multiplyScalar(0.82).setY(m.position.y + 0.12); back.userData.face = 1; back.scale.setScalar(0.85); g.add(back); }
+      }
+    });
+  }
+  if (mirror) { g.scale.y = -1; g.traverse(o => { if (o.material && !o.isSprite) { o.material = o.material.clone(); o.material.side = THREE.DoubleSide; } }); }
+  return g;
+}
+build(world, false);
+build(world, true).position.y = -0.001;
+
+// ---- a few comets and fine dust in the light (no five-point star shapes) ----
+function comet(radius, tiltX, tiltZ, start, arc, color, n = 60, size = 0.04) {
+  const g = new THREE.Group(); g.rotation.set(tiltX, 0, tiltZ); g.position.y = 1.8; world.add(g);
+  const geo = new THREE.SphereGeometry(1, 10, 8);
+  for (let i = 0; i < n; i++) { const k = i / (n - 1), t = start - arc * k;
+    const m = new THREE.Mesh(geo, glow(color, 3 * Math.pow(1 - k, 2.4) + 0.15)); m.scale.setScalar(size * (1 - 0.85 * k));
+    m.position.set(Math.cos(t) * radius, 0, Math.sin(t) * radius); g.add(m); }
+}
+comet(5.6, 0.32, -0.12, 0.6, 1.4, COL.amber);
+comet(6.8, -0.18, 0.22, 2.9, 1.2, COL.blue, 55, 0.036);
+comet(4.9, 0.55, 0.3, 4.6, 1.0, COL.violet, 45, 0.03);
+{ rnd = 5; const n = 260, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const y = rand() * 3.6, r = (0.2 + rand() * 0.8) * R * 0.5 * (1 - y / Hh), a = rand() * Math.PI * 2; p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = y; p[i * 3 + 2] = Math.sin(a) * r; }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(p, 3));
+  world.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xbcd6ff, size: 0.012, transparent: true, opacity: 0.4, depthWrite: false }))); }
+
+// the sky's specks of light, as in the first concept (owner liked them; only five-point star shapes are out)
+{ rnd = 17; const n = 900, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const r = 2 + rand() * 16, a = rand() * Math.PI * 2; p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = rand() * 9; p[i * 3 + 2] = Math.sin(a) * r; }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(p, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xcfd9ff, size: 0.018, transparent: true, opacity: 0.55, depthWrite: false }))); }
+
+// ---- light ----
+scene.add(new THREE.AmbientLight(0x3a4a66, 0.25));
+const key = new THREE.SpotLight(0xeaf3ff, 60, 40, 0.5, 0.6, 1.4); key.position.set(-6, 14, 8); scene.add(key);
+const rim = new THREE.SpotLight(0x8fb4ff, 50, 40, 0.6, 0.7, 1.4); rim.position.set(8, 8, -10); scene.add(rim);
+const capL = new THREE.PointLight(0xcfe6ff, 4, 7, 1.6); capL.position.y = Hh - 0.6; world.add(capL);
+corners.forEach((c, i) => { const l = new THREE.PointLight(cornerCol[i], 1.6, 4, 2); l.position.copy(c).setY(0.5); world.add(l); });
+
+// ---- the Grand Hall: frosted blue glass screens in thin chrome, one big number each, holograms layered behind ----
+function bigTex(kind) {
+  const c = document.createElement("canvas"); c.width = 1200; c.height = 760; const g = c.getContext("2d");
+  const mono = '500 30px "IBM Plex Mono", monospace', label = (t, x, y, col = "#93A4B8") => { g.font = mono; g.fillStyle = col; g.fillText(t, x, y); };
+  if (kind === "round") {
+    label("THIS ROUND · BTC UP OR DOWN", 70, 100);
+    g.font = '700 230px "Syncopate", sans-serif'; g.fillStyle = "#F4F8FC"; g.fillText("2:39", 60, 380);
+    g.lineWidth = 10; g.strokeStyle = "rgba(170,205,255,.15)"; g.beginPath(); g.moveTo(70, 470); g.lineTo(1130, 470); g.stroke();
+    g.strokeStyle = "#8ec2ff"; g.beginPath(); g.moveTo(70, 470); g.lineTo(70 + 1060 * 0.82, 470); g.stroke();
+    label("41 calls sealed until the close", 70, 560, "#C9D6E4"); label("Example data", 70, 680, "#5f6f84");
+  } else if (kind === "market") {
+    label("KALSHI · THE CROWD SAYS", 70, 100);
+    g.font = '700 250px "Syncopate", sans-serif'; g.fillStyle = "#3EE6A0"; g.fillText("62%", 60, 390);
+    g.font = '500 54px Manrope, sans-serif'; g.fillStyle = "#F4F8FC"; g.fillText("chance Bitcoin closes up", 70, 480);
+    label("Up 62¢   Down 38¢", 70, 580, "#C9D6E4"); label("Example data", 70, 680, "#5f6f84");
+  } else {
+    label("DAILY TOURNAMENT · TOP 3", 70, 100);
+    [["Odin", "bot", "+18.4", "#4D9BFF"], ["Vega", "caller", "+12.1", "#FFB04D"], ["Halo-7", "script", "+9.6", "#B48CFF"]].forEach(([n, k, v, col], i) => { const y = 230 + i * 150;
+      g.fillStyle = col; g.beginPath(); g.arc(95, y - 22, 14, 0, 7); g.fill();
+      g.font = '600 76px Manrope, sans-serif'; g.fillStyle = "#F4F8FC"; g.fillText(n, 135, y);
+      g.font = mono; g.fillStyle = "#93A4B8"; g.fillText(k, 520, y - 6);
+      g.font = '600 76px Manrope, sans-serif'; g.fillStyle = "#3EE6A0"; g.textAlign = "right"; g.fillText(v, 1130, y); g.textAlign = "left"; });
+    label("Paper profit, units · Example data", 70, 690, "#5f6f84");
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+const hall = new THREE.Group(); scene.add(hall); hall.visible = shot === "hall";
+if (shot === "hall") {
+  const frosted = new THREE.MeshPhysicalMaterial({ color: 0xcfe2ff, metalness: 0, roughness: 0.45, transmission: 1, thickness: 0.01, ior: 1.5, attenuationColor: new THREE.Color(0x6fa8ff), attenuationDistance: 1.2, envMapIntensity: 1 });
+  const edgeCol = { market: COL.blue, round: COL.white, board: COL.violet };
+  [["market", -1], ["round", 0], ["board", 1]].forEach(([k, i]) => {
+    const a = i * 0.62, rr = 6.2, w = 3.6, h = 2.28;
+    const g = new THREE.Group(); g.position.set(Math.sin(a) * rr, 2.25, Math.cos(a) * rr - 7.4); g.rotation.y = a; hall.add(g);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.05), frosted));
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.96, h * 0.96), new THREE.MeshBasicMaterial({ map: bigTex(k), transparent: true, toneMapped: false })); face.position.z = 0.035; g.add(face);
+    const bar = (bw, bh, x, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.06), chrome); m.position.set(x, y, 0); g.add(m); };
+    bar(w + 0.03, 0.018, 0, h / 2); bar(w + 0.03, 0.018, 0, -h / 2); bar(0.018, h, -w / 2, 0); bar(0.018, h, w / 2, 0);
+    const lit = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, 0.01, 0.01), glow(edgeCol[k], 2.4)); lit.position.set(0, -h / 2 - 0.04, 0.04); g.add(lit);
+  });
+  // holograms layered behind and above, and the amber and violet beams
+  const hmat = tex => new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.15, 1.15, 1.15), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  rnd = 3; const spots = [[-5.2, 4.6, -11], [-2.6, 5.2, -12.5], [0.4, 4.9, -11.8], [3.2, 5.3, -12.4], [5.6, 4.5, -11.2], [-6.4, 2.6, -13.2], [6.8, 2.8, -13.4], [-3.6, 6.4, -14], [2.2, 6.6, -14.4]];
+  spots.forEach((p, i) => { const s = 1.1 + rand() * 0.6, m = new THREE.Mesh(new THREE.PlaneGeometry(s * 1.6, s), hmat(holoTex(holoKinds[i % holoKinds.length], 40 + i * 9)));
+    m.position.set(...p); m.rotation.y = -p[0] * 0.05; m.material.opacity = 0.55 + rand() * 0.35; hall.add(m); });
+  hall.add(rod(new THREE.Vector3(-0.35, 0, -16), new THREE.Vector3(-0.35, 40, -16), 0.03, glow(0xffb45a, 2.4)));
+  hall.add(rod(new THREE.Vector3(0.25, 0, -16.2), new THREE.Vector3(0.25, 40, -16.2), 0.016, glow(COL.violet, 2.4)));
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(9, 0.02, 8, 240), glow(0x6fa8ff, 2)); ring.rotation.x = Math.PI / 2; ring.position.set(0, 0.03, -7.4); hall.add(ring);
+}
+
+// ---- shots ----
+const shots = {
+  hero: { pos: [3.4, 2.4, 14.5], look: [1.6, 2.5, 0], world: [4.4, 0, 0] },
+  close: { pos: [5.0, 1.3, 7.2], look: [0.2, 2.0, 0], world: [0, 0, 0] },
+  crystal: { pos: [2.6, 3.1, 6.6], look: [0, 3.7, 0], world: [0, 0, 0] },
+  hall: { pos: [0, 2.5, 8.6], look: [0, 2.6, -3], world: [6, 0, -26] },
+};
+const s = shots[shot]; camera.position.set(...s.pos); camera.lookAt(...s.look);
+world.position.set(...s.world); floor.position.x = s.world[0]; floor.position.z = s.world[2];
+if (shot === "hall") { floor.position.set(0, 0, -7); floor.scale.setScalar(1.3); world.visible = false; }
+scene.updateMatrixWorld(true);
+world.traverse(o => { if (o.userData.face) { const p = o.getWorldPosition(new THREE.Vector3()), d = camera.position.clone().sub(p).setY(0); o.lookAt(p.clone().add(d)); } });
+
+// ---- post: glow only on what's brighter than white, then a soft vignette and fine grain ----
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(W / 2, H / 2), 0.55, 0.28, 1.0));
+composer.addPass(new OutputPass());
+composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: "varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}",
+  fragmentShader: "uniform sampler2D tDiffuse;varying vec2 v;float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}void main(){vec4 c=texture2D(tDiffuse,v);float d=distance(v,vec2(.5));c.rgb*=smoothstep(.95,.32,d)*.35+.65;c.rgb+=(h(v*1000.)-.5)*.022;gl_FragColor=c;}" }));
+
+// ---- interface ----
+const ui = document.getElementById("ui");
+const nav = `<nav><div class="mark">D<i>3</i>MON</div><div class="links glass"><span class="on">World</span><span>Grand Hall</span><span>Tournaments</span><span>VIP</span><span>Build a bot</span></div><div class="enter">Enter the Hall</div></nav>`;
+if (shot === "hero") ui.innerHTML = nav + `<div class="hero"><div class="eyebrow"><b></b>LIVE · ROUND 12:30–12:45 · BITCOIN UP OR DOWN</div><h1>D<i>3</i>MON</h1><div class="sub"><b>The live trade network.</b> Callers, bots and chart scripts call Bitcoin every fifteen minutes. Kalshi keeps the score.</div><div class="ctas"><div class="enter">Enter the Grand Hall</div></div></div>
+  <div class="ticker glass"><div><small>ROUND CLOSES IN</small><strong class="blu">02:39</strong></div><div><small>CALLS SEALED</small><strong>41</strong></div><div><small>THE CROWD SAYS UP</small><strong class="up">62%</strong></div><div><small>LEADER TODAY</small><strong>Odin <span class="up">+18.4</span></strong></div></div>`;
+if (shot === "close") ui.innerHTML = nav + `<div class="tag glass" style="left:64%;top:66%;color:#FFB04D"><small>CALLERS</small><strong>128 live this round</strong></div><div class="tag glass" style="left:18%;top:58%;color:#4D9BFF"><small>BOTS</small><strong>Odin leads · +18.4</strong></div><div class="tag glass" style="left:70%;top:30%;color:#B48CFF"><small>CHART SCRIPTS</small><strong>Halo-7 · 9 of 12 right</strong></div>`;
+if (shot === "crystal") ui.innerHTML = nav + `<div class="label">THE CRYSTAL TIP<b>VIP Room</b></div>`;
+if (shot === "hall") ui.innerHTML = nav + `<div class="label">THE GRAND HALL<b>Live floor</b></div>`;
+
+for (let i = 0; i < 3; i++) composer.render();
+window.__ready = true;
+</script></body></html>
