@@ -1,10 +1,17 @@
-# Linking the hall chat to the D3MON Discord
+# Linking the site's chat to the D3MON Discord
 
-The Grand Hall's chat, the main page's Cortex chat (main floor) and **one D3MON Discord channel** are one conversation:
+The Grand Hall's chat, the main page's Cortex chat and the D3MON Discord are one conversation:
 
-- **From Discord to the hall:** every few seconds, the D3MON server reads the channel's new messages with a bot and adds them to the hall chat, under the sender's Discord name and marked "Discord".
-- **From the hall to Discord:** every new message in the hall or on the Cortex main floor goes to the channel through a webhook, under the member's name with "· D3MON" after it. Nobody gets pinged from the site: `@everyone` and mentions are switched off.
+- **The main channel** (for example `#trading-floor`) is the hall's chat and the Cortex main floor.
+- **Whole categories** add every text channel in them, and the text chat of their voice channels, each as a channel of its own on the site:
+  - in the hall's chat panel, each one is a tab;
+  - in the Cortex, each one is a channel. A Discord channel named like a Cortex channel (`btc`, `eth`, `sol`, `xrp`, `kalshi`, `polymarket`, `off-topic`) joins that one.
+  - A channel added to a linked category joins by itself within 5 minutes, and one moved out is unlinked (its messages stay).
+- **From Discord to the site:** every few seconds, D3MON reads each linked channel's new messages with a bot and adds them under the sender's Discord name, marked "Discord".
+- **From the site to Discord:** every new message in a linked channel, from the hall or the Cortex, goes to that Discord channel under the member's name with "· D3MON" after it. Nobody gets pinged from the site: `@everyone` and mentions are switched off.
+- **Voice talk isn't carried,** only voice channels' text chat. If Discord won't let the bot post in a voice channel's chat, that channel is read-only on the site, and the admins' health check shows why.
 - **Rules:** the site's chat rules apply to site members (bans, mutes, slow mode, masked words). Discord's own moderators look after Discord.
+- **Only link public categories.** The site's chat is public, so anyone visiting the site can read every linked channel. Never link staff, mod or private channels.
 
 The code is in `server/arena/discord.js`, and the tests are in `test/discord.test.js`, which use a stand-in Discord.
 
@@ -16,33 +23,34 @@ You need to be an admin of the D3MON Discord server.
    - Go to https://discord.com/developers/applications and choose **New Application**. Name it `D3MON`.
    - Under **Bot**, choose **Reset Token** and copy the token. It's a secret: never paste it in a chat, the repo or a screenshot.
    - Still under **Bot**, turn on **Message Content Intent** and save.
-2. **Invite the bot.**
-   - Under **OAuth2 → URL Generator**, tick the `bot` scope.
-   - Then tick the **View Channels** and **Read Message History** permissions.
-   - Open the link it makes and add the bot to the D3MON server.
-3. **Make the webhook.**
-   - In Discord, open the chosen channel's settings: **Integrations → Webhooks → New Webhook**.
-   - Name it `D3MON` and choose **Copy Webhook URL**. That's a secret too.
-4. **Copy the channel's id.**
+2. **Invite the bot with the three permissions it needs:** View Channels, Read Message History and Manage Webhooks. Manage Webhooks lets it make its own "D3MON" webhook in each linked channel.
+   - Copy the **Application ID** from **General Information**.
+   - Open this link with your Application ID in place of `PASTE_ID_HERE`:
+     ```
+     https://discord.com/oauth2/authorize?client_id=PASTE_ID_HERE&scope=bot&permissions=536937472
+     ```
+   - Choose the D3MON server and authorize it. If the bot is already in the server, authorizing again just updates its permissions.
+3. **Copy the ids.**
    - In Discord, turn on **User Settings → Advanced → Developer Mode**.
-   - Right-click the channel and choose **Copy Channel ID**.
-5. **Put the three values on the server.** They go in `/srv/d3mon/.env`, which git never touches:
+   - Right-click the main channel and choose **Copy Channel ID**.
+   - Right-click each category to link and choose **Copy Category ID**.
+4. **Put them on the server.** They go in `/srv/d3mon/.env`, which git never touches:
    ```sh
    sudo nano /srv/d3mon/.env
    ```
-   Add these three lines with your values, then save (Ctrl+O, Enter, Ctrl+X):
+   Add these lines with your values, then save (Ctrl+O, Enter, Ctrl+X). Separate several categories with commas.
    ```
    D3MON_DISCORD_BOT_TOKEN=the bot token
-   D3MON_DISCORD_CHANNEL_ID=the channel id
-   D3MON_DISCORD_WEBHOOK_URL=the webhook URL
+   D3MON_DISCORD_CHANNEL_ID=the main channel's id
+   D3MON_DISCORD_CATEGORY_IDS=the category id,another category id
    ```
    Then restart:
    ```sh
    sudo systemctl restart d3mon
    ```
-6. **Check it.**
-   - Post in the Discord channel. Within a few seconds it should show in the hall's chat, marked "Discord".
-   - Post in the hall, and it should show in the channel.
-   - Admins can see the link's health in `GET /api/v1/hall/chat` (`link`: when it last read and sent, and the last error). The secrets are never shown.
+5. **Check it.**
+   - Post in a linked Discord channel. Within a few seconds it should show on the site, marked "Discord".
+   - Post in the hall, and it should show in Discord.
+   - Admins can see each link's health in `GET /api/v1/hall/chat` (`link`: when each channel was last read and sent to, and any error). The secrets are never shown.
 
-The first read after a restart only marks where to start, so the channel's old messages aren't poured into the hall. To switch the link off, remove the three lines and restart.
+The first read of each channel only marks where to start, so old messages aren't poured into the site. Without categories, the main channel alone works too, using the bot's own webhook or one you give in `D3MON_DISCORD_WEBHOOK_URL`. To switch the link off, remove the lines and restart.
