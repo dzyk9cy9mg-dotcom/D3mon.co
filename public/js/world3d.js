@@ -218,7 +218,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const spin = (t, s) => (t / s) * Math.PI * 2; // one turn every s seconds
   // ---------- inside, rising up: the 10118 video (owner, 2026-10-18; its booths with people and its stars left out) ----------
   // Rings of glass chart screens, a glass ramp spiralling up, floating code and
-  // maths for the chart scripts near the top, and the people online as little lights in the stands.
+  // maths for the chart scripts near the top.
   const tower = new THREE.Group();
   scene.add(tower);
   const fades = []; // [material, full opacity], faded in with the inside
@@ -591,17 +591,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const vipGlow = new THREE.Sprite(add(new THREE.SpriteMaterial({ map: radial(), color: GOLD, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.22));
   vipGlow.position.y = 0.1; vipGlow.scale.setScalar(0.75);
   vip.add(vipGlow);
-  // The people online: little lights in the stands around the floor (later from the live count).
-  {
-    const n = full ? 700 : phone ? 160 : 380, pp = new Float32Array(n * 3), pc = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2, tier = Math.floor(Math.random() * 3), r = 1.22 + tier * 0.09 + Math.random() * 0.05;
-      pp.set([Math.cos(a) * r, 0.16 + tier * 0.07, Math.sin(a) * r], i * 3);
-      const c = new THREE.Color(Math.random() < 0.6 ? 0xdce7ee : palette[Math.floor(Math.random() * 3)]); pc.set([c.r, c.g, c.b], i * 3);
-    }
-    tower.add(new THREE.Points(new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(pp, 3)).setAttribute("color", new THREE.BufferAttribute(pc, 3)),
-      add(new THREE.PointsMaterial({ size: 0.035, vertexColors: true, map: radial(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9)));
-  }
+  // The little lights in the stands (the people online) were taken out (owner, 2026-10-19: they looked messy).
   // A violet beam beside the golden one, as in the video.
   const beam2 = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1, 8, 1, true), add(edgeMat(C.scripts, 0.9), 0.9));
   scene.add(beam2);
