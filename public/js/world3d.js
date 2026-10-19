@@ -195,14 +195,12 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const screens = [];
   // Each level's screens sit on a ring that turns, so a visitor stopped at that level can bring each one round
   // to face them (the ◀ ▶ controls); the camera itself never turns.
-  const ring1 = new THREE.Group(), ring2 = new THREE.Group();
-  tower.add(ring1, ring2);
+  const ring1 = new THREE.Group(), ring2 = new THREE.Group(), ring3 = new THREE.Group();
+  tower.add(ring1, ring2, ring3);
   // Chart screens in two rings, and code and maths for the chart scripts higher up: all kept well inside the
   // ramp, so nothing crosses it.
   // The lower ring is the Grand Hall's live screens (below); the rest are charts.
-  for (let i = 0; i < 3; i++) screens.push(panel(chartTex(10 + i, C[keys[(i + 1) % 3]]), 0.52, 0.32, C[keys[(i + 1) % 3]], (i / 3) * Math.PI * 2 + Math.PI / 2, inr(1.6) * 0.64, 1.6, 1, false, ring2));
-  for (let i = 0; i < 2; i++) screens.push(panel(i % 2 ? mathTex(i) : codeTex(i), 0.38, i % 2 ? 0.19 : 0.25, i % 2 ? 0xdce7ee : C.scripts, i * Math.PI + 0.6, inr(2.25) * 0.6, 2.25, 0.95, true));
-  screens.slice(-2).forEach((g, i) => { if (i % 2) g.children[1].visible = false; }); // the maths floats free, with no frame
+  screens.push(panel(chartTex(10, C.bots), 0.52, 0.32, C.bots, Math.PI / 2, inr(1.6) * 0.64, 1.6, 1, false, ring2)); // the rest of this level is below, with the live screens
   // ---------- the Grand Hall's live screens: the everyday trading room (docs/world/SITEMAP.md) ----------
   // This round with its clock and every call as it arrives, the tournament standings, the last round's result,
   // and the place kept for the Demon Discord, which becomes the hall's chat and voice. world.js hands the data
@@ -213,16 +211,17 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const UP = "#37e08a", DOWN = "#ff4d5e", INK = "#dce7ee", DIM = "#8aa0b4";
   const FONT = '"Share Tech Mono", ui-monospace, monospace', HEAD = 'Orbitron, "Share Tech Mono", sans-serif';
   const clip = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
-  function liveScreen(color, at, draw) {
+  function liveScreen(color, at, draw, { ring = ring1, y = 0.85, r = inr(0.85) * 0.68, w = 0.5 } = {}) {
     const cv = document.createElement("canvas"); cv.width = 512; cv.height = 320;
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-    panel(tex, 0.5, 0.3125, color, at, inr(0.85) * 0.68, 0.85, 1, true, ring1);
+    const grp = panel(tex, w, w * 0.625, color, at, r, y, 1, true, ring);
     const sc = { redraw() {
       const g = cv.getContext("2d");
       g.clearRect(0, 0, 512, 320); g.fillStyle = "rgba(14,30,48,0.9)"; g.fillRect(0, 0, 512, 320);
       g.fillStyle = hex(color); g.fillRect(0, 0, 512, 4);
       draw(g); tex.needsUpdate = true;
     } };
+    sc.mesh = grp.children[0];
     sc.redraw();
     return sc;
   }
@@ -277,7 +276,51 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     g.fillStyle = INK; g.font = `24px ${FONT}`; g.fillText("Talk with everyone trading", 22, 140); g.fillText("the rounds, right here.", 22, 172);
     g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText("Coming soon, mirrored with the Discord.", 22, 236);
   });
-  const liveScreens = [roundScreen, standingsScreen, lastScreen];
+  // The second level is also the chart scripts' (the strand of the three that reads the charts): the top scripts
+  // in the tournament, how to bring one, and a script's code, round the chart. It turns round like the level below.
+  const L2 = { ring: ring2, y: 1.6, r: inr(1.6) * 0.64, w: 0.52 };
+  const scriptsScreen = liveScreen(C.scripts, FRONT + Math.PI / 2, g => {
+    const t = live.standings, rows = (t?.standings || []).filter(r => r.entrant.kind === "script").slice(0, 5);
+    title(g, "CHART SCRIPTS", t ? `Top scripts · ${clip(t.title, 24)}` : "Loading…");
+    g.font = `22px ${FONT}`;
+    if (t && !rows.length) { g.fillStyle = DIM; g.fillText("No chart scripts in it yet.", 22, 120); }
+    rows.forEach((r, i) => {
+      const y = 112 + i * 34;
+      g.fillStyle = r.rank === 1 ? hex(C.callers) : DIM; g.fillText(String(r.rank).padStart(2, " "), 22, y);
+      g.fillStyle = INK; g.fillText(clip(r.entrant.name, 17), 66, y);
+      g.textAlign = "right"; g.fillText(`${r.correct} right`, 490, y); g.textAlign = "left";
+    });
+    g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Not financial advice. D3MON never trades.", 22, 306);
+  }, L2);
+  liveScreen(C.scripts, FRONT - Math.PI / 2, g => {
+    title(g, "BRING YOUR SCRIPT", "Chart scripts call Up or Down too");
+    g.fillStyle = INK; g.font = `22px ${FONT}`;
+    ["1. Join D3MON with your script", "2. Make its key on My bots", "3. Send its call each round"].forEach((l, i) => g.fillText(l, 22, 124 + i * 40));
+    g.fillStyle = DIM; g.font = `18px ${FONT}`; g.fillText("Start at d3mon.co/apply", 22, 290);
+  }, L2);
+  screens.push(panel(codeTex(0), 0.52, 0.34, C.scripts, FRONT + Math.PI, L2.r, L2.y, 0.95, true, ring2));
+
+  // The very top level is one screen that comes up in front of you to choose where to go next (owner,
+  // 2026-10-19): the start of moving through the whole site from inside the world. Click a line on the screen.
+  const outsideEl = document.getElementById("outside");
+  const go = where => {
+    if (where === "vip") { const r = outsideEl.getBoundingClientRect(); scrollTo({ top: scrollY + r.top + r.height - innerHeight, behavior: reducedMotion ? "auto" : "smooth" }); }
+    else if (where.startsWith("#")) document.querySelector(where)?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth" });
+    else location.href = where;
+  };
+  const MENU = [["▲  VIP Room", "vip"], ["Tournaments", "tournaments"], ["Every bot, script and caller", "#helix"], ["My bots", "my"], ["Join D3MON", "apply"]];
+  const MENU_TOP = 78, MENU_ROW = 44;
+  let menuHover = -1;
+  const menuScreen = liveScreen(0xffd166, FRONT, g => {
+    title(g, "WHERE TO NEXT?");
+    MENU.forEach(([label], i) => {
+      const top = MENU_TOP + i * MENU_ROW;
+      if (i === menuHover) { g.fillStyle = "rgba(255,209,102,0.2)"; g.fillRect(12, top + 2, 488, MENU_ROW - 6); }
+      g.fillStyle = i === 0 ? "#ffd166" : INK; g.font = `24px ${FONT}`; g.fillText(label, 26, top + 30);
+      g.fillStyle = DIM; g.textAlign = "right"; g.fillText("→", 486, top + 30); g.textAlign = "left";
+    });
+  }, { ring: ring3, y: 2.3, r: inr(2.3) * 0.62, w: 0.6 });
+  const liveScreens = [roundScreen, standingsScreen, lastScreen, scriptsScreen, menuScreen];
   try { document.fonts?.ready.then(() => liveScreens.forEach(x => x.redraw())); } catch (e) {}
   const GREY = new THREE.Color(0x2a3a4c), WHITE = new THREE.Color(0xffffff), GREEN = new THREE.Color(0x37e08a), RED = new THREE.Color(0xff4d5e);
   function hallData(d) {
@@ -554,7 +597,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const front = { a: CORNERS.bots, b: CORNERS.scripts };
   const faceNormal = new THREE.Vector3().subVectors(front.b, front.a).cross(new THREE.Vector3().subVectors(apex, front.a)).setY(0).normalize();
   // The levels the camera holds at (see the camera path), each with its ring of screens.
-  const LEVELS = [{ from: 0.7, to: 0.77, ring: ring1 }, { from: 0.83, to: 0.89, ring: ring2 }];
+  const LEVELS = [{ from: 0.7, to: 0.77, ring: ring1 }, { from: 0.81, to: 0.86, ring: ring2 }, { from: 0.89, to: 0.93, ring: ring3, menu: true }];
   // ◀ ▶ while stopped at a level: turn its ring of screens one screen at a time (keys and swipes too).
   const nav = document.createElement("div");
   nav.className = "w3d-nav"; nav.hidden = true;
@@ -564,11 +607,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const angles = ring.children.map(g => Math.atan2(g.position.z, g.position.x)), front = Math.PI / 2;
     return angles.map(a => a - front).sort((x, y) => y - x); // left to right, as the turn that brings each to the front
   };
-  for (const L of LEVELS) { L.turn = 0; L.steps = stepsOf(L.ring); L.wrap = L.ring === ring2; }
+  for (const L of LEVELS) { L.turn = 0; L.steps = stepsOf(L.ring); L.wrap = L.ring !== ring1; } // the upper rings are even: round and round
   let atLevel = null;
   function turn(dir) {
     const L = atLevel;
-    if (!L) return;
+    if (!L || L.menu) return;
     if (L.wrap) { L.turn -= dir * (2 * Math.PI / L.steps.length); return; } // an even ring: round and round (▶ brings the one on the right)
     const i = L.steps.findIndex(a => Math.abs(a - L.turn) < 1e-3);
     const next = i < 0 ? (dir > 0 ? L.steps.findIndex(a => a < L.turn) : L.steps.findLastIndex(a => a > L.turn)) : i + dir;
@@ -587,6 +630,55 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   };
   addEventListener("touchstart", onTouchStart, { passive: true });
   addEventListener("touchend", onTouchEnd, { passive: true });
+  // Drag with the mouse to turn the ring by hand; let go and it settles on the nearest screen.
+  let drag = null;
+  const snap = L => {
+    if (L.wrap) { const step = 2 * Math.PI / L.steps.length; L.turn = Math.round(L.turn / step) * step; return; }
+    L.turn = L.steps.reduce((a, b) => (Math.abs(b - L.turn) < Math.abs(a - L.turn) ? b : a));
+  };
+  const onDown = e => {
+    if (!atLevel || atLevel.menu || e.button !== 0 || e.pointerType === "touch" || e.target.closest("a, button, input, select, textarea, label, .w-panel")) return;
+    drag = { L: atLevel, x: e.clientX, turn: atLevel.turn, moved: false };
+  };
+  const onMove = e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) < 4) return;
+    drag.moved = true; document.body.classList.add("w3d-dragging");
+    const L = drag.L, lo = Math.min(...L.steps) - 0.15, hi = Math.max(...L.steps) + 0.15;
+    L.turn = drag.turn + (dx / innerWidth) * Math.PI * 1.2; // dragging right brings the screens on the left round
+    if (!L.wrap) L.turn = Math.min(hi, Math.max(lo, L.turn));
+  };
+  const onUp = () => {
+    if (!drag) return;
+    if (drag.moved) snap(drag.L);
+    drag = null; document.body.classList.remove("w3d-dragging");
+  };
+  // Pointing at the menu screen: a ray from the camera through the pointer finds the line under it.
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  const menuAt = e => {
+    if (!atLevel?.menu) return -1;
+    ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObject(menuScreen.mesh)[0];
+    if (!hit?.uv) return -1;
+    const i = Math.floor(((1 - hit.uv.y) * 320 - MENU_TOP) / MENU_ROW);
+    return i >= 0 && i < MENU.length ? i : -1;
+  };
+  const setHover = i => { if (i !== menuHover) { menuHover = i; menuScreen.redraw(); } document.body.classList.toggle("w3d-pick", i >= 0); };
+  const onMenuMove = e => { if (atLevel?.menu) setHover(menuAt(e)); else if (menuHover >= 0) setHover(-1); };
+  const onMenuClick = e => { if (e.target.closest("a, button, input, .w-panel")) return; const i = menuAt(e); if (i >= 0) go(MENU[i][1]); };
+  const onMenuKey = e => {
+    if (!atLevel?.menu) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setHover((Math.max(0, menuHover) + (e.key === "ArrowDown" ? 1 : MENU.length - 1)) % MENU.length); }
+    else if (e.key === "Enter" && menuHover >= 0) go(MENU[menuHover][1]);
+  };
+  addEventListener("pointermove", onMenuMove);
+  addEventListener("click", onMenuClick);
+  addEventListener("keydown", onMenuKey);
+  addEventListener("pointerdown", onDown);
+  addEventListener("pointermove", onMove);
+  addEventListener("pointerup", onUp);
 
   const flash = document.createElement("div");
   flash.className = "w3d-flash";
@@ -601,9 +693,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     { at: 0.56, pos: new THREE.Vector3(0, 2.0, 10.5), look: new THREE.Vector3(0, 1.8, 0), up: new THREE.Vector3(0, 1, 0) },
     // the camera holds at each level of screens, so a visitor can stop and look around them (◀ ▶)
     ...hold(0.7, 0.77, new THREE.Vector3(0, 0.95, 0).addScaledVector(faceNormal, 2.0), new THREE.Vector3(0, 0.85, 0)), // the hall's live screens
-    ...hold(0.83, 0.89, new THREE.Vector3(0, 1.68, 0).addScaledVector(faceNormal, 1.55), new THREE.Vector3(0, 1.6, 0)), // the level above
+    ...hold(0.81, 0.86, new THREE.Vector3(0, 1.68, 0).addScaledVector(faceNormal, 1.55), new THREE.Vector3(0, 1.6, 0)), // the level above
+    ...hold(0.89, 0.93, new THREE.Vector3(0, 2.35, 0).addScaledVector(faceNormal, 1.35), new THREE.Vector3(0, 2.25, 0)), // the chart scripts' level
     // at the top of the helix, into the centre beam and up it like a lift, under the crystal...
-    { at: 0.95, pos: new THREE.Vector3(0, VIP_Y - 0.5, 0).addScaledVector(faceNormal, 0.16), look: new THREE.Vector3(0, VIP_Y + 0.4, 0).addScaledVector(faceNormal, -0.4), up: new THREE.Vector3(0, 1, 0) },
+    { at: 0.965, pos: new THREE.Vector3(0, VIP_Y - 0.5, 0).addScaledVector(faceNormal, 0.16), look: new THREE.Vector3(0, VIP_Y + 0.4, 0).addScaledVector(faceNormal, -0.4), up: new THREE.Vector3(0, 1, 0) },
     // ...then out through the glass to the end: the crystal capstone, the VIP Room, whole and glowing
     { at: 1, pos: new THREE.Vector3(0, VIP_Y + 0.35, 0).addScaledVector(faceNormal, 2.7).addScaledVector(side, 0.6), look: new THREE.Vector3(0, VIP_Y + 0.6, 0), up: new THREE.Vector3(0, 1, 0) },
   ];
@@ -620,7 +713,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   function readScroll() {
     const r = outside.getBoundingClientRect(), span = Math.max(1, r.height - innerHeight);
     target = clamp01(-r.top / span);
-    if (reducedMotion) target = [0, 0.56, 0.735, 0.86, 1].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a)); // cut between shots, no flying
+    if (reducedMotion) target = [0, 0.56, 0.735, 0.835, 0.91, 1].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a)); // cut between shots, no flying
     document.body.style.setProperty("--w3d-p", String(clamp01(-r.top / span)));
     const past = r.bottom < innerHeight * 0.6;
     document.body.classList.toggle("w3d-past", past);
@@ -702,13 +795,13 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     flowGeo.attributes.position.needsUpdate = true;
 
     // A short burst of light as we pass through, gone again once we're in.
-    const through = clamp01((p - 0.89) / 0.06), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
+    const through = clamp01((p - 0.93) / 0.04), burst = through < 0.7 ? smooth(through / 0.7) : 1 - smooth((through - 0.7) / 0.3);
     flash.style.opacity = String(past ? 0 : burst * 0.85);
 
     moveLights(time, H * rise);
     atLevel = past ? null : LEVELS.find(L => p >= L.from - 0.005 && p <= L.to + 0.005) || null;
-    nav.hidden = !atLevel;
-    for (const L of LEVELS) L.ring.rotation.y += (L.turn - L.ring.rotation.y) * (reducedMotion ? 1 : Math.min(1, dt * 4));
+    nav.hidden = !atLevel || !!atLevel.menu; document.body.classList.toggle("w3d-at-level", !!atLevel && !atLevel.menu);
+    for (const L of LEVELS) L.ring.rotation.y += (L.turn - L.ring.rotation.y) * (reducedMotion ? 1 : Math.min(1, dt * (drag ? 14 : 4)));
     formFloor(time);
     const s = shotAt(p);
     camera.position.copy(s.pos);
@@ -739,6 +832,9 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       renderer.dispose();
       scene.traverse(o => { o.geometry?.dispose?.(); if (o.material) [].concat(o.material).forEach(m => { m.map?.dispose?.(); m.dispose(); }); });
       removeEventListener("keydown", onKey); removeEventListener("touchstart", onTouchStart); removeEventListener("touchend", onTouchEnd);
+      removeEventListener("pointerdown", onDown); removeEventListener("pointermove", onMove); removeEventListener("pointerup", onUp);
+      removeEventListener("pointermove", onMenuMove); removeEventListener("click", onMenuClick); removeEventListener("keydown", onMenuKey);
+      document.body.classList.remove("w3d-at-level", "w3d-dragging", "w3d-pick");
       canvas.remove(); flash.remove(); nav.remove(); fpsEl?.remove();
       delete document.body.dataset.three;
       document.body.style.removeProperty("--w3d-p");
