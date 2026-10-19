@@ -4,16 +4,21 @@
   "use strict";
   const { api, follow, esc, when, kindName, session, syncClock, serverNow, mmss } = window.Arena;
   const $ = id => document.getElementById(id);
-  const S = { info: null, room: null, holders: [], entrants: [] };
+  const S = { info: null, room: null, holders: [], entrants: [], sessions: { upcoming: [] } };
   const Q = 15 * 60000;
   const msg = (t, ok) => { $("msg").textContent = t || ""; $("msg").classList.toggle("ok", !!ok); };
   const fmtTime = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   const dir = d => (d === "up" ? '<b style="color:var(--up)">▲ Up</b>' : '<b style="color:var(--dn)">▼ Down</b>');
-  const card = e => `<a class="item" href="card?e=${encodeURIComponent(e.slug)}"><b>${esc(e.name)}</b> <span class="tag">${esc(kindName(e.kind))} · by ${esc(e.creatorName)}</span></a>`;
+  const card = e => `<a class="item" href="profile?e=${encodeURIComponent(e.slug)}"><b>${esc(e.name)}</b> <span class="tag">${esc(kindName(e.kind))} · by ${esc(e.creatorName)}</span></a>`;
 
   function render() {
     const i = S.info;
     if (!i) return;
+    const now = Date.now();
+    $("sessions").innerHTML = S.sessions.upcoming.length ? S.sessions.upcoming.map(s => `<div class="item"><div class="top"><span class="st ${s.startsAt <= now ? "approved" : "pending"}">${s.startsAt <= now ? "on now" : "upcoming"}</span><b>${esc(s.title)}</b>
+        <span class="meta">${esc(new Date(s.startsAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }))} · ${s.minutes} min${s.leads ? ` · ${esc(s.leads)}` : ""}</span>
+        ${i.admin ? `<button class="btn ghost sm" type="button" data-cancel="${esc(s.id)}" style="margin-left:auto">Cancel</button>` : ""}</div></div>`).join("")
+      : `<p class="empty">No sessions scheduled yet.</p>`;
     $("door").hidden = i.access;
     $("room").hidden = !i.access;
     $("teaser").innerHTML = i.featured.length ? `<p class="tag">Featured now:</p><div class="vipcards">${i.featured.map(card).join("")}</div>` : "";
@@ -37,7 +42,7 @@
   }
 
   async function load() {
-    S.info = await api("GET", "vip");
+    [S.info, S.sessions] = await Promise.all([api("GET", "vip"), api("GET", "vip/sessions")]);
     S.room = S.info.access ? await api("GET", "vip/room") : null;
     if (S.info.admin) {
       const [h, e] = await Promise.all([api("GET", "vip/access"), api("GET", "entrants")]);
@@ -56,12 +61,25 @@
       msg(`${r.access.name || r.access.username} has access until ${when(r.access.until)}.`, true);
     } catch (e) { msg(e.message); }
   });
+  $("sessForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    try {
+      const r = await api("POST", "vip/sessions", { title: $("sTitle").value, startsAt: new Date($("sStart").value).getTime(), minutes: +$("sMin").value, leads: $("sLeads").value });
+      $("sTitle").value = $("sLeads").value = "";
+      await load();
+      msg(`Scheduled: ${r.session.title}.`, true);
+    } catch (e) { msg(e.message); }
+  });
   document.addEventListener("click", async ev => {
     const b = ev.target.closest("button");
     if (!b) return;
     if (b.dataset.end) {
       if (!confirm("End this member's access now?")) return;
       try { await api("DELETE", `vip/access/${b.dataset.end}`); await load(); msg("Access ended.", true); } catch (e) { msg(e.message); }
+    }
+    if (b.dataset.cancel) {
+      if (!confirm("Cancel this session?")) return;
+      try { await api("DELETE", `vip/sessions/${b.dataset.cancel}`); await load(); msg("Session cancelled.", true); } catch (e) { msg(e.message); }
     }
     if (b.id === "saveFeatured") {
       const ids = [...document.querySelectorAll("#pick input:checked")].map(x => x.value);
