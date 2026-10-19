@@ -19,6 +19,7 @@ const clamp01 = v => Math.min(1, Math.max(0, v));
 
 export function start({ level = "lite", reducedMotion = false, showFps = false, onSlow = () => {}, onVideo = () => {}, onChat = () => {} } = {}) {
   const full = level === "full", phone = level === "mobile-lite";
+  let grade = null; // Full quality's colour grade
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: full, powerPreference: "high-performance" });
@@ -37,6 +38,21 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
 
   // ---------- light ----------
   scene.add(new THREE.AmbientLight(0x223344, 1.2));
+  // Full quality: film-style lighting (docs/world/concept-v2, build step 1). A cool studio built in code for the
+  // glass to reflect, and a colour grade (below). Lite and phones skip it.
+  if (full) {
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(30, 14, 30), new THREE.MeshBasicMaterial({ color: 0x03060d, side: THREE.BackSide })));
+    const softbox = (w, h, x, y, z, c, k) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(k), side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m); };
+    softbox(16, 1, 0, 6.5, -6, 0xe6f0ff, 2.6); // a long cool light above
+    softbox(3, 9, -13, 1, 4, C.bots, 1.7);     // the Bots corner's blue from the left
+    softbox(3, 9, 13, 1, -3, C.scripts, 1.5);  // the Scripts corner's violet from the right
+    softbox(6, 1.2, 0, 5, -14, C.callers, 0.8); // the Callers corner's amber from behind
+    softbox(8, 2, 0, 2, 14, 0xcfe0ff, 0.6);    // fill behind the camera
+    const pm = new THREE.PMREMGenerator(renderer);
+    scene.environment = pm.fromScene(env, 0.02).texture;
+    pm.dispose(); env.traverse(o => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
+  }
   for (const [k, v] of Object.entries(CORNERS)) {
     const l = new THREE.PointLight(C[k], 14, 14, 2);
     l.position.copy(v).setY(1.2);
@@ -111,7 +127,9 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   keys.forEach((k, i) => { const k2 = keys[(i + 1) % 3]; fv.push(...CORNERS[k].toArray(), ...CORNERS[k2].toArray(), ...apex.toArray()); });
   faceGeo.setAttribute("position", new THREE.Float32BufferAttribute(fv, 3));
   faceGeo.computeVertexNormals();
-  const faces = new THREE.Mesh(faceGeo, new THREE.MeshStandardMaterial({ color: 0x2a4a66, metalness: 0.6, roughness: 0.15, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
+  const faces = new THREE.Mesh(faceGeo, full
+    ? new THREE.MeshPhysicalMaterial({ color: 0xcfe2ff, metalness: 0, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.03, iridescence: 0.3, iridescenceIOR: 1.3, envMapIntensity: 1.6, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false })
+    : new THREE.MeshStandardMaterial({ color: 0x2a4a66, metalness: 0.6, roughness: 0.15, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
   pyr.add(faces);
   // The glass is made of panels: faint seams across each face.
   const seams = [];
@@ -946,6 +964,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   function resize() {
     const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false);
+    if (grade) { // the grade's copy of the frame matches the drawing buffer
+      const v = renderer.getDrawingBufferSize(new THREE.Vector2());
+      grade.frame?.dispose(); grade.frame = new THREE.FramebufferTexture(v.x, v.y); grade.quad.material.uniforms.tFrame.value = grade.frame;
+    }
     camera.aspect = w / h;
     camera.fov = w < h ? 60 : 45; // portrait screens see the same pyramid
     camera.updateProjectionMatrix();
@@ -953,6 +975,19 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   }
   addEventListener("resize", resize);
   resize(); readScroll(); shown = target;
+
+  // Full quality's grade: a soft vignette, a touch of contrast and fine grain, over a copy of the finished frame.
+  // No glow pass: this scene has too many near-white lines, and a glow on them hazes the whole sky.
+  if (full) {
+    const post = new THREE.Scene(), quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+      uniforms: { tFrame: { value: null } }, depthTest: false, depthWrite: false,
+      vertexShader: "varying vec2 v;void main(){v=uv;gl_Position=vec4(position.xy,0.,1.);}",
+      fragmentShader: "uniform sampler2D tFrame;varying vec2 v;float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}void main(){vec3 c=texture2D(tFrame,v).rgb;c=mix(c,c*c*(3.-2.*c),.22);float d=distance(v,vec2(.5));c*=smoothstep(.95,.32,d)*.3+.7;c+=(h(v*1000.)-.5)*.018;gl_FragColor=vec4(c,1.);}",
+    }));
+    post.add(quad);
+    grade = { post, cam: new THREE.Camera(), quad, frame: null };
+    resize(); // makes the grade's copy of the frame
+  }
 
   // ---------- frames ----------
   let fpsEl = null;
@@ -1068,6 +1103,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     }
     sg.pl.material.opacity = 1 - 0.45 * ((1 - Math.cos(spin(reducedMotion ? 0 : time, 2.4))) / 2);
     renderer.render(scene, camera);
+    if (grade) { renderer.copyFramebufferToTexture(grade.frame); renderer.render(grade.post, grade.cam); }
 
     if (fpsEl) { fpsAcc += dt; fpsN++; if (now - fpsAt > 500) { fpsEl.textContent = `${Math.round(fpsN / fpsAcc)} fps · ${level}`; fpsAcc = 0; fpsN = 0; fpsAt = now; } }
     // Judge smoothness once, over the first few seconds: too slow and Auto steps down to 2D.
@@ -1084,6 +1120,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     hold(on) { held = !!on; if (!on) last = performance.now(); }, // stops and restarts the drawing (the video panel)
     stop() {
       cancelAnimationFrame(raf);
+      grade?.frame?.dispose(); grade?.quad.geometry.dispose(); grade?.quad.material.dispose(); scene.environment?.dispose?.();
       removeEventListener("scroll", readScroll);
       removeEventListener("resize", resize);
       renderer.dispose();

@@ -63,7 +63,7 @@ node docs/world/concept-v2/render.mjs <out folder> hero close crystal hall
 
 One step at a time, each its own pull request:
 
-1. Film-style lighting.
+1. Film-style lighting. **Built on the branch (2026-10-19), Full quality only:** studio reflections on clear glass faces and a colour grade (vignette, a touch of contrast, fine grain), in `public/js/world3d.js`. Lite, phones and 2D are unchanged. A glow pass was tried and dropped: with this scene's many near-white lines it hazed the whole sky. Before and after: `stills/step1-before-after-*.jpg` (left before, right after). To see it: Quality → Full on `/world`.
 2. A hero that hits: text off the pyramid, one button.
 3. Fix the crystal interior shot.
 4. Screens readable across the room.
