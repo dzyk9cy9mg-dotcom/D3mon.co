@@ -200,6 +200,14 @@ export class Prices {
     return written;
   }
 
+  // GET /api/v1/market: what Kalshi is charging for Up and Down in the open round, as last read (public; the
+  // trading floor shows it as the crowd's odds). Null when there's no fresh price for the round now.
+  market(now = this.now()) {
+    const q = this.snapshot, round = currentRound(now);
+    const fresh = q && q.round === round && now - q.at <= SNAPSHOT_MAX_AGE_MS;
+    return { market: MARKET, round, endsAt: round + ROUND_MS, price: fresh ? { up: q.yesAsk, down: q.noAsk, at: q.at } : null, notice: "Kalshi's prices, for information. Not financial advice. D3MON never trades." };
+  }
+
   status() {
     const s = this.state;
     return { live: this.live, lastQuoteAt: s.lastQuoteAt, lastBackfillAt: s.lastBackfillAt, lastError: s.lastError, pricedSinceStart: s.priced, snapshot: this.snapshot };

@@ -145,6 +145,16 @@ describe("pricing calls", () => {
     assert.equal(c.paperPerContract, undefined, "no result yet");
   });
 
+  test("GET /market shows the open round's prices, while fresh", async () => {
+    const m = (await guest.get("/api/v1/market")).json;
+    assert.deepEqual([m.round, m.price.up, m.price.down], [CUR, 0.62, 0.42], "from the live read just before");
+    assert.match(m.notice, /Not financial advice/);
+    const at = arena().prices.snapshot.at;
+    arena().prices.snapshot.at -= 2 * MIN;
+    assert.equal((await guest.get("/api/v1/market")).json.price, null, "too old to show");
+    arena().prices.snapshot.at = at;
+  });
+
   test("if Kalshi can't be reached, the last price read for that round (up to a minute old) is used", async () => {
     k.failOpen = true;
     await call(1, CUR, "up");

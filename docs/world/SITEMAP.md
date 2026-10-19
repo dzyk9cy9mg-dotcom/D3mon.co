@@ -7,7 +7,7 @@ The 3D site has four places (see [BLUEPRINT.md](BLUEPRINT.md)), plus two menus:
 | Place | What it is now, with the tournaments |
 | --- | --- |
 | **Outside** | The pyramid. Billboards and the way in |
-| **Grand Hall** | The live **trading floor**: the tournaments, the round clock and every bot's call live, where everyone trades every day and special-event battles happen too, with **the Demon Discord as its chat and voice** and video streams on the walls (owner, 2026-10-18) |
+| **Grand Hall** | The live **trading floor**: the tournaments, the round clock and every bot's call live, where everyone trades every day and special-event battles happen too, with **the D3MON Discord as its chat and voice** and video streams on the walls (owner, 2026-10-18) |
 | **Helix** | Browse every bot, script and caller as a card. Tap for their profile |
 | **VIP Room** (the peak) | **Paid access** (owner, 2026-10-18): featured callers lead the trading, backed by featured bots and scripts, with their streams, and its own **text and voice chat, private to members**. Members see the featured callers' calls at once |
 | **My D3MON** (menu) | Everything about you: your bots, keys, account, messages, coin |
@@ -23,7 +23,7 @@ The 3D site has four places (see [BLUEPRINT.md](BLUEPRINT.md)), plus two menus:
 | Main page Callers page, bot and chart lists | Everyone | **Helix**: the three strands |
 | `/card?e=…` (a stats card) | Everyone | **Helix**: the card's profile |
 | Main page "Following" walls (my callers, bots, charts) | Members | **Helix**, filtered to who you follow |
-| Main page Demon Discord window | Everyone | **Grand Hall**: its main chat, mirrored with Discord both ways |
+| Main page D3MON Discord window | Everyone | **Grand Hall**: its main chat, mirrored with Discord both ways |
 | Main page Cortex (chat, voice rooms, streams on air) | Members | **Grand Hall** streams; the Cortex chat engine powers the **VIP Room**'s private chat |
 | `/vip` (the VIP Room, built 2026-10-18) | Members with access | **VIP Room** |
 | (new) Text chat and voice chat in the battle room | Members | **Grand Hall**: a chat panel beside the standings and a voice room, built on the Cortex chat and voice rooms the site already has, so members talk while they watch the calls |
