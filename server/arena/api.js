@@ -19,6 +19,7 @@ import { Kalshi } from "./kalshi.js";
 import { Prices } from "./prices.js";
 import { Tournaments } from "./tournaments.js";
 import { Vip } from "./vip.js";
+import { BattleResults } from "./results.js";
 import { Hall } from "./hall.js";
 import { HallChat } from "./hallchat.js";
 import { DiscordBridge } from "./discord.js";
@@ -72,6 +73,7 @@ export function createArena({ store, accounts, cfg }) {
   const tournaments = new Tournaments({ ledger, registry, feed, calls, metrics });
   if (cfg.kalshi !== false) tournaments.start(); // no Kalshi, no results to save
   const vip = new Vip({ ledger, registry, calls, feed, accounts });
+  const results = new BattleResults({ registry, calls, metrics });
   const hallChat = new HallChat({ store, feed, userName });
   // The hall chat and one D3MON Discord channel as one conversation, when the bot's settings are in .env.
   const discord = DiscordBridge.configured(cfg)
@@ -182,6 +184,10 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /vip/access") return ok({ access: vip.list(ctx) });
     if (route === "POST /vip/access") { writer(); return ok({ access: vip.grant(ctx, await body()) }); }
     if ((m = route.match(/^DELETE \/vip\/access\/([A-Za-z0-9_-]{8,40})$/))) { writer(); return ok({ access: vip.revoke(ctx, m[1]) }); }
+    if (route === "GET /vip/sessions") return ok(vip.sessionList());
+    if (route === "POST /vip/sessions") { writer(); return ok({ session: vip.addSession(ctx, await body()) }, 201); }
+    if ((m = route.match(/^DELETE \/vip\/sessions\/([A-Za-z0-9_-]{8,40})$/))) { writer(); return ok(vip.cancelSession(ctx, m[1])); }
+    if (route === "GET /presence") return ok(feed.presence());
     if (route === "PUT /vip/featured") { writer(); return ok(vip.setFeatured(ctx, await body())); }
     if (route === "GET /tournaments") return ok(tournaments.current());
     if (route === "GET /tournaments/admin") return ok(tournaments.adminView(ctx));
@@ -199,6 +205,7 @@ export function createArena({ store, accounts, cfg }) {
       if (ctx.uid) take(limits.apply, ctx.uid);
       return ok({ application: registry.appView(registry.apply(ctx, m[1], await body()), ctx) }, 201);
     }
+    if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)\/results$/))) return ok(results.results(ctx, m[1]));
     if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)\/metrics$/))) return ok(metrics.view(ctx, m[1], { history: url.searchParams.get("history") === "1" }));
     if ((m = route.match(/^PUT \/battles\/([A-Za-z0-9]+)\/rounds\/(\d{1,16})\/metrics$/))) { writer(); return ok({ round: metrics.record(ctx, m[1], m[2], await body()) }); }
     if (route === "POST /applications") {
@@ -210,7 +217,8 @@ export function createArena({ store, accounts, cfg }) {
     if ((m = route.match(/^POST \/applications\/([A-Za-z0-9]+)\/withdraw$/))) { writer(); return ok({ application: registry.appView(registry.withdraw(ctx, m[1]), ctx) }); }
     if ((m = route.match(/^POST \/applications\/([A-Za-z0-9]+)\/review$/))) { writer(); return ok({ application: registry.appView(registry.review(ctx, m[1], await body()), ctx) }); }
     if (route === "GET /entrants") return ok({ entrants: registry.listEntrants(ctx, { mine: url.searchParams.get("mine") === "1" }) });
-    if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9-]+)$/))) return ok({ entrant: registry.getEntrant(ctx, m[1]) });
+    if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9-]+)$/))) { const e = registry.getEntrant(ctx, m[1]); return ok({ entrant: { ...e, badges: results.badges(e.id) } }); }
+    if ((m = route.match(/^PUT \/entrants\/([A-Za-z0-9]+)\/profile$/))) { writer(); return ok({ entrant: registry.setProfile(ctx, m[1], await body()) }); }
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9-]+)\/calls$/))) return ok({ calls: calls.entrantCalls(ctx, m[1], { limit: Number(url.searchParams.get("limit")) || 200 }) });
     if ((m = route.match(/^POST \/entrants\/([A-Za-z0-9]+)\/call$/))) { writer(); return ok(calls.fromButton(ctx, m[1], await body()), 201); }
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9]+)\/keys$/))) return ok({ keys: keys.list(ctx, m[1]) });
@@ -242,5 +250,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, results, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }

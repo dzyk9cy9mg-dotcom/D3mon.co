@@ -174,3 +174,16 @@ function checkOne(k, v, rule) {
 
 // The same slug the page uses (slug() in d3mon.js), so entrants line up with its battle roster names.
 export const slugify = s => cleanText(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+
+// A web link someone gives us (a stream, a shop): https only, no passwords in it, at most 300 characters, and,
+// when `hosts` is given, on one of those sites (or their subdomains). Returns the link as the browser reads it.
+export const STREAM_HOSTS = ["youtube.com", "youtu.be", "twitch.tv", "kick.com", "discord.gg", "discord.com"];
+export function webLink(field, text, { hosts } = {}) {
+  let u;
+  try { u = new URL(String(text).trim()); } catch (e) { throw new ApiError(400, "invalid_argument", `"${field}" must be a link (https://…).`, field); }
+  if (u.protocol !== "https:" || u.username || u.password) throw new ApiError(400, "invalid_argument", `"${field}" must be an https:// link.`, field);
+  const host = u.hostname.toLowerCase().replace(/^www\./, "");
+  if (hosts && !hosts.some(h => host === h || host.endsWith(`.${h}`))) throw new ApiError(400, "invalid_argument", `"${field}" must be a link to ${hosts.join(", ")}.`, field);
+  if (u.href.length > 300) throw new ApiError(400, "invalid_argument", `"${field}" can be at most 300 characters.`, field);
+  return u.href;
+}

@@ -6,7 +6,7 @@
 //
 // These collections are server-only (rules.js keeps /api/db out of them); every change comes through
 // here, so each field is checked and every decision is logged. ARCHITECTURE.md §5 has the shapes.
-import { ApiError, check, slugify } from "./validate.js";
+import { ApiError, check, slugify, webLink, STREAM_HOSTS } from "./validate.js";
 import { isAdmin } from "../rules.js";
 
 export const BATTLES = "arena_battles", APPS = "arena_apps", ENTRANTS = "arena_entrants";
@@ -33,6 +33,17 @@ const BATTLE_FIELDS = {
   status: { type: "enum", values: BATTLE_STATUS, default: "draft" },
   onMainPage: { type: "boolean" }, // show this battle's lineup on the current main page (one battle at a time)
   callWindowMin: { type: "integer", min: 0, max: 15, default: DEFAULT_CALL_WINDOW_MIN }, // calls close this many minutes into each round (15 = at its end)
+  // Where to watch it: HardSmoke's and the owners' streams and the D3MON Discord (owner, 2026-10-19: several per battle)
+  streams: { type: "array", max: 12, of: { type: "object", fields: { label: { type: "string", required: true, min: 1, max: 40 }, url: { type: "string", required: true, max: 300 } } } },
+};
+const streamLinks = f => { if (f.streams) f.streams = f.streams.map((s, i) => ({ label: s.label, url: webLink(`streams[${i}].url`, s.url, { hosts: STREAM_HOSTS }) })); return f; };
+
+// What an owner adds to their entrant's public profile (owner, 2026-10-19): a tagline, their shop (with D3MON's
+// referral code, as agreed with D3MON) and their stream. Public once set; admins can clear them.
+const PROFILE_FIELDS = {
+  tagline: { type: "string", max: 140 },
+  shopUrl: { type: "string", max: 300 },
+  streamUrl: { type: "string", max: 300 },
 };
 
 const APP_FIELDS = {
@@ -106,7 +117,7 @@ export class Registry {
   battleView(b, ctx) {
     const entrants = (b.entrants || []).map(id => this.#get(ENTRANTS, id)).filter(Boolean).map(e => this.entrantView(e, ctx));
     const out = { id: b.id, title: b.title, market: b.market, startsAt: b.startsAt, rounds: b.rounds, roundMs: b.roundMs,
-      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, status: b.status, state: battleState(b), over: battleOver(b), onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
+      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, streams: b.streams || [], status: b.status, state: battleState(b), over: battleOver(b), onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
     if (isAdmin(ctx)) {
       out.applications = {};
       for (const a of this.#all(APPS, [["battleId", "==", b.id]])) out.applications[a.status] = (out.applications[a.status] || 0) + 1;
@@ -116,7 +127,9 @@ export class Registry {
 
   // The alternative account and notes are for HardSmoke and the owner; the rest is the public profile.
   entrantView(e, ctx) {
-    const out = { id: e.id, kind: e.kind, name: e.name, slug: e.slug, creatorName: e.creatorName, discordServer: e.discordServer, status: e.status, approvedAt: e.approvedAt, battles: e.battles };
+    const p = e.profile || {};
+    const out = { id: e.id, kind: e.kind, name: e.name, slug: e.slug, creatorName: e.creatorName, discordServer: e.discordServer, status: e.status, approvedAt: e.approvedAt, battles: e.battles,
+      tagline: p.tagline || "", shopUrl: p.shopUrl || "", streamUrl: p.streamUrl || "" };
     if (isAdmin(ctx) || (ctx.uid && ctx.uid === e.ownerId)) Object.assign(out, { altAccount: e.altAccount, notes: e.notes, ownerId: e.ownerId, mine: ctx.uid === e.ownerId });
     return out;
   }
@@ -134,7 +147,7 @@ export class Registry {
 
   createBattle(ctx, body) {
     this.#requireAdmin(ctx);
-    const f = check(body, BATTLE_FIELDS);
+    const f = streamLinks(check(body, BATTLE_FIELDS));
     checkStart(f.startsAt);
     const now = Date.now();
     const b = { id: this.store.newId(BATTLES), ...f, market: "KXBTC15M", roundMs: ROUND_MS, entrants: [], createdBy: ctx.uid, createdAt: now, updatedAt: now };
@@ -147,7 +160,7 @@ export class Registry {
   updateBattle(ctx, id, body) {
     this.#requireAdmin(ctx);
     const b = this.battleFor(ctx, id);
-    const f = check(body, BATTLE_FIELDS, { partial: true });
+    const f = streamLinks(check(body, BATTLE_FIELDS, { partial: true }));
     if (f.startsAt !== undefined) checkStart(f.startsAt);
     if (b.status === "final" && f.status === undefined) throw new ApiError(409, "battle_final", "This battle is final. Reopen it (change its status) before editing.");
     const next = { ...b, ...f, updatedAt: Date.now() };
@@ -311,6 +324,21 @@ export class Registry {
     const e = this.#get(ENTRANTS, id) || (typeof id === "string" ? this.entrantBySlug(id) : null);
     if (!e || (e.status !== "active" && !isAdmin(ctx) && e.ownerId !== ctx.uid)) throw new ApiError(404, "not_found", "No such entrant.");
     return this.entrantView(e, ctx);
+  }
+
+  // PUT /entrants/:id/profile { tagline, shopUrl, streamUrl }: the owner's public profile fields. Each one sent
+  // replaces the old ("" clears it). Admins may only clear them (an owner's words and links are the owner's).
+  setProfile(ctx, id, body) {
+    this.#requireMember(ctx);
+    const e = this.#get(ENTRANTS, id);
+    if (!e || (e.ownerId !== ctx.uid && !isAdmin(ctx))) throw new ApiError(404, "not_found", "That isn't one of your saved entrants.");
+    const f = check(body, PROFILE_FIELDS, { partial: true });
+    if (e.ownerId !== ctx.uid && Object.values(f).some(v => v !== "")) throw new ApiError(403, "not_granted", "Admins can clear these, but only the owner writes them.");
+    if (f.shopUrl) f.shopUrl = webLink("shopUrl", f.shopUrl);
+    if (f.streamUrl) f.streamUrl = webLink("streamUrl", f.streamUrl, { hosts: STREAM_HOSTS });
+    const next = { ...e, profile: { ...(e.profile || {}), ...f, updatedAt: Date.now(), updatedBy: ctx.uid }, updatedAt: Date.now() };
+    this.#save(ENTRANTS, next, ctx.uid);
+    return this.entrantView(next, ctx);
   }
 
   // ---------- internals ----------
