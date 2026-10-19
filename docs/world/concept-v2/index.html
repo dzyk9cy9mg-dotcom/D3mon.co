@@ -35,6 +35,30 @@ h1 i{font-style:normal;background:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C
 .tag::before{content:"";position:absolute;width:8px;height:8px;border-radius:50%;left:-22px;top:50%;margin-top:-4px;background:currentColor;box-shadow:0 0 14px currentColor}
 .label{position:absolute;left:56px;top:110px;font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.08em}
 .label b{display:block;margin-top:10px;font:700 34px Syncopate;letter-spacing:.08em;color:var(--ink)}
+.menu,.pager{display:none}
+/* phones: one menu button, 44px+ touch targets, text off the pyramid, the ticker as a 2×2 grid */
+@media (max-width:600px){
+nav{top:14px;left:16px;right:16px}
+.links{display:none}
+.menu{display:flex;align-items:center;gap:8px;font:600 14px Manrope;padding:0 18px;height:44px;border-radius:999px;background:rgba(4,8,18,.72)}
+.menu i{display:grid;gap:4px}.menu i::before,.menu i::after{content:"";width:16px;height:2px;background:var(--ink);border-radius:2px}
+.enter{display:flex;align-items:center;height:44px;box-sizing:border-box;padding:0 18px;font-size:14px}
+nav .enter{margin-left:auto;margin-right:8px}
+.hero{left:16px;right:16px;bottom:186px;max-width:none}
+.eyebrow{font-size:11px}
+h1{font-size:54px;margin-top:12px}
+.sub{font-size:16px;margin-top:14px}
+.ctas{margin-top:20px;gap:18px}.ctas .enter{height:48px}
+.skip{font-size:15px;padding:12px 0 2px}
+.ticker{left:16px;right:16px;bottom:16px;grid-template-columns:1fr 1fr;row-gap:14px;padding:16px 18px}
+.ticker div:nth-child(3){border-left:0;padding-left:0}
+.ticker strong{font-size:20px}
+.label{left:16px;top:80px;font-size:11px;padding:12px 16px;border-radius:14px;background:rgba(4,8,18,.78)}.label b{font-size:24px}
+.pager{display:flex;position:absolute;left:16px;right:16px;bottom:24px;align-items:center;justify-content:space-between}
+.pager .btn{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font:600 20px Manrope}
+.pager .mid{display:grid;justify-items:center;gap:8px;font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}
+.dots{display:flex;gap:6px}.dots b{width:6px;height:6px;border-radius:50%;background:rgba(180,195,212,.35)}.dots b.on{background:var(--ink);width:18px;border-radius:3px}
+}
 </style></head><body>
 <div class="ui" id="ui"></div>
 <script type="module">
@@ -194,7 +218,7 @@ function build(parent, mirror) {
   corners.forEach((c, i) => { const s = capH / Hh, a = c.clone().multiplyScalar(s).setY(Hh - capH), b = corners[(i + 1) % 3].clone().multiplyScalar(s).setY(Hh - capH); g.add(rod(a, b, 0.014, gold)); });
   const heart = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), glow(0xe6f4ff, 7)); heart.position.y = Hh - capH * 0.62; g.add(heart);
   const burst = new THREE.Sprite(new THREE.SpriteMaterial({ map: burstTex, color: new THREE.Color(1.3, 1.45, 1.8), blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, fog: false }));
-  burst.position.y = Hh - capH * 0.62; burst.scale.setScalar(mirror ? 2.4 : 3.2); burst.renderOrder = mirror ? 1 : 5; g.add(burst);
+  burst.position.y = Hh - capH * 0.62; burst.scale.setScalar(mirror ? 2.4 : 3.2); burst.renderOrder = mirror ? 1 : 5; burst.userData.mirrorGlow = mirror; g.add(burst);
   // the laser out of the top, the beams inside, and a tight core
   g.add(rod(apex, apex.clone().setY(60), 0.012, glow(0xd8ecff, 2.6)));
   g.add(rod(new THREE.Vector3(0, 0.4, 0), new THREE.Vector3(0, Hh - capH * 0.62, 0), 0.02, glow(0xffc47a, 2.0)));
@@ -303,6 +327,9 @@ const shots = {
   crystal: { pos: [2.6, 3.1, 6.6], look: [0, 3.7, 0], world: [0, 0, 0] },
   hall: { pos: [0, 2.5, 8.6], look: [0, 2.6, -3], world: [6, 0, -26] },
 };
+const phone = W / H < 0.8; // a phone held upright: the pyramid centred above the text; the hall shows one screen at a time
+if (phone) { shots.hero = { pos: [0, 2.2, 23], look: [0, -1.6, 0], world: [0, 0, 0] }; shots.hall = { pos: [0, 2.6, 11.5], look: [0, 2.0, -1.2], world: [6, 0, -26] }; }
+if (phone) world.traverse(o => { if (o.userData.mirrorGlow) o.visible = false; }); // its reflection would sit behind the text
 const s = shots[shot]; camera.position.set(...s.pos); camera.lookAt(...s.look);
 world.position.set(...s.world); floor.position.x = s.world[0]; floor.position.z = s.world[2];
 if (shot === "hall") { floor.position.set(0, 0, -7); floor.scale.setScalar(1.3); world.visible = false; }
@@ -319,12 +346,12 @@ composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, verte
 
 // ---- interface ----
 const ui = document.getElementById("ui");
-const nav = `<nav><div class="mark">D<i>3</i>MON</div><div class="links glass"><span class="on">World</span><span>Grand Hall</span><span>Tournaments</span><span>VIP</span><span>Build a bot</span></div><div class="enter">Join D3MON</div></nav>`;
+const nav = `<nav><div class="mark">D<i>3</i>MON</div><div class="links glass"><span class="on">World</span><span>Grand Hall</span><span>Tournaments</span><span>VIP</span><span>Build a bot</span></div><div class="enter">Join D3MON</div><div class="menu glass"><i></i>Menu</div></nav>`;
 if (shot === "hero") ui.innerHTML = nav + `<div class="hero"><div class="eyebrow"><b></b>LIVE · ROUND 12:30–12:45 · BITCOIN UP OR DOWN</div><h1>D<i>3</i>MON</h1><div class="sub"><b>The live trade network.</b> Callers, bots and chart scripts call Bitcoin every fifteen minutes. Kalshi keeps the score.</div><div class="ctas"><div class="enter">Enter the Grand Hall</div><div class="skip">Skip the intro →</div></div></div>
   <div class="ticker glass"><div><small>ROUND CLOSES IN</small><strong class="blu">02:39</strong></div><div><small>CALLS SEALED</small><strong>41</strong></div><div><small>THE CROWD SAYS UP</small><strong class="up">62%</strong></div><div><small>LEADER TODAY</small><strong>Odin <span class="up">+18.4</span></strong></div></div>`;
 if (shot === "close") ui.innerHTML = nav + `<div class="tag glass" style="left:64%;top:66%;color:#FFB04D"><small>CALLERS</small><strong>128 live this round</strong></div><div class="tag glass" style="left:18%;top:58%;color:#4D9BFF"><small>BOTS</small><strong>Odin leads · +18.4</strong></div><div class="tag glass" style="left:70%;top:30%;color:#B48CFF"><small>CHART SCRIPTS</small><strong>Halo-7 · 9 of 12 right</strong></div>`;
 if (shot === "crystal") ui.innerHTML = nav + `<div class="label">THE CRYSTAL TIP<b>VIP Room</b></div>`;
-if (shot === "hall") ui.innerHTML = nav + `<div class="label">THE GRAND HALL<b>Live floor</b></div>`;
+if (shot === "hall") ui.innerHTML = nav + `<div class="label">THE GRAND HALL<b>Live floor</b></div><div class="pager"><div class="btn glass">‹</div><div class="mid">THIS ROUND · 2 OF 10<div class="dots"><b></b><b class="on"></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div></div><div class="btn glass">›</div></div>`;
 
 for (let i = 0; i < 3; i++) composer.render();
 window.__ready = true;
