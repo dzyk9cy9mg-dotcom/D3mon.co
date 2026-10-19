@@ -173,3 +173,21 @@ body.w3d-pick{cursor:pointer}
 .w-vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .w-vbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .w-vbar a{color:var(--ink-2);font:500 13px var(--mono)}
+
+/* The hall's chat: a panel down the right side, so the world stays in view (full width on phones). */
+.w-chat{position:fixed;right:16px;top:72px;bottom:16px;z-index:70;width:min(360px,calc(100vw - 32px));display:flex;flex-direction:column;background:rgba(10,17,24,.94);border:1px solid var(--line);box-shadow:0 12px 32px rgba(0,0,0,.6)}
+.w-chat[hidden]{display:none}
+.w-chathead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.w-chathead b{font:700 13px var(--display);letter-spacing:.08em;color:var(--ink)}
+.w-chathead span{flex:1;font:500 11px var(--mono);color:var(--ink-3)}
+.w-chathead .w-btn{padding:4px 9px}
+.w-chatlist{flex:1;overflow-y:auto;list-style:none;margin:0;padding:10px 12px;display:grid;align-content:start;gap:8px;font:500 14px/1.4 var(--body);color:var(--ink-2);overflow-wrap:anywhere}
+.w-chatlist b{margin-right:4px}.w-chatlist i{font-style:normal;margin-right:4px}.w-chatlist i.up{color:var(--up)}.w-chatlist i.dn{color:var(--dn)}
+.w-chatlist time{margin-left:6px;font:11px var(--mono);color:var(--ink-3)}
+.w-chatform{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.w-chatform input{flex:1;min-width:0;padding:8px 10px;background:var(--bg);border:1px solid var(--line);color:var(--ink);font:500 14px var(--body)}
+.w-chatform[hidden],.w-chatsign[hidden]{display:none}
+.w-chatsign{padding:12px;border-top:1px solid var(--line);color:var(--ink);font:600 14px var(--body)}
+.w-chatmsg{margin:0;padding:0 12px 8px;font:12px var(--mono);color:var(--dn)}
+.w-chatmsg:empty{display:none}
+@media (max-width:600px){.w-chat{left:16px;right:16px;width:auto;top:64px}}

@@ -70,6 +70,7 @@
       if (mine !== loading || level() === "2d") return;
       scene3d = m.start({ level: lv, reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches, showFps: new URLSearchParams(location.search).has("fps"),
         onVideo: v => openVideo(v),
+        onChat: () => openChat(),
         onSlow: fps => {
           if (choice !== "auto") return; // a level chosen by hand stays
           try { sessionStorage.setItem("d3w.slow", String(fps)); } catch (e) {}
@@ -145,7 +146,7 @@
   const left = ms => { const m = Math.max(0, Math.ceil(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; };
 
   // The 3D Grand Hall shows the same live data on its screens, ring and spokes.
-  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, entrants: S.entrants, battles: S.battles, market: S.market, hourly: S.hourly, video: S.video, serverNow }); }
+  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, entrants: S.entrants, battles: S.battles, market: S.market, hourly: S.hourly, video: S.video, chat: S.chat, serverNow }); }
 
   // ---------- the hall's video (GET /hall/video): a button in 2D, the live event screen in 3D ----------
   function renderVideo() {
@@ -167,6 +168,25 @@
     scene3d?.hold?.(true); // the 3D world stops drawing while the video plays, so the video isn't starved
   }
   function closeVideo() { $("videoPanel").hidden = true; $("videoFrame").innerHTML = ""; scene3d?.hold?.(false); } // emptying it stops the video
+  // ---------- the hall's chat (GET/POST /hall/chat): the Cortex chat's main floor ----------
+  const KIND_C = { bot: "var(--bots)", script: "var(--scripts)", member: "var(--callers)" };
+  function renderChat() {
+    const box = $("chatList"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+    const msgs = S.chat?.messages || [];
+    box.innerHTML = msgs.length ? msgs.map(m => `<li><b style="color:${KIND_C[m.as] || KIND_C.member}">${esc(m.name)}</b>${m.direction ? `<i class="${m.direction === "up" ? "up" : "dn"}">${m.direction === "up" ? "▲" : "▼"}</i>` : ""} ${esc(m.text)}<time>${new Date(m.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time></li>`).join("") : `<li class="w-empty">No messages yet. Say hello.</li>`;
+    if (atEnd) box.scrollTop = box.scrollHeight; // stay at the newest unless they scrolled up to read
+  }
+  async function loadChat() { try { S.chat = await api("GET", "hall/chat?limit=40"); renderChat(); push3d(); } catch (e) {} }
+  function openChat() { $("chatPanel").hidden = false; renderChat(); $("chatList").scrollTop = $("chatList").scrollHeight; (S.me ? $("chatIn") : $("chatSignIn")).focus(); }
+  function closeChat() { $("chatPanel").hidden = true; }
+  async function sendChat() {
+    const text = $("chatIn").value.trim();
+    if (!text) return;
+    $("chatSend").disabled = true;
+    try { await api("POST", "hall/chat", { text }); $("chatIn").value = ""; $("chatMsg").textContent = ""; await loadChat(); $("chatList").scrollTop = $("chatList").scrollHeight; }
+    catch (x) { $("chatMsg").textContent = x.message; }
+    finally { $("chatSend").disabled = false; $("chatIn").focus(); }
+  }
   async function loadVideo() { try { S.video = (await api("GET", "hall/video")).video; } catch (e) {} renderVideo(); }
 
   async function loadStandings() {
@@ -186,7 +206,7 @@
       api("GET", "battles").then(b => (S.battles = b.battles)),
       api("GET", "tournaments").then(c => api("GET", `tournaments/${c.tournaments.find(t => t.kind === "hourly").id}`)).then(t => (S.hourly = t.tournament)),
     ].map(p => p.catch(() => {})));
-    await loadVideo();
+    await Promise.all([loadVideo(), loadChat()]);
     renderRing(); renderCalls();
     await loadStandings();
   }
@@ -200,13 +220,19 @@
     }).join("");
   }
 
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("videoPanel").hidden) closeVideo(); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !$("videoPanel").hidden) closeVideo();
+    else if (e.key === "Escape" && !$("chatPanel").hidden) closeChat();
+  });
+  $("chatForm").addEventListener("submit", e => { e.preventDefault(); sendChat(); });
   document.addEventListener("click", async e => {
     if (e.target === $("videoPanel")) return closeVideo(); // a click outside the video closes it
     const b = e.target.closest("button");
     if (!b) return;
     if (b.id === "videoBtn") return openVideo();
     if (b.id === "videoClose") return closeVideo();
+    if (b.id === "chatBtn") return openChat();
+    if (b.id === "chatClose") return closeChat();
     if (b.dataset.kind) { S.kind = b.dataset.kind; renderStandings(); try { await loadStandings(); } catch (x) { msg(x.message); } }
     if (b.dataset.strand) { S.strand = b.dataset.strand; renderHelix(); }
   });
@@ -221,6 +247,7 @@
     const admin = !!me && (me.role === "admin" || me.role === "owner");
     $("adminWrap").hidden = !admin;
     if (me) { $("acctBtn").textContent = me.name || me.username || "Account"; $("acctBtn").href = "login"; }
+    S.me = me; $("chatForm").hidden = !me; $("chatSignIn").hidden = !!me; // guests read the chat; members type
     try {
       await syncClock();
       tickClock();
@@ -240,7 +267,11 @@
       }
     } catch (x) { msg(x.message); }
     let t = null;
-    follow(["tournaments", "hall"], () => { clearTimeout(t); t = setTimeout(() => loadHall().catch(() => {}), 400); },
+    follow(["tournaments", "hall"], type => {
+      if (type === "hall.chat") return loadChat(); // a new message: only the chat is read again
+      if (type === "hall.video") return loadVideo().then(push3d);
+      clearTimeout(t); t = setTimeout(() => loadHall().catch(() => {}), 400);
+    },
       on => { $("live").textContent = on ? "● live" : "○ reconnecting"; $("live").classList.toggle("on", on); });
   })();
 })();
