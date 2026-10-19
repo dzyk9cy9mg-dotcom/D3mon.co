@@ -114,6 +114,7 @@
     const now = serverNow(), cur = Math.floor(now / Q) * Q;
     $("rTime").textContent = `${time(cur)}–${time(cur + Q)}`;
     $("rLeft").textContent = mmss(cur + Q - now);
+    $("tkLeft").textContent = mmss(cur + Q - now); $("heroRound").textContent = `Live · Round ${time(cur)}–${time(cur + Q)}`;
     if (S.round !== null && cur !== S.round) loadHall().catch(() => {});
     S.round = cur;
   }
@@ -124,6 +125,7 @@
         <span class="w-k">${x.kind === "caller" ? "caller" : x.kind === "script" ? "script" : "bot"}</span>
         <span class="w-d">${x.sealed ? '<span class="w-seal">● sealed</span>' : dirHtml(x.direction)}${x.price ? ` <span class="w-paid" title="Kalshi's price for this side when the call was made">@${Math.round(x.price.paid * 100)}¢</span>` : ""}</span><time>${esc(time(x.receivedAt))}</time></li>`).join("")
       : `<li class="w-empty">No calls yet this round.</li>`;
+    renderTicker();
     const p = S.prev;
     if (!p) { $("prev").textContent = "–"; return; }
     const right = p.calls.filter(x => x.correct === true).length, wrong = p.calls.filter(x => x.correct === false).length;
@@ -142,6 +144,14 @@
     $("rows").innerHTML = top.length ? top.map(r => `<li><span class="w-rank">${r.rank}</span><a href="card?e=${encodeURIComponent(r.entrant.slug)}">${esc(r.entrant.name)}</a>
         <span class="w-k">${r.entrant.kind}</span><span class="w-score"><b>${r.correct}</b> right · ${pct(r.accuracy)}</span></li>`).join("")
       : `<li class="w-empty">No bots in this tournament yet. Owners switch it on in <a href="my">My bots</a>.</li>`;
+  }
+  // The front page's live bar: calls this round, Kalshi's price for Up, and today's leader (ranked by correct calls).
+  function renderTicker() {
+    $("tkCalls").textContent = S.calls ? String(S.calls.calls.length) : "–";
+    const up = S.market?.price?.up;
+    $("tkUp").textContent = up == null ? "–" : `${Math.round(up * 100)}%`;
+    const lead = S.daily?.standings?.[0];
+    $("tkLead").textContent = lead ? `${lead.entrant.name} · ${lead.correct} right` : "No one yet";
   }
   const left = ms => { const m = Math.max(0, Math.ceil(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; };
 
@@ -205,7 +215,8 @@
     const cur = await api("GET", "tournaments");
     const id = cur.tournaments.find(t => t.kind === S.kind).id;
     S.t = (await api("GET", `tournaments/${id}`)).tournament;
-    renderStandings();
+    if (S.kind === "daily") S.daily = S.t;
+    renderStandings(); renderTicker();
     push3d();
   }
   async function loadHall() {
@@ -213,8 +224,8 @@
     const [rounds, calls, prev] = await Promise.all([api("GET", "rounds"), api("GET", `rounds/${cur}/calls`), api("GET", `rounds/${cur - Q}/calls`)]);
     S.rounds = rounds.rounds; S.calls = calls; S.prev = prev;
     // Only the 3D hall shows these (Kalshi's prices now, the events, the hourly tournament); a failure here never stops the page.
+    await api("GET", "market").then(m => (S.market = m)).catch(() => {}); // the live bar shows it too
     if (scene3d) await Promise.all([
-      api("GET", "market").then(m => (S.market = m)),
       api("GET", "battles").then(b => (S.battles = b.battles)),
       api("GET", "tournaments").then(c => api("GET", `tournaments/${c.tournaments.find(t => t.kind === "hourly").id}`)).then(t => (S.hourly = t.tournament)),
     ].map(p => p.catch(() => {})));
@@ -237,6 +248,8 @@
     else if (e.key === "Escape" && !$("chatPanel").hidden) closeChat();
   });
   $("chatForm").addEventListener("submit", e => { e.preventDefault(); sendChat(); });
+  // In 3D, "Enter the Grand Hall" glides down to the hall's screens; in 2D (and "Skip the intro") it's a plain jump.
+  $("enterBtn").addEventListener("click", e => { if (scene3d?.glide) { e.preventDefault(); scene3d.glide("hall"); } });
   document.addEventListener("click", async e => {
     if (e.target === $("videoPanel")) return closeVideo(); // a click outside the video closes it
     const b = e.target.closest("button");

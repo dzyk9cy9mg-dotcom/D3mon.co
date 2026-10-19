@@ -55,6 +55,23 @@
 .w-lede b{color:var(--ink)}
 .w-cta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .w-cta .big{padding:12px 18px;font-size:13px}
+/* the front page (concept v2): one main button, a skip link, and a live bar */
+.w-hero{display:grid;justify-items:center;gap:14px}
+.w-eyebrow{margin:0;display:flex;align-items:center;gap:10px;font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#9fc6ff}
+.w-eyebrow i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--up);box-shadow:0 0 10px var(--up)}
+.w-cta{align-items:center}
+.w-cta .big{min-height:44px;box-sizing:border-box}
+.w-skipintro{display:none;color:var(--ink-2);font:500 14px var(--body);text-decoration:none;border-bottom:1px solid var(--line);padding:12px 0 2px}
+.w-skipintro:hover{color:var(--ink)}
+.w-ticker{width:min(100%,980px);box-sizing:border-box;display:grid;grid-template-columns:repeat(4,1fr);padding:16px 22px 10px;background:rgba(10,17,24,.86);border:1px solid var(--line);text-align:left}
+.w-ticker div{display:grid;gap:4px;padding:0 16px;border-left:1px solid var(--line);min-width:0}
+.w-ticker div:first-child{border-left:0;padding-left:0}
+.w-ticker small{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.w-ticker b{font:600 21px var(--body);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.w-ticker b.up{color:var(--up)}
+@media (max-width:600px){.w-ebx{display:none}}
+.w-tknote{grid-column:1/-1;margin:10px 0 0;font:11px var(--mono);color:var(--ink-3)}
+@media (max-width:600px){.w-ticker{grid-template-columns:1fr 1fr;row-gap:14px;padding:14px 16px 10px}.w-ticker div:nth-child(3){border-left:0;padding-left:0}.w-ticker b{font-size:19px}}
 .w-corners{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase}
 .w-corners span::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;transform:rotate(45deg)}
 .c-cal{--kc:var(--callers)}.c-bot{--kc:var(--bots)}.c-scr{--kc:var(--scripts)}
@@ -139,15 +156,29 @@ body[data-three="on"].w3d-past #w3d{opacity:.12;filter:blur(3px)}
 body[data-three="on"] .w-out{min-height:300vh;align-content:start;padding:0}
 body[data-three="on"] .w-out>*{position:sticky}
 body[data-three="on"] .w-tri{display:none}
-body[data-three="on"] .w-out h1{top:18vh;margin-top:18vh;text-shadow:0 0 24px rgba(5,8,12,.9)}
-body[data-three="on"] .w-out .w-lede{top:calc(18vh + 90px);text-shadow:0 0 12px #05080C,0 0 24px #05080C}
-body[data-three="on"] .w-out .w-cta{top:calc(18vh + 170px)}
-body[data-three="on"] .w-out .w-corners{top:calc(18vh + 230px)}
-body[data-three="on"] .w-out h1,body[data-three="on"] .w-out .w-lede,body[data-three="on"] .w-out .w-cta,body[data-three="on"] .w-out .w-corners{opacity:clamp(0,calc(1 - var(--w3d-p,0) * 4),1);transform:translateY(calc(var(--w3d-p,0) * -120px))}
+/* 3D: the stills' hero. Text on the left (on phones below the pyramid), the live bar along the bottom;
+   both fade as the scroll glides in. */
+body[data-three="on"] .w-out{justify-items:stretch}
+body[data-three="on"] .w-out .w-corners{display:none}
+body[data-three="on"] .w-hero{top:calc(100vh - 500px);height:0;justify-items:start;align-content:start;text-align:left;padding:0 max(24px,calc((100vw - 1180px) / 2))}
+body[data-three="on"] .w-hero>*{max-width:500px}
+body[data-three="on"] .w-out h1{font-size:clamp(48px,7vw,96px);letter-spacing:.06em;text-shadow:0 0 24px rgba(5,8,12,.9)}
+body[data-three="on"] .w-out .w-lede{text-shadow:0 0 12px #05080C,0 0 24px #05080C}
+body[data-three="on"] .w-skipintro{display:inline-block}
+body[data-three="on"] .w-ticker{top:calc(100vh - 128px);margin:0 max(24px,calc((100vw - 1180px) / 2));width:auto;backdrop-filter:blur(8px)}
+body[data-three="on"] .w-hero,body[data-three="on"] .w-ticker{opacity:clamp(0,calc(1 - var(--w3d-p,0) * 4),1);transform:translateY(calc(var(--w3d-p,0) * -120px));transition:opacity .9s ease}
+body[data-three="on"]:not(.w3d-arrived) .w-hero,body[data-three="on"]:not(.w3d-arrived) .w-ticker{opacity:0}
+@media (max-width:600px){
+  body[data-three="on"] .w-hero{top:calc(100vh - 504px);padding:0 16px}
+  body[data-three="on"] .w-out h1{font-size:44px}
+  body[data-three="on"] .w-cta{gap:18px}
+  body[data-three="on"] .w-out .w-lede{font-size:16px}
+  body[data-three="on"] .w-ticker{top:calc(100vh - 186px);margin:0 16px}
+}
 body[data-three="on"] .w-card{background:rgba(10,17,24,.86);backdrop-filter:blur(6px)}
 .w3d-flash{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 50%,rgba(220,235,255,.9),rgba(77,163,255,.4) 35%,rgba(5,8,12,0) 70%)}
 .w3d-fps{position:fixed;left:10px;bottom:10px;z-index:50;font:12px var(--mono);color:var(--up);background:rgba(0,0,0,.6);padding:3px 7px}
-@media (prefers-reduced-motion:reduce){#w3d{transition:none}}
+@media (prefers-reduced-motion:reduce){#w3d,body[data-three="on"] .w-hero,body[data-three="on"] .w-ticker{transition:none}}
 .w-paid{font:12px var(--mono);color:var(--ink-2)}
 /* ◀ ▶ while the 3D camera is stopped at a level of screens */
 .w3d-nav{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:10px;padding:6px;background:rgba(10,17,24,.82);border:1px solid var(--line);backdrop-filter:blur(6px)}

@@ -1,5 +1,6 @@
 // /world in 3D: the outside (docs/world/BLUEPRINT.md, step 3). Loaded by world.js only on devices that get
-// the 3D version; the 2D version never downloads it. Scrolling through the Outside place drives the camera:
+// the 3D version; the 2D version never downloads it. On arrival the opening (0 to 0.56 below) plays by itself and
+// the page opens on the hero shot (concept v2); scrolling through the Outside place then drives the camera on:
 //   0.00  overhead, the pyramid flat on the floor: seen from above it's the D3MON logo
 //   0.35  the triangle has risen into the pyramid, particles lifting with it
 //   0.70  the opening shot, low and in front
@@ -952,10 +953,14 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // ---------- scroll ----------
   const outside = document.getElementById("outside");
   let target = 0, shown = 0;
+  // The page opens on the hero shot (concept v2): the opening (overhead logo, the triangle rising into the pyramid,
+  // down to the front) plays by itself on arrival, and the scroll runs from the hero shot on into the hall.
+  const OPEN = 0.56, toRaw = v => clamp01((v - OPEN) / (1 - OPEN));
+  let arrive = reducedMotion ? 1 : 0, arrived = false;
   function readScroll() {
     const r = outside.getBoundingClientRect(), span = Math.max(1, r.height - innerHeight);
     target = clamp01(-r.top / span);
-    if (reducedMotion) target = [0, 0.56, 0.735, 0.835, 0.91, 1].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a)); // cut between shots, no flying
+    if (reducedMotion) target = [0.56, 0.735, 0.835, 0.91, 1].map(toRaw).reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a)); // cut between shots, no flying
     document.body.style.setProperty("--w3d-p", String(clamp01(-r.top / span)));
     const past = r.bottom < innerHeight * 0.6;
     document.body.classList.toggle("w3d-past", past);
@@ -970,6 +975,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     }
     camera.aspect = w / h;
     camera.fov = w < h ? 60 : 45; // portrait screens see the same pyramid
+    // The hero shot: the pyramid to the right of the page's text, or above it on a portrait screen.
+    const hero = shots[2];
+    if (w < h) { hero.pos.set(0, 3.0, 15); hero.look.set(0, -2.9, 0); }
+    else if (w < 900) { hero.pos.set(0, 2.0, 10.5); hero.look.set(0, 1.0, 0); }
+    else { hero.pos.set(-3.0, 2.0, 10.5); hero.look.set(-3.0, 1.6, 0); }
     camera.updateProjectionMatrix();
     cometPoints.material.uniforms.uScale.value = h / (2 * Math.tan((camera.fov * Math.PI) / 360)) * renderer.getPixelRatio();
   }
@@ -1006,7 +1016,9 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     frames.push(now - last); last = now;
     const time = clock.getElapsedTime();
     shown += (target - shown) * (reducedMotion ? 1 : Math.min(1, dt * 3.2));
-    const p = shown;
+    arrive = Math.min(1, arrive + dt / 3.2);
+    if (arrive === 1 && !arrived) { arrived = true; document.body.classList.add("w3d-arrived"); } // the page's text fades in once the pyramid stands
+    const p = OPEN * smooth(arrive) + shown * (1 - OPEN);
 
     // The rise: from the flat logo triangle into the pyramid.
     const rise = 0.04 + 0.96 * smooth(clamp01(p / 0.33));
@@ -1117,6 +1129,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
 
   return {
     hall: hallData,
+    glide(where) { // "hall": down to the hall's live screens, gliding (or a cut with reduce motion)
+      if (where !== "hall") return;
+      const r = outside.getBoundingClientRect(), span = Math.max(1, r.height - innerHeight);
+      scrollTo({ top: scrollY + r.top + span * toRaw(0.735), behavior: reducedMotion ? "auto" : "smooth" });
+    },
     hold(on) { held = !!on; if (!on) last = performance.now(); }, // stops and restarts the drawing (the video panel)
     stop() {
       cancelAnimationFrame(raf);
@@ -1132,7 +1149,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       canvas.remove(); flash.remove(); nav.remove(); fpsEl?.remove();
       delete document.body.dataset.three;
       document.body.style.removeProperty("--w3d-p");
-      document.body.classList.remove("w3d-past");
+      document.body.classList.remove("w3d-past", "w3d-arrived");
     },
   };
 }

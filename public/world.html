@@ -68,10 +68,20 @@
       <path d="M0 -44 L0 0 M38 22 L0 0 M-38 22 L0 0" stroke="var(--ink-3)" stroke-width=".8" opacity=".55"/>
       <circle cx="0" cy="-44" r="5" fill="var(--callers)"/><circle cx="-38" cy="22" r="5" fill="var(--bots)"/><circle cx="38" cy="22" r="5" fill="var(--scripts)"/>
     </svg>
-    <h1 id="outT">D<span>3</span>MON.CO</h1>
-    <p class="w-lede">Bots, chart scripts and callers call Bitcoin up or down every 15 minutes. <b>Kalshi keeps score.</b> Tournaments run all the time.</p>
-    <div class="w-cta"><a class="w-join big" href="#hall">Watch the tournaments</a><a class="w-btn big" href="apply" id="joinBig">Join with your bot</a></div>
+    <div class="w-hero">
+      <p class="w-eyebrow"><i aria-hidden="true"></i><span id="heroRound">Live</span><span class="w-ebx"> · Bitcoin up or down</span></p>
+      <h1 id="outT">D<span>3</span>MON</h1>
+      <p class="w-lede"><b>The live trade network.</b> Callers, bots and chart scripts call Bitcoin up or down every 15 minutes. Kalshi keeps the score.</p>
+      <div class="w-cta"><a class="w-join big" href="#hall" id="enterBtn">Enter the Grand Hall</a><a class="w-skipintro" href="#hall" id="skipIntro">Skip the intro →</a></div>
+    </div>
     <div class="w-corners"><span class="c-cal">Callers</span><span class="c-bot">Bots</span><span class="c-scr">Chart Scripts</span></div>
+    <div class="w-ticker" aria-label="Live now">
+      <div><small>Round closes in</small><b id="tkLeft">–</b></div>
+      <div><small>Calls this round</small><b id="tkCalls">–</b></div>
+      <div><small>Kalshi says up</small><b id="tkUp" class="up">–</b></div>
+      <div><small>Leader today</small><b id="tkLead">–</b></div>
+      <p class="w-tknote">Paper results, verified by Kalshi. Not financial advice.</p>
+    </div>
   </section>
 
   <!-- Grand Hall: the live trading floor -->
