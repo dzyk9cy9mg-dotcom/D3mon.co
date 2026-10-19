@@ -166,14 +166,55 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     hall.add(line, node); spokes.push(line); nodes.push(node);
   }
   // The wave a round's result sends across the floor: green for up, red for down.
-  const wave = new THREE.Mesh(new THREE.RingGeometry(0.7, 1, 128), new THREE.MeshBasicMaterial({ color: 0x37e08a, transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
-  wave.rotation.x = -Math.PI / 2; wave.position.y = 0.04;
-  scene.add(wave); // it runs out of the pyramid and across the floor
+  // A round's result: a ring of green (up) or red (down) draws in to the core, then one pulse of that colour
+  // rides up the beam and out of the capstone into the sky (owner: clean, nothing running outward).
+  const wave = new THREE.Mesh(new THREE.RingGeometry(0.88, 1, 128), new THREE.MeshBasicMaterial({ color: 0x37e08a, transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+  wave.rotation.x = -Math.PI / 2; wave.position.y = 0.06;
+  scene.add(wave);
+  const orb = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial(), color: 0x37e08a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  orb.scale.setScalar(0.9);
+  scene.add(orb);
   // The golden beam from the core up to the capstone.
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 8, 1, true), edgeMat(C.callers, 0.95));
   const beamGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1, 12, 1, true), edgeMat(C.callers, 0.18));
   scene.add(beam, beamGlow);
   const palette = [C.callers, C.bots, C.scripts, 0xffffff];
+  // ---------- the main page's emblem at the heart of the triangle (owner, 2026-10-19) ----------
+  // The same drawing as the gyroscope in the main page's triangle (index.html .sigil.gim), layer for layer, with
+  // the same movements as d3mon.css: three outer rings tumbling (14 s round X, 11 s round Y, 8 s back round X),
+  // each also spinning in its own plane (30 s, 16 s back, 10 s), the inner dashed ring (22 s back), the triangle
+  // (40 s) and the pulsing heart (2.4 s). Its lines are a little bolder than the page's, as it's drawn smaller.
+  // It always faces the camera, as it faces you on the main page. From the overhead opening it is the main
+  // page's size at the heart of the triangle; as the pyramid rises it settles on the beam in the clear space
+  // between the hall's live screens and the level above, near the triangle's centre seen from the front.
+  const sigil = new THREE.Group();
+  scene.add(sigil);
+  const SVG_DEFS = '<defs><linearGradient id="t" x1="0" y1="-70" x2="0" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB547"/><stop offset=".55" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient><radialGradient id="c"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".6"/><stop offset="1" stop-color="#4DA3FF" stop-opacity="0"/></radialGradient></defs>';
+  const sigilLayer = (body, z, parent = sigil, additive = false) => {
+    const cv = document.createElement("canvas"); cv.width = cv.height = 512;
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    const im = new Image();
+    im.onload = () => { cv.getContext("2d").drawImage(im, 0, 0, 512, 512); tex.needsUpdate = true; };
+    im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-100 -100 200 200">${SVG_DEFS}${body}</svg>`);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+    m.position.z = z; m.userData.o = 1; parent.add(m);
+    return m;
+  };
+  const gimbal = () => { const g = new THREE.Group(); sigil.add(g); return g; };
+  const sg = {
+    halo: sigilLayer('<circle r="98" fill="url(#c)"/>', -0.08, sigil, true),
+    back: sigilLayer('<circle r="74" fill="#05080C" fill-opacity=".55" stroke="#1A2A36"/>', -0.06),
+    g1: gimbal(), g2: gimbal(), g3: gimbal(),
+  };
+  sg.s3 = sigilLayer('<circle r="94" fill="none" stroke="#8FA3B2" stroke-opacity=".6" stroke-width="1.6" stroke-dasharray="1.6 5"/>', 0, sg.g1);
+  sg.s1 = sigilLayer('<circle r="84" fill="none" stroke="url(#t)" stroke-width="2.6" stroke-dasharray="36 10 4 10"/>', 0, sg.g2);
+  sg.s2 = sigilLayer('<polygon points="0,-66 57.2,-33 57.2,33 0,66 -57.2,33 -57.2,-33" fill="none" stroke="#4DA3FF" stroke-opacity=".7" stroke-width="1.8"/>', 0, sg.g3);
+  sg.s4 = sigilLayer('<circle r="44" fill="none" stroke="#8FA3B2" stroke-opacity=".5" stroke-width="1.4" stroke-dasharray="2 4"/>', 0.02);
+  sg.tri = sigilLayer('<polygon points="0,-62 53.7,31 -53.7,31" fill="rgba(77,163,255,.06)" stroke="url(#t)" stroke-width="3"/><line x1="0" y1="-62" x2="0" y2="0" stroke="#FFB547" stroke-opacity=".35"/><line x1="53.7" y1="31" x2="0" y2="0" stroke="#B98CFF" stroke-opacity=".35"/><line x1="-53.7" y1="31" x2="0" y2="0" stroke="#4DA3FF" stroke-opacity=".35"/><circle cx="0" cy="-62" r="5" fill="#FFB547"/><circle cx="-53.7" cy="31" r="5" fill="#4DA3FF"/><circle cx="53.7" cy="31" r="5" fill="#B98CFF"/>', 0.03);
+  sg.heart = sigilLayer('<circle r="20" fill="#05080C" stroke="#4DA3FF" stroke-width="1.4"/>', 0.04);
+  sg.pl = sigilLayer('<circle r="8" fill="#4DA3FF"/>', 0.05);
+  sg.dot = sigilLayer('<circle r="4" fill="#DCE7EE"/>', 0.06);
+  const spin = (t, s) => (t / s) * Math.PI * 2; // one turn every s seconds
   // ---------- inside, rising up: the 10118 video (owner, 2026-10-18; its booths with people and its stars left out) ----------
   // Rings of glass chart screens, a glass ramp spiralling up with hexagon bot pods along it, floating code and
   // maths for the chart scripts near the top, and the people online as little lights in the stands.
@@ -433,7 +474,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   }
 
   // The helix: one clean glass ramp, two turns, narrowing with the walls. It levels off near the top and runs
-  // onto a full gold landing ring around the foot of the crystal capstone, so it finishes, not stops.
+  // onto a full landing ring around the foot of the crystal capstone, so it finishes, not stops. The ring is
+  // the helix's own blue, so the colour carries right through (owner, 2026-10-19).
   const VIP_Y = 3.0, VIP_R = 0.38, TURNS = 2, RAMP_Y0 = 0.35;
   const rampW = y => 0.05 + 0.07 * (inr(y) / 1.4);
   const rampAt = (t, side = 0) => {
@@ -453,9 +495,9 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     for (const e of [edgeIn, edgeOut]) tower.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(e), glassLine(0x9fd0ff, 0.75)));
   }
   {
-    const w = rampW(VIP_Y), land = new THREE.Mesh(new THREE.RingGeometry(VIP_R - w / 2, VIP_R + w / 2, 96), add(new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.16));
+    const w = rampW(VIP_Y), land = new THREE.Mesh(new THREE.RingGeometry(VIP_R - w / 2, VIP_R + w / 2, 96), add(new THREE.MeshBasicMaterial({ color: 0x8fc4ff, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0.1));
     land.rotation.x = -Math.PI / 2; land.position.y = VIP_Y; tower.add(land);
-    for (const r of [VIP_R - w / 2, VIP_R + w / 2]) { const e = new THREE.Mesh(new THREE.TorusGeometry(r, 0.004, 6, 128), add(edgeMat(0xffd166, 1), 0.9)); e.rotation.x = Math.PI / 2; e.position.y = VIP_Y; tower.add(e); }
+    for (const r of [VIP_R - w / 2, VIP_R + w / 2]) { const e = new THREE.Mesh(new THREE.TorusGeometry(r, 0.004, 6, 128), add(edgeMat(0x9fd0ff, 1), 0.75)); e.rotation.x = Math.PI / 2; e.position.y = VIP_Y; tower.add(e); }
   }
   // Lights walking up the helix: the people rising toward the VIP Room.
   const walkN = full ? 40 : phone ? 12 : 24, walkPos = new Float32Array(walkN * 3), walkT = Array.from({ length: walkN }, () => Math.random());
@@ -835,7 +877,6 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const tmp = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), clock = new THREE.Clock();
   let raf = 0, last = performance.now(), frames = [], judged = false, started = performance.now(), fpsAcc = 0, fpsN = 0, fpsAt = last;
   let clockAt = 0, spotAt = 0, resultFx = null;
-  const GOLD_C = new THREE.Color(C.callers), FLOOR_C = glow.material.color.clone();
   const minFrame = full ? 0 : 1000 / 40; // Lite caps at about 40 frames a second
   function frame(now) {
     raf = requestAnimationFrame(frame);
@@ -881,15 +922,27 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
     for (const m of [beam, beamGlow, beam2]) { m.scale.set(1, beamLen, 1); m.position.set(m === beam2 ? 0.05 : 0, 0.15 + beamLen / 2, m === beam2 ? 0.03 : 0); }
     beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
-    if (resultPending) { resultFx = { start: time, color: new THREE.Color(resultPending === "up" ? 0x37e08a : 0xff4d5e) }; resultPending = null; for (let i = 0; i < 3; i++) { pulses[nextPulse] = time + i * 0.35; nextPulse = (nextPulse + 1) % pulses.length; } }
-    const fx = resultFx ? clamp01((time - resultFx.start) / 4) : 1;
-    if (fx < 1) {
-      const swell = Math.sin(fx * Math.PI);
-      wave.scale.setScalar(0.2 + fx * 6); wave.material.color.copy(resultFx.color); wave.material.opacity = inside * (1 - fx);
-      glow.material.color.copy(FLOOR_C).lerp(resultFx.color, swell * 0.8);
-      beam.material.color.copy(GOLD_C).lerp(resultFx.color, swell); beamGlow.material.color.copy(GOLD_C).lerp(resultFx.color, swell);
-      beamGlow.material.opacity = inside * (0.18 + 0.6 * swell); beamGlow.scale.x = beamGlow.scale.z = 1 + 1.5 * swell;
-    } else if (resultFx) { resultFx = null; wave.material.opacity = 0; beam.material.color.copy(GOLD_C); beamGlow.material.color.copy(GOLD_C); beamGlow.scale.x = beamGlow.scale.z = 1; glow.material.color.copy(FLOOR_C); }
+    if (resultPending) { resultFx = { start: time, color: new THREE.Color(resultPending === "up" ? 0x37e08a : 0xff4d5e), fired: false }; resultPending = null; }
+    if (resultFx) {
+      const t = time - resultFx.start, IN = 1.3, UP = 1.4, OUT = 1.2; // in to the core, up the beam, out into the sky
+      wave.material.color.copy(resultFx.color); orb.material.color.copy(resultFx.color);
+      if (t < IN) { const u = smooth(t / IN); wave.scale.setScalar(1.45 * (1 - u) + 0.05); wave.material.opacity = inside * (0.4 + 0.5 * u); }
+      else wave.material.opacity = 0;
+      const apexY = H * rise;
+      if (t >= IN && t < IN + UP + OUT) {
+        const u = t - IN, y = u < UP ? 0.15 + (apexY - 0.15) * smooth(u / UP) : apexY + 14 * ((u - UP) / OUT) ** 1.5;
+        orb.position.set(0, y, 0); orb.material.opacity = inside * (u < UP ? 1 : 1 - (u - UP) / OUT);
+        if (u >= UP && !resultFx.fired) { resultFx.fired = true; pulses[nextPulse] = time; nextPulse = (nextPulse + 1) % pulses.length; } // and the laser carries it on up
+      } else orb.material.opacity = 0;
+      if (t >= IN + UP + OUT) { resultFx = null; wave.material.opacity = 0; orb.material.opacity = 0; }
+    }
+    { // the emblem: CSS rotate() is clockwise and its rotateX tips the top away, so both are negative here
+      const t = reducedMotion ? 0 : time, k = (1 - Math.cos(spin(t, 2.4))) / 2;
+      sg.g1.rotation.x = -spin(t, 14); sg.g2.rotation.y = spin(t, 11); sg.g3.rotation.x = spin(t, 8);
+      sg.s3.rotation.z = -spin(t, 30); sg.s1.rotation.z = spin(t, 16); sg.s2.rotation.z = -spin(t, 10);
+      sg.s4.rotation.z = spin(t, 22); sg.tri.rotation.z = -spin(t, 40);
+      sg.pl.scale.setScalar(1 + 0.35 * k);
+    }
     marks.children.forEach((m, i) => { if (m.isMesh) m.rotation.y = time * (0.15 + i * 0.03); });
 
     // Particles flow from the corners to the apex and along the base; during the rise they lift too.
@@ -920,6 +973,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const near = clamp01((Math.hypot(camera.position.x, camera.position.z) - 0.35) / 1.6);
     core.material.opacity *= 0.25 + 0.75 * near; beamGlow.material.opacity *= near;
     for (const m of [beam, beam2]) { const w = 0.2 + 0.8 * near; m.scale.x = m.scale.z = w; }
+    sigil.quaternion.copy(camera.quaternion);
+    sigil.position.set(0, 1.18 * rise, 0);
+    sigil.scale.setScalar(1.12 - 0.76 * smooth(clamp01(p / 0.33)));
+    const sigilO = 0.3 + 0.7 * near; // dimmed when the camera rides the beam right past it
+    sigil.traverse(o => { if (o.isMesh) o.material.opacity = o === sg.pl ? (1 - 0.45 * ((1 - Math.cos(spin(reducedMotion ? 0 : time, 2.4))) / 2)) * sigilO : sigilO; });
     renderer.render(scene, camera);
 
     if (fpsEl) { fpsAcc += dt; fpsN++; if (now - fpsAt > 500) { fpsEl.textContent = `${Math.round(fpsN / fpsAcc)} fps · ${level}`; fpsAcc = 0; fpsN = 0; fpsAt = now; } }
