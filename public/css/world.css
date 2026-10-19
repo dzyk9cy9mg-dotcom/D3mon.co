@@ -275,3 +275,64 @@ body[data-three="on"] .w-cta{justify-content:flex-start}
   .w-ticker small{letter-spacing:.04em}
 }
 @media (min-width:601px){body[data-three="on"] .w-out h1{font-size:clamp(48px,5.6vw,80px)}body[data-three="on"] .w-hero>*{max-width:440px}}
+
+/* ---------- HardSmoke's battles, the capstone and who's here (docs/world/USERS.md, 2026-10-19) ---------- */
+.w-ticker{grid-template-columns:repeat(5,1fr)}
+.w-tkhere b{display:inline}
+.w-tkchat{justify-self:start;margin-top:2px;padding:0;border:0;background:none;color:#9fc6ff;font:600 13px var(--body);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.w-tkchat:hover{color:var(--ink)}
+@media (max-width:600px){.w-ticker{grid-template-columns:1fr 1fr}.w-tkhere{grid-column:1/-1;border-left:0!important;padding-left:0!important;grid-template-columns:auto auto 1fr;align-items:baseline;column-gap:12px}.w-tkchat{justify-self:end}}
+.w-livedot{display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:50%;background:var(--dn);box-shadow:0 0 10px var(--dn);vertical-align:1px}
+.w-events{width:min(100%,980px);display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;text-align:left}
+.w-events[hidden]{display:none}
+.w-event{display:grid;gap:4px;padding:14px 18px;border-radius:16px;border:1px solid var(--edge);background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.w-event small{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#9fc6ff}
+.w-ev-cap small{color:#E9C27A}
+.w-event b{font:600 17px var(--body);color:var(--ink)}
+.w-event span{font:14px var(--body);color:var(--ink-2)}
+.w-evgo{display:flex;gap:16px;flex-wrap:wrap;margin-top:2px}
+.w-evgo a{color:var(--ink);font:600 14px var(--body);text-decoration:none;padding:6px 0}
+.w-evgo a:hover{color:#9fc6ff}
+body[data-three="on"] .w-events{top:84px;width:auto;max-width:600px;margin:0 max(24px,calc((100vw - 1180px) / 2));grid-template-columns:repeat(2,minmax(0,1fr));opacity:clamp(0,calc(1 - var(--w3d-p,0) * 4),1);transition:opacity .9s ease}
+body[data-three="on"]:not(.w3d-arrived) .w-events{opacity:0}
+/* phones in 3D: one-line pills at the top ("Next battle · Sat 7:00 PM PT  Apply →"), clear of the title below */
+@media (max-width:600px){
+  body[data-three="on"] .w-events{top:70px;margin:0 16px;grid-template-columns:1fr;gap:6px}
+  body[data-three="on"] .w-event{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px 6px 14px;border-radius:999px}
+  body[data-three="on"] .w-event::before{content:attr(data-short);font:600 13px var(--body);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body[data-three="on"] .w-event>small,body[data-three="on"] .w-event>b,body[data-three="on"] .w-event>span:not(.w-evgo){display:none}
+  body[data-three="on"] .w-evgo{margin:0;flex:none}
+  body[data-three="on"] .w-evgo a{padding:8px 12px;border-radius:999px;background:rgba(170,205,255,.12);font-size:13px}
+  body[data-three="on"] .w-evgo a:not(:first-child){display:none}
+}
+@media (prefers-reduced-motion:reduce){body[data-three="on"] .w-events{transition:none}}
+.w-evcard{margin-top:16px}
+.w-evhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.w-evhead h3{margin:4px 0 6px;font:700 18px var(--display);letter-spacing:.06em;color:var(--ink)}
+.w-evcard h4{margin:14px 0 8px;font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.w-evcols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px}
+@media (max-width:700px){.w-evcols{grid-template-columns:1fr}}
+.w-chiprow{display:flex;flex-wrap:wrap;gap:6px}
+.w-chip{display:inline-flex;align-items:baseline;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--edge);background:rgba(4,8,18,.6);color:var(--ink);text-decoration:none;font:600 14px var(--body)}
+.w-chip small{font:11px var(--mono);color:var(--kc,var(--ink-2))}
+.w-chip:hover{border-color:rgba(170,205,255,.4)}
+.w-streams{display:flex;flex-wrap:wrap;gap:6px}
+.w-streams a{padding:7px 12px;border-radius:999px;border:1px solid var(--edge);color:#9fc6ff;text-decoration:none;font:600 14px var(--body)}
+.w-win{margin-left:8px;padding:2px 8px;border-radius:999px;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#06101e;background:var(--gold)}
+.w-chatbox{align-items:flex-start}
+.w-chatpeek{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:3px;font:14px var(--body);color:var(--ink-2)}
+.w-chatpeek b{color:var(--ink)}
+.w-events{order:10}
+body[data-three="on"] .w-events{order:-1}
+@media (max-width:600px){
+  body[data-three="on"] .w-cta{flex-wrap:nowrap;gap:14px}
+  body[data-three="on"] .w-cta .big{padding:0 18px;font-size:15px}
+  body[data-three="on"] .w-skipintro{font-size:14px;white-space:nowrap}
+  body[data-three="on"] .w-hero{top:calc(100vh - 470px)}
+  body[data-three="on"] .w-ticker{top:calc(100vh - 262px)}
+}
+@media (max-width:600px){
+  body[data-three="on"] .w-event:not(:first-child){display:none} /* one pill on a phone: the battle when there is one */
+  body[data-three="on"] .w-hero{top:calc(100vh - 494px)}
+  body[data-three="on"] .w-ticker{top:calc(100vh - 240px);padding:12px 16px 8px;row-gap:10px}
+}

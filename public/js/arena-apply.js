@@ -18,7 +18,7 @@
   const picked = () => (document.querySelector("input[name=battle]:checked") || {}).value || "join";
 
   function renderBattles() {
-    const was = picked();
+    const was = document.querySelector("input[name=battle]:checked") ? picked() : new URLSearchParams(location.search).get("battle") || "join"; // ?battle=<id> from the front page
     $("battles").innerHTML = `<label class="pick"><input type="radio" name="battle" value="join" ${was === "join" ? "checked" : ""}>
           <span><b>Join D3MON</b><br><span class="meta">A new bot, script or caller. Once an admin approves it, it appears on My bots, where bots and scripts can join the tournaments.</span></span></label>`
       + openBattles().map(b => `<label class="pick"><input type="radio" name="battle" value="${esc(b.id)}" ${b.id === was ? "checked" : ""}>
