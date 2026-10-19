@@ -19,6 +19,7 @@ import { Kalshi } from "./kalshi.js";
 import { Prices } from "./prices.js";
 import { Tournaments } from "./tournaments.js";
 import { Vip } from "./vip.js";
+import { Hall } from "./hall.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
 
@@ -37,7 +38,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": case "tournaments": case "vip": return id === undefined;
+      case "battles": case "catalog": case "tournaments": case "vip": case "hall": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "admin": return (id === "applications" || id === "monitor") && isAdmin(ctx);
@@ -69,6 +70,7 @@ export function createArena({ store, accounts, cfg }) {
   const tournaments = new Tournaments({ ledger, registry, feed, calls, metrics });
   if (cfg.kalshi !== false) tournaments.start(); // no Kalshi, no results to save
   const vip = new Vip({ ledger, registry, calls, feed, accounts });
+  const hall = new Hall({ ledger, feed });
   const displays = new Displays({ store, registry, stats, catalog, feed });
   displays.seed();
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
@@ -154,6 +156,9 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /rounds") return ok(roundsView(url));
     if (route === "GET /market") return ok(prices.market());
     if ((m = route.match(/^GET \/rounds\/(\d{1,16})\/calls$/))) return ok(calls.roundCalls(ctx, m[1]));
+    if (route === "GET /hall/video") return ok(hall.view());
+    if (route === "PUT /hall/video") { writer(); return ok(hall.set(ctx, await body())); }
+    if (route === "DELETE /hall/video") { writer(); return ok(hall.clear(ctx)); }
     if (route === "GET /vip") return ok(vip.info(ctx));
     if (route === "GET /vip/room") return ok(vip.room(ctx));
     if (route === "GET /vip/access") return ok({ access: vip.list(ctx) });
@@ -219,5 +224,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, hall, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }

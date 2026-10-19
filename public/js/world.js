@@ -69,6 +69,7 @@
       const m = await import("./world3d.js");
       if (mine !== loading || level() === "2d") return;
       scene3d = m.start({ level: lv, reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches, showFps: new URLSearchParams(location.search).has("fps"),
+        onVideo: v => openVideo(v),
         onSlow: fps => {
           if (choice !== "auto") return; // a level chosen by hand stays
           try { sessionStorage.setItem("d3w.slow", String(fps)); } catch (e) {}
@@ -144,7 +145,24 @@
   const left = ms => { const m = Math.max(0, Math.ceil(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; };
 
   // The 3D Grand Hall shows the same live data on its screens, ring and spokes.
-  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, entrants: S.entrants, battles: S.battles, market: S.market, hourly: S.hourly, serverNow }); }
+  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, entrants: S.entrants, battles: S.battles, market: S.market, hourly: S.hourly, video: S.video, serverNow }); }
+
+  // ---------- the hall's video (GET /hall/video): a button in 2D, the live event screen in 3D ----------
+  function renderVideo() {
+    const v = S.video;
+    $("videoBox").hidden = !v;
+    if (v) $("videoTitle").textContent = v.title || (v.kind === "short" ? "A new Short" : v.kind === "live" ? "Live now" : "Watch now");
+  }
+  function openVideo(v = S.video) {
+    if (!v) return;
+    const box = $("videoPanel");
+    box.classList.toggle("tall", v.kind === "short");
+    $("videoFrame").innerHTML = `<iframe src="${esc(v.embed)}?autoplay=1&playsinline=1&rel=0" title="${esc(v.title || "Video")}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+    $("videoLink").href = v.watch;
+    box.hidden = false; $("videoClose").focus();
+  }
+  function closeVideo() { $("videoPanel").hidden = true; $("videoFrame").innerHTML = ""; } // emptying it stops the video
+  async function loadVideo() { try { S.video = (await api("GET", "hall/video")).video; } catch (e) {} renderVideo(); }
 
   async function loadStandings() {
     const cur = await api("GET", "tournaments");
@@ -163,6 +181,7 @@
       api("GET", "battles").then(b => (S.battles = b.battles)),
       api("GET", "tournaments").then(c => api("GET", `tournaments/${c.tournaments.find(t => t.kind === "hourly").id}`)).then(t => (S.hourly = t.tournament)),
     ].map(p => p.catch(() => {})));
+    await loadVideo();
     renderRing(); renderCalls();
     await loadStandings();
   }
@@ -176,9 +195,13 @@
     }).join("");
   }
 
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("videoPanel").hidden) closeVideo(); });
   document.addEventListener("click", async e => {
+    if (e.target === $("videoPanel")) return closeVideo(); // a click outside the video closes it
     const b = e.target.closest("button");
     if (!b) return;
+    if (b.id === "videoBtn") return openVideo();
+    if (b.id === "videoClose") return closeVideo();
     if (b.dataset.kind) { S.kind = b.dataset.kind; renderStandings(); try { await loadStandings(); } catch (x) { msg(x.message); } }
     if (b.dataset.strand) { S.strand = b.dataset.strand; renderHelix(); }
   });
@@ -212,7 +235,7 @@
       }
     } catch (x) { msg(x.message); }
     let t = null;
-    follow(["tournaments"], () => { clearTimeout(t); t = setTimeout(() => loadHall().catch(() => {}), 400); },
+    follow(["tournaments", "hall"], () => { clearTimeout(t); t = setTimeout(() => loadHall().catch(() => {}), 400); },
       on => { $("live").textContent = on ? "● live" : "○ reconnecting"; $("live").classList.toggle("on", on); });
   })();
 })();
