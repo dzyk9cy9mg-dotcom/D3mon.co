@@ -10,8 +10,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 nav{position:absolute;top:28px;left:56px;right:56px;display:flex;align-items:center;justify-content:space-between}
 .mark{font:700 15px Syncopate,sans-serif;letter-spacing:.42em;background:linear-gradient(180deg,#fff,#b9c6d6);-webkit-background-clip:text;background-clip:text;color:transparent}
 .mark i{font-style:normal;background:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C7333);-webkit-background-clip:text;background-clip:text;color:transparent}
-.links{display:flex;gap:6px;padding:6px;border-radius:999px}
-.links span{font:500 13px Manrope;letter-spacing:.02em;color:var(--ink2);padding:9px 16px;border-radius:999px}
+.links{display:flex;gap:6px;padding:6px;border-radius:999px;background:rgba(4,8,18,.72)}
+.links span{font:500 14px Manrope;letter-spacing:.02em;color:#B4C3D4;padding:9px 16px;border-radius:999px}
 .links span.on{color:var(--ink);background:rgba(170,205,255,.10)}
 .enter{font:600 13px Manrope;padding:11px 20px;border-radius:999px;color:#06101e;background:linear-gradient(180deg,#F4F9FF,#B8CCE6);box-shadow:inset 0 1px 0 #fff,0 8px 30px rgba(140,190,255,.28)}
 .hero{position:absolute;left:56px;bottom:150px;max-width:620px}
@@ -21,19 +21,70 @@ h1{margin:18px 0 0;font:700 92px/0.95 Syncopate,sans-serif;letter-spacing:.06em;
 h1 i{font-style:normal;background:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C7333);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sub{margin-top:22px;font:400 19px/1.55 Manrope;color:var(--ink2);max-width:46ch}
 .sub b{color:var(--ink);font-weight:600}
-.ctas{display:flex;gap:12px;margin-top:30px}
+.ctas{display:flex;gap:22px;align-items:center;margin-top:30px}
+.skip{font:500 14px Manrope;color:#B4C3D4;border-bottom:1px solid rgba(180,195,212,.4);padding-bottom:2px}
 .ticker{position:absolute;left:56px;right:56px;bottom:40px;border-radius:16px;display:grid;grid-template-columns:repeat(4,1fr);padding:18px 26px}
 .ticker div{display:grid;gap:4px;padding-left:18px;border-left:1px solid rgba(170,205,255,.10)}
 .ticker div:first-child{border-left:0;padding-left:0}
-.ticker small{font:500 11px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}
+.ticker small{font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}
 .ticker strong{font:600 22px Manrope;font-variant-numeric:tabular-nums}
 .up{color:#3EE6A0}.amb{color:#FFC46B}.blu{color:#8ec2ff}
 .tag{position:absolute;padding:12px 16px;border-radius:14px;display:grid;gap:3px}
-.tag small{font:500 11px "IBM Plex Mono";color:var(--ink2)}
+.tag small{font:500 12px "IBM Plex Mono";color:var(--ink2)}
 .tag strong{font:600 17px Manrope}
 .tag::before{content:"";position:absolute;width:8px;height:8px;border-radius:50%;left:-22px;top:50%;margin-top:-4px;background:currentColor;box-shadow:0 0 14px currentColor}
 .label{position:absolute;left:56px;top:110px;font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.08em}
 .label b{display:block;margin-top:10px;font:700 34px Syncopate;letter-spacing:.08em;color:var(--ink)}
+/* the cinematic profile (inspiration/06's style, never its character): "I am NAME." in the kind's colour, HUD labels, a glass quote card */
+.pf{position:absolute;left:56px;top:50%;transform:translateY(-38%);max-width:560px}
+.pf .kind{font:500 12px "IBM Plex Mono";letter-spacing:.12em;color:#8ec2ff;display:flex;gap:10px;align-items:center}
+.pf .kind b{width:7px;height:7px;border-radius:50%;background:#3EE6A0;box-shadow:0 0 12px #3EE6A0}
+.pf h1{font:700 76px/1.02 Syncopate,sans-serif;letter-spacing:.02em;margin:18px 0 0;background:none;-webkit-background-clip:initial;background-clip:initial;color:#EEF4FA}
+.pf h1 em{font-style:normal;display:block;color:#5AA9FF;text-shadow:0 0 40px rgba(61,139,255,.45)}
+.pf .by{margin-top:18px;font:400 17px/1.5 Manrope;color:#B4C3D4}.pf .by b{color:var(--ink);font-weight:600}.pf .by i{font-style:normal}
+.stats{display:grid;grid-template-columns:repeat(4,auto);gap:26px;margin-top:30px}
+.stats div{display:grid;gap:4px}.stats small{font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}.stats strong{font:600 26px Manrope;font-variant-numeric:tabular-nums}
+.ver{margin-top:14px;font:500 12px "IBM Plex Mono";color:#3EE6A0;letter-spacing:.04em}
+.ver span{color:var(--ink2)}
+.quote{position:absolute;right:56px;top:150px;width:300px;padding:18px 20px;border-radius:16px}
+.quote p{margin:0;font:400 16px/1.5 Manrope;color:var(--ink)}.quote small{display:block;margin-top:10px;font:500 11px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}
+.hud{position:absolute;font:500 11px "IBM Plex Mono";color:#8193a8;letter-spacing:.12em;line-height:1.8}
+.hud b{color:#C9D6E4;font-weight:500}
+.frame{position:absolute;inset:96px 28px 28px 28px;pointer-events:none}
+.frame i{position:absolute;width:22px;height:22px;border:1px solid rgba(142,194,255,.45)}
+.frame i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}.frame i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}.frame i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}.frame i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
+.cue{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.1em}
+@media (max-width:600px){
+.pf{left:16px;right:16px;top:auto;bottom:150px;transform:none}.pf .by i{display:none}.ver{font-size:11px}
+.pf h1{font-size:44px;margin-top:12px}.pf .by{font-size:15px;margin-top:12px}
+.stats{grid-template-columns:1fr 1fr;gap:14px 20px;margin-top:20px}.stats strong{font-size:22px}
+.quote{left:16px;right:16px;top:auto;bottom:24px;width:auto;padding:14px 16px}.quote p{font-size:15px}
+.hud{display:none}.frame{inset:76px 10px 10px 10px}.cue{display:none}
+}
+.menu,.pager{display:none}
+/* phones: one menu button, 44px+ touch targets, text off the pyramid, the ticker as a 2×2 grid */
+@media (max-width:600px){
+nav{top:14px;left:16px;right:16px}
+.links{display:none}
+.menu{display:flex;align-items:center;gap:8px;font:600 14px Manrope;padding:0 18px;height:44px;border-radius:999px;background:rgba(4,8,18,.72)}
+.menu i{display:grid;gap:4px}.menu i::before,.menu i::after{content:"";width:16px;height:2px;background:var(--ink);border-radius:2px}
+.enter{display:flex;align-items:center;height:44px;box-sizing:border-box;padding:0 18px;font-size:14px}
+nav .enter{margin-left:auto;margin-right:8px}
+.hero{left:16px;right:16px;bottom:186px;max-width:none}
+.eyebrow{font-size:11px}
+h1{font-size:54px;margin-top:12px}
+.sub{font-size:16px;margin-top:14px}
+.ctas{margin-top:20px;gap:18px}.ctas .enter{height:48px}
+.skip{font-size:15px;padding:12px 0 2px}
+.ticker{left:16px;right:16px;bottom:16px;grid-template-columns:1fr 1fr;row-gap:14px;padding:16px 18px}
+.ticker div:nth-child(3){border-left:0;padding-left:0}
+.ticker strong{font-size:20px}
+.label{left:16px;top:80px;font-size:11px;padding:12px 16px;border-radius:14px;background:rgba(4,8,18,.78)}.label b{font-size:24px}
+.pager{display:flex;position:absolute;left:16px;right:16px;bottom:24px;align-items:center;justify-content:space-between}
+.pager .btn{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font:600 20px Manrope}
+.pager .mid{display:grid;justify-items:center;gap:8px;font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}
+.dots{display:flex;gap:6px}.dots b{width:6px;height:6px;border-radius:50%;background:rgba(180,195,212,.35)}.dots b.on{background:var(--ink);width:18px;border-radius:3px}
+}
 </style></head><body>
 <div class="ui" id="ui"></div>
 <script type="module">
@@ -106,7 +157,7 @@ function holoTex(kind, seed) {
   const line = "rgba(150,205,255,.95)";
   g.strokeStyle = line; g.lineWidth = 3; g.strokeRect(6, 6, 628, 388);          // frame
   g.lineWidth = 6; g.beginPath(); g.moveTo(6, 40); g.lineTo(6, 6); g.lineTo(46, 6); g.moveTo(594, 394); g.lineTo(634, 394); g.lineTo(634, 354); g.stroke(); // corner ticks
-  g.font = '500 20px "IBM Plex Mono"'; g.fillStyle = "rgba(170,215,255,.95)";
+  g.font = '500 28px "IBM Plex Mono"'; g.fillStyle = "rgba(170,215,255,.95)";
   if (kind === "candles") {
     g.fillText("BTC · 1m", 28, 40);
     g.strokeStyle = "rgba(120,170,230,.45)"; g.lineWidth = 1.5; for (let y = 90; y < 380; y += 58) { g.beginPath(); g.moveTo(24, y); g.lineTo(616, y); g.stroke(); }
@@ -159,15 +210,9 @@ function tube(a, b, r, ca, cb, k) { // a lit tube from a to b, its colour runnin
   return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(k, k, k) }));
 }
 function rod(a, b, r, m) { const d = b.clone().sub(a), c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 16), m); c.position.copy(a).add(b).multiplyScalar(0.5); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return c; }
-function burstTexture() {
-  const c = document.createElement("canvas"); c.width = c.height = 1024; const g = c.getContext("2d"); rnd = 31;
-  g.globalCompositeOperation = "lighter";
-  for (let i = 0; i < 14; i++) { const a = -Math.PI / 2 + (rand() - 0.5) * Math.PI * 1.25, len = 160 + rand() * 300, w = 0.02 + rand() * 0.035;
-    const gr = g.createLinearGradient(512, 512, 512 + Math.cos(a) * len, 512 + Math.sin(a) * len); gr.addColorStop(0, "rgba(220,238,255,.32)"); gr.addColorStop(1, "rgba(120,180,255,0)");
-    g.fillStyle = gr; g.beginPath(); g.moveTo(512, 512); g.lineTo(512 + Math.cos(a - w) * len, 512 + Math.sin(a - w) * len); g.lineTo(512 + Math.cos(a + w) * len, 512 + Math.sin(a + w) * len); g.closePath(); g.fill(); }
-  const h = g.createLinearGradient(0, 0, 1024, 0); h.addColorStop(0, "rgba(120,180,255,0)"); h.addColorStop(0.5, "rgba(200,228,255,.55)"); h.addColorStop(1, "rgba(120,180,255,0)");
-  g.fillStyle = h; g.globalAlpha = 0.35; g.fillRect(0, 510, 1024, 4); g.globalAlpha = 1; // a faint horizontal flare
-  const r = g.createRadialGradient(512, 512, 0, 512, 512, 120); r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(0.3, "rgba(200,228,255,.35)"); r.addColorStop(1, "rgba(120,180,255,0)");
+function burstTexture() { // a plain soft glow: no rays or flare, so nothing reads as a star shape
+  const c = document.createElement("canvas"); c.width = c.height = 1024; const g = c.getContext("2d");
+  const r = g.createRadialGradient(512, 512, 0, 512, 512, 512); r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(0.06, "rgba(220,238,255,.5)"); r.addColorStop(0.18, "rgba(160,205,255,.12)"); r.addColorStop(0.45, "rgba(120,180,255,.02)"); r.addColorStop(0.7, "rgba(120,180,255,0)");
   g.fillStyle = r; g.fillRect(0, 0, 1024, 1024);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
@@ -199,7 +244,7 @@ function build(parent, mirror) {
   corners.forEach((c, i) => { const s = capH / Hh, a = c.clone().multiplyScalar(s).setY(Hh - capH), b = corners[(i + 1) % 3].clone().multiplyScalar(s).setY(Hh - capH); g.add(rod(a, b, 0.014, gold)); });
   const heart = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), glow(0xe6f4ff, 7)); heart.position.y = Hh - capH * 0.62; g.add(heart);
   const burst = new THREE.Sprite(new THREE.SpriteMaterial({ map: burstTex, color: new THREE.Color(1.3, 1.45, 1.8), blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, fog: false }));
-  burst.position.y = Hh - capH * 0.62; burst.scale.setScalar(mirror ? 2.4 : 3.2); burst.renderOrder = mirror ? 1 : 5; g.add(burst);
+  burst.position.y = Hh - capH * 0.62; burst.scale.setScalar(mirror ? 2.4 : 3.2); burst.renderOrder = mirror ? 1 : 5; burst.userData.mirrorGlow = mirror; g.add(burst);
   // the laser out of the top, the beams inside, and a tight core
   g.add(rod(apex, apex.clone().setY(60), 0.012, glow(0xd8ecff, 2.6)));
   g.add(rod(new THREE.Vector3(0, 0.4, 0), new THREE.Vector3(0, Hh - capH * 0.62, 0), 0.02, glow(0xffc47a, 2.0)));
@@ -211,14 +256,11 @@ function build(parent, mirror) {
   // layered hologram screens on three levels round the beams
   if (!mirror) {
     rnd = 99; let k = 0;
-    [[1.0, 5, 1.45, 0.62], [1.85, 3, 1.05, 0.5], [2.6, 2, 0.7, 0.38]].forEach(([y, n, rr, w]) => {
-      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + y, kind = holoKinds[k++ % holoKinds.length];
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.6, w), holoMat(holoTex(kind, 11 + k * 7)));
-        m.position.set(Math.sin(a) * rr, y + (rand() - 0.5) * 0.18, Math.cos(a) * rr); m.userData.face = 1; g.add(m);
-        // a second, fainter layer just behind, for depth
-        if (y < 2) {
-        const back = new THREE.Mesh(m.geometry, holoMat(holoTex(holoKinds[(k + 5) % holoKinds.length], 5 + k * 13), 0.7));
-        back.position.copy(m.position).multiplyScalar(0.82).setY(m.position.y + 0.12); back.userData.face = 1; back.scale.setScalar(0.85); g.add(back); }
+    // fewer, bigger screens, one layer, so each reads as one thing
+    [[1.05, 3, 1.5, 0.9, ["candles", "gauge", "code"]], [2.15, 2, 0.95, 0.66, ["line", "maths"]]].forEach(([y, n, rr, w, kinds]) => {
+      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + y + 0.5;
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.6, w), holoMat(holoTex(kinds[i], 11 + k++ * 7)));
+        m.position.set(Math.sin(a) * rr, y, Math.cos(a) * rr); m.userData.face = 1; g.add(m);
       }
     });
   }
@@ -237,7 +279,7 @@ function comet(radius, tiltX, tiltZ, start, arc, color, n = 60, size = 0.04) {
     m.position.set(Math.cos(t) * radius, 0, Math.sin(t) * radius); g.add(m); }
 }
 comet(5.6, 0.32, -0.12, 0.6, 1.4, COL.amber);
-comet(6.8, -0.18, 0.22, 2.9, 1.2, COL.blue, 55, 0.036);
+comet(6.8, -0.18, 0.22, 2.2, 1.0, COL.blue, 55, 0.036);
 comet(4.9, 0.55, 0.3, 4.6, 1.0, COL.violet, 45, 0.03);
 { rnd = 5; const n = 260, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const y = rand() * 3.6, r = (0.2 + rand() * 0.8) * R * 0.5 * (1 - y / Hh), a = rand() * Math.PI * 2; p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = y; p[i * 3 + 2] = Math.sin(a) * r; }
   const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(p, 3));
@@ -258,18 +300,18 @@ corners.forEach((c, i) => { const l = new THREE.PointLight(cornerCol[i], 1.6, 4,
 // ---- the Grand Hall: frosted blue glass screens in thin chrome, one big number each, holograms layered behind ----
 function bigTex(kind) {
   const c = document.createElement("canvas"); c.width = 1200; c.height = 760; const g = c.getContext("2d");
-  const mono = '500 30px "IBM Plex Mono", monospace', label = (t, x, y, col = "#93A4B8") => { g.font = mono; g.fillStyle = col; g.fillText(t, x, y); };
+  const mono = '500 40px "IBM Plex Mono", monospace', label = (t, x, y, col = "#93A4B8") => { g.font = mono; g.fillStyle = col; g.fillText(t, x, y); };
   if (kind === "round") {
     label("THIS ROUND · BTC UP OR DOWN", 70, 100);
     g.font = '700 230px "Syncopate", sans-serif'; g.fillStyle = "#F4F8FC"; g.fillText("2:39", 60, 380);
     g.lineWidth = 10; g.strokeStyle = "rgba(170,205,255,.15)"; g.beginPath(); g.moveTo(70, 470); g.lineTo(1130, 470); g.stroke();
     g.strokeStyle = "#8ec2ff"; g.beginPath(); g.moveTo(70, 470); g.lineTo(70 + 1060 * 0.82, 470); g.stroke();
-    label("41 calls sealed until the close", 70, 560, "#C9D6E4"); label("Example data", 70, 680, "#5f6f84");
+    label("41 calls sealed until the close", 70, 570, "#C9D6E4"); label("Example data", 70, 680, "#9AABBF");
   } else if (kind === "market") {
     label("KALSHI · THE CROWD SAYS", 70, 100);
     g.font = '700 250px "Syncopate", sans-serif'; g.fillStyle = "#3EE6A0"; g.fillText("62%", 60, 390);
     g.font = '500 54px Manrope, sans-serif'; g.fillStyle = "#F4F8FC"; g.fillText("chance Bitcoin closes up", 70, 480);
-    label("Up 62¢   Down 38¢", 70, 580, "#C9D6E4"); label("Example data", 70, 680, "#5f6f84");
+    label("Up 62¢   Down 38¢", 70, 580, "#C9D6E4"); label("Example data", 70, 680, "#9AABBF");
   } else {
     label("DAILY TOURNAMENT · TOP 3", 70, 100);
     [["Odin", "bot", "+18.4", "#4D9BFF"], ["Vega", "caller", "+12.1", "#FFB04D"], ["Halo-7", "script", "+9.6", "#B48CFF"]].forEach(([n, k, v, col], i) => { const y = 230 + i * 150;
@@ -277,7 +319,7 @@ function bigTex(kind) {
       g.font = '600 76px Manrope, sans-serif'; g.fillStyle = "#F4F8FC"; g.fillText(n, 135, y);
       g.font = mono; g.fillStyle = "#93A4B8"; g.fillText(k, 520, y - 6);
       g.font = '600 76px Manrope, sans-serif'; g.fillStyle = "#3EE6A0"; g.textAlign = "right"; g.fillText(v, 1130, y); g.textAlign = "left"; });
-    label("Paper profit, units · Example data", 70, 690, "#5f6f84");
+    label("Paper profit, units · Example data", 70, 690, "#9AABBF");
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
@@ -296,14 +338,49 @@ if (shot === "hall") {
   });
   // holograms layered behind and above, and the amber and violet beams
   const hmat = tex => new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.15, 1.15, 1.15), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-  rnd = 3; const spots = [[-5.2, 4.6, -11], [-2.6, 5.2, -12.5], [0.4, 4.9, -11.8], [3.2, 5.3, -12.4], [5.6, 4.5, -11.2], [-6.4, 2.6, -13.2], [6.8, 2.8, -13.4], [-3.6, 6.4, -14], [2.2, 6.6, -14.4]];
-  spots.forEach((p, i) => { const s = 1.1 + rand() * 0.6, m = new THREE.Mesh(new THREE.PlaneGeometry(s * 1.6, s), hmat(holoTex(holoKinds[i % holoKinds.length], 40 + i * 9)));
+  rnd = 3; const spots = [[-4.6, 4.9, -12], [-1.4, 5.3, -12.8], [2.0, 5.2, -12.6], [5.0, 4.8, -12]];
+  spots.forEach((p, i) => { const s = 1.7, m = new THREE.Mesh(new THREE.PlaneGeometry(s * 1.6, s), hmat(holoTex(holoKinds[i % holoKinds.length], 40 + i * 9)));
     m.position.set(...p); m.rotation.y = -p[0] * 0.05; m.material.opacity = 0.55 + rand() * 0.35; hall.add(m); });
   hall.add(rod(new THREE.Vector3(-0.35, 0, -16), new THREE.Vector3(-0.35, 40, -16), 0.03, glow(0xffb45a, 2.4)));
   hall.add(rod(new THREE.Vector3(0.25, 0, -16.2), new THREE.Vector3(0.25, 40, -16.2), 0.016, glow(COL.violet, 2.4)));
   const ring = new THREE.Mesh(new THREE.TorusGeometry(9, 0.02, 8, 240), glow(0x6fa8ff, 2)); ring.rotation.x = Math.PI / 2; ring.position.set(0, 0.03, -7.4); hall.add(ring);
 }
 
+
+// ---- a profile: the entrant's generated emblem in engraved line art, in its kind's colour, in smoky light ----
+function emblemTex() {
+  const c = document.createElement("canvas"); c.width = c.height = 2048; const g = c.getContext("2d"), C = 1024; rnd = 23;
+  const ink = a => `rgba(120,185,255,${a})`;
+  g.translate(C, C);
+  const poly = (n, r, rot = 0) => { g.beginPath(); for (let i = 0; i <= n; i++) { const t = rot + i / n * Math.PI * 2; g[i ? "lineTo" : "moveTo"](Math.cos(t) * r, Math.sin(t) * r); } g.stroke(); };
+  // engraved rings of fine hatching
+  for (let ring = 0; ring < 3; ring++) { const r0 = 560 + ring * 150, r1 = r0 + 90;
+    for (let i = 0; i < 360; i++) { const t = i / 360 * Math.PI * 2 + ring * 0.01; g.strokeStyle = ink(0.16 + 0.18 * rand()); g.lineWidth = 1.4; g.beginPath(); g.moveTo(Math.cos(t) * r0, Math.sin(t) * r0); g.lineTo(Math.cos(t) * r1, Math.sin(t) * r1); g.stroke(); }
+    g.strokeStyle = ink(0.7); g.lineWidth = 2.5; g.beginPath(); g.arc(0, 0, r0, 0, 7); g.stroke(); g.beginPath(); g.arc(0, 0, r1, 0, 7); g.stroke(); }
+  // the Bots mark: nested hexagons and a triangle, drawn as engraved line
+  g.lineWidth = 3; for (let k = 0; k < 7; k++) { g.strokeStyle = ink(0.95 - k * 0.1); poly(6, 520 - k * 46, Math.PI / 6); }
+  g.lineWidth = 4; g.strokeStyle = ink(1); poly(3, 380, -Math.PI / 2); g.lineWidth = 2; g.strokeStyle = ink(0.6); poly(3, 330, -Math.PI / 2); // one triangle, D3MON's, never a star
+  for (let i = 0; i < 6; i++) { const t = i / 6 * Math.PI * 2 + Math.PI / 6; g.strokeStyle = ink(0.5); g.lineWidth = 2; g.beginPath(); g.moveTo(Math.cos(t) * 120, Math.sin(t) * 120); g.lineTo(Math.cos(t) * 520, Math.sin(t) * 520); g.stroke(); }
+  for (let r = 40; r < 200; r += 18) { g.strokeStyle = ink(0.35 + r / 400); g.lineWidth = 2; g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); }
+  const core = g.createRadialGradient(0, 0, 0, 0, 0, 150); core.addColorStop(0, "rgba(235,246,255,1)"); core.addColorStop(0.35, "rgba(120,185,255,.6)"); core.addColorStop(1, "rgba(60,120,255,0)");
+  g.fillStyle = core; g.beginPath(); g.arc(0, 0, 150, 0, 7); g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+function smokeTex() { const c = document.createElement("canvas"); c.width = c.height = 512; const g = c.getContext("2d"); rnd = 41;
+  for (let i = 0; i < 70; i++) { const x = 256 + (rand() - 0.5) * 300, y = 256 + (rand() - 0.5) * 300, r = 40 + rand() * 120, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, "rgba(255,255,255,.05)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 512, 512); }
+  return new THREE.CanvasTexture(c); }
+const prof = new THREE.Group(); scene.add(prof); prof.visible = shot === "profile";
+if (shot === "profile") {
+  const em = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.MeshBasicMaterial({ map: emblemTex(), color: new THREE.Color(0.95, 0.95, 0.95), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  em.position.set(0, 2.7, -2); prof.add(em);
+  const st = smokeTex(); rnd = 9;
+  for (let i = 0; i < 14; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: st, color: new THREE.Color(i % 3 ? 0x6fa8ff : 0x9aa9c0).multiplyScalar(0.5), transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    m.position.set((rand() - 0.5) * 7, 0.6 + rand() * 4, -3 + rand() * 2.5); m.rotation.z = rand() * 6; prof.add(m); }
+  // the emblem's pieces drifting in as it assembles (the scroll would play this)
+  const n = 500, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = rand() * 6.283, r = 2.6 + rand() * 2.2; p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = 2.7 + Math.sin(a) * r * 0.8; p[i * 3 + 2] = -2 + (rand() - 0.5); }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute("position", new THREE.BufferAttribute(p, 3));
+  prof.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: new THREE.Color(1.6, 2.2, 3.2), size: 0.02, transparent: true, opacity: 0.8, depthWrite: false })));
+}
 // ---- shots ----
 const shots = {
   hero: { pos: [3.4, 2.4, 14.5], look: [1.6, 2.5, 0], world: [4.4, 0, 0] },
@@ -311,9 +388,14 @@ const shots = {
   crystal: { pos: [2.6, 3.1, 6.6], look: [0, 3.7, 0], world: [0, 0, 0] },
   hall: { pos: [0, 2.5, 8.6], look: [0, 2.6, -3], world: [6, 0, -26] },
 };
+shots.profile = { pos: [-2.6, 2.7, 9], look: [-2.6, 2.7, 0], world: [0, 0, 0] };
+const phone = W / H < 0.8; // a phone held upright: the pyramid centred above the text; the hall shows one screen at a time
+if (phone) { shots.hero = { pos: [0, 2.2, 23], look: [0, -1.6, 0], world: [0, 0, 0] }; shots.hall = { pos: [0, 2.6, 11.5], look: [0, 2.0, -1.2], world: [6, 0, -26] }; shots.profile = { pos: [0, 2.7, 13], look: [0, 0.4, 0], world: [0, 0, 0] }; }
+if (phone) world.traverse(o => { if (o.userData.mirrorGlow) o.visible = false; }); // its reflection would sit behind the text
 const s = shots[shot]; camera.position.set(...s.pos); camera.lookAt(...s.look);
 world.position.set(...s.world); floor.position.x = s.world[0]; floor.position.z = s.world[2];
 if (shot === "hall") { floor.position.set(0, 0, -7); floor.scale.setScalar(1.3); world.visible = false; }
+if (shot === "profile") { world.visible = false; floor.position.set(0, 0, -2); }
 scene.updateMatrixWorld(true);
 world.traverse(o => { if (o.userData.face) { const p = o.getWorldPosition(new THREE.Vector3()), d = camera.position.clone().sub(p).setY(0); o.lookAt(p.clone().add(d)); } });
 
@@ -327,13 +409,23 @@ composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, verte
 
 // ---- interface ----
 const ui = document.getElementById("ui");
-const nav = `<nav><div class="mark">D<i>3</i>MON</div><div class="links glass"><span class="on">World</span><span>Grand Hall</span><span>Tournaments</span><span>VIP</span><span>Build a bot</span></div><div class="enter">Enter the Hall</div></nav>`;
-if (shot === "hero") ui.innerHTML = nav + `<div class="hero"><div class="eyebrow"><b></b>LIVE · ROUND 12:30–12:45 · BITCOIN UP OR DOWN</div><h1>D<i>3</i>MON</h1><div class="sub"><b>The live trade network.</b> Callers, bots and chart scripts call Bitcoin every fifteen minutes. Kalshi keeps the score.</div><div class="ctas"><div class="enter">Enter the Grand Hall</div></div></div>
+const nav = `<nav><div class="mark">D<i>3</i>MON</div><div class="links glass"><span class="on">World</span><span>Grand Hall</span><span>Tournaments</span><span>VIP</span><span>Build a bot</span></div><div class="enter">Join D3MON</div><div class="menu glass"><i></i>Menu</div></nav>`;
+if (shot === "hero") ui.innerHTML = nav + `<div class="hero"><div class="eyebrow"><b></b>LIVE · ROUND 12:30–12:45 · BITCOIN UP OR DOWN</div><h1>D<i>3</i>MON</h1><div class="sub"><b>The live trade network.</b> Callers, bots and chart scripts call Bitcoin every fifteen minutes. Kalshi keeps the score.</div><div class="ctas"><div class="enter">Enter the Grand Hall</div><div class="skip">Skip the intro →</div></div></div>
   <div class="ticker glass"><div><small>ROUND CLOSES IN</small><strong class="blu">02:39</strong></div><div><small>CALLS SEALED</small><strong>41</strong></div><div><small>THE CROWD SAYS UP</small><strong class="up">62%</strong></div><div><small>LEADER TODAY</small><strong>Odin <span class="up">+18.4</span></strong></div></div>`;
 if (shot === "close") ui.innerHTML = nav + `<div class="tag glass" style="left:64%;top:66%;color:#FFB04D"><small>CALLERS</small><strong>128 live this round</strong></div><div class="tag glass" style="left:18%;top:58%;color:#4D9BFF"><small>BOTS</small><strong>Odin leads · +18.4</strong></div><div class="tag glass" style="left:70%;top:30%;color:#B48CFF"><small>CHART SCRIPTS</small><strong>Halo-7 · 9 of 12 right</strong></div>`;
 if (shot === "crystal") ui.innerHTML = nav + `<div class="label">THE CRYSTAL TIP<b>VIP Room</b></div>`;
-if (shot === "hall") ui.innerHTML = nav + `<div class="label">THE GRAND HALL<b>Live floor</b></div>`;
+if (shot === "hall") ui.innerHTML = nav + `<div class="label">THE GRAND HALL<b>Live floor</b></div><div class="pager"><div class="btn glass">‹</div><div class="mid">THIS ROUND · 2 OF 10<div class="dots"><b></b><b class="on"></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div></div><div class="btn glass">›</div></div>`;
 
+
+if (shot === "profile") ui.innerHTML = nav + `<div class="frame"><i></i><i></i><i></i><i></i></div>
+  <div class="hud" style="left:56px;top:122px">BOT · D3MON ENTRANT<br><b>ODIN</b></div>
+  <div class="hud" style="right:56px;bottom:56px;text-align:right">IN TOURNAMENTS <b>· JOINED</b><br>THIS ROUND <b>· UP @62¢</b><br>ACTIVE SINCE <b>· OCT 2026</b></div>
+  <div class="pf"><div class="kind"><b></b>BOT · LIVE THIS ROUND</div><h1>I am<em>Odin.</em></h1>
+  <div class="by">Made by <b>nova_labs</b>. <i>Calls every round, priced at Kalshi's own price.</i></div>
+  <div class="stats"><div><small>CORRECT</small><strong>31 of 48</strong></div><div><small>ACCURACY</small><strong>65%</strong></div><div><small>PAPER PER $1</small><strong class="up">+$4.12</strong></div><div><small>AVG LEAD</small><strong>6m 12s</strong></div></div>
+  <div class="ver">✓ VERIFIED BY KALSHI <span>· shown because the owner made these public · not financial advice</span></div></div>
+  <div class="quote glass"><p>"Trend first, then the crowd. Never the other way round."</p><small>ODIN'S TAGLINE · EXAMPLE</small></div>
+  <div class="cue">SCROLL · STATS · RECENT CALLS · STREAM · DISCORD ↓</div>`;
 for (let i = 0; i < 3; i++) composer.render();
 window.__ready = true;
 </script></body></html>

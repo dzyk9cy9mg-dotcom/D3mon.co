@@ -6,7 +6,8 @@ Concept stills for the 3D redesign, made before building anything. **Nothing her
 
 - The owner reviewed the first concept (the review artifact at https://claude.ai/artifact/VgX5YvbeiyVmYZBTw42N8E: stills, the full three.js source and a 6-second glide) and asked for these stills, blending it with their references.
 - **The four stills are in [`stills/`](stills/):** `v2-hero.jpg` (the front page), `v2-close.jpg` (through the glass), `v2-crystal.jpg` (the crystal tip, the VIP Room) and `v2-hall.jpg` (the Grand Hall's screens). They were shown to the owner, who hasn't approved them or said "go" yet.
-- **Next:** the owner's feedback on the stills, then the build plan below, one step and one pull request at a time.
+- **Round 2 (2026-10-19), `stills/v3-*.jpg`:** after a design check with the UI UX Pro Max skill (`.claude/skills/ui-ux-pro-max/`), the owner agreed: the crystal's light is a plain soft glow (no rays, nothing star-like); fewer, bigger screens inside the pyramid (5, one layer) and in the hall (4 behind); bigger labels on every screen; a darker backing behind the menu so the beam can't wash it out; no comet trail across the D3MON title; the top-right button is **Join D3MON** and the front page's one button is **Enter the Grand Hall**, with a **Skip the intro →** link beside it. The v2 stills are kept for comparison.
+- **Next:** the owner's feedback on the v3 stills, then the build plan below, one step and one pull request at a time.
 
 ## What the owner wants in the look
 
@@ -62,7 +63,7 @@ node docs/world/concept-v2/render.mjs <out folder> hero close crystal hall
 
 One step at a time, each its own pull request:
 
-1. Film-style lighting.
+1. Film-style lighting. **Built on the branch (2026-10-19), Full quality only:** studio reflections on clear glass faces and a colour grade (vignette, a touch of contrast, fine grain), in `public/js/world3d.js`. Lite, phones and 2D are unchanged. A glow pass was tried and dropped: with this scene's many near-white lines it hazed the whole sky. Before and after: `stills/step1-before-after-*.jpg` (left before, right after). To see it: Quality → Full on `/world`.
 2. A hero that hits: text off the pyramid, one button.
 3. Fix the crystal interior shot.
 4. Screens readable across the room.
