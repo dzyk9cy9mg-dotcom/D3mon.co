@@ -16,3 +16,4 @@ artifact-original/
 
 # The concept stills' fonts, fetched by docs/world/concept-v2/fetch-fonts.sh
 docs/world/concept-v2/fonts/
+__pycache__/
