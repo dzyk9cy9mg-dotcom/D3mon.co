@@ -75,6 +75,7 @@
           slowFps = fps; auto.level = "2d"; renderQuality(); world3d();
         } });
       if (!scene3d) { auto.level = "2d"; renderQuality(); }
+      if (new URLSearchParams(location.search).has("fps")) window.__w3d = scene3d; // for testing the scene by hand
       push3d();
     } catch (e) { console.error("3D world:", e); auto.level = "2d"; renderQuality(); }
   }

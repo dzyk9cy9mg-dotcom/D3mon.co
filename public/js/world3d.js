@@ -165,6 +165,10 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     node.position.copy(end); node.scale.setScalar(0.24);
     hall.add(line, node); spokes.push(line); nodes.push(node);
   }
+  // The wave a round's result sends across the floor: green for up, red for down.
+  const wave = new THREE.Mesh(new THREE.RingGeometry(0.7, 1, 128), new THREE.MeshBasicMaterial({ color: 0x37e08a, transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+  wave.rotation.x = -Math.PI / 2; wave.position.y = 0.04;
+  scene.add(wave); // it runs out of the pyramid and across the floor
   // The golden beam from the core up to the capstone.
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 8, 1, true), edgeMat(C.callers, 0.95));
   const beamGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1, 12, 1, true), edgeMat(C.callers, 0.18));
@@ -392,8 +396,24 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const liveScreens = [roundScreen, standingsScreen, lastScreen, scriptsScreen, menuScreen, spotA, spotB, eventScreen, marketScreen, hourlyScreen, callersScreen];
   try { document.fonts?.ready.then(() => liveScreens.forEach(x => x.redraw())); } catch (e) {}
   const GREY = new THREE.Color(0x2a3a4c), WHITE = new THREE.Color(0xffffff), GREEN = new THREE.Color(0x37e08a), RED = new THREE.Color(0xff4d5e);
+  // The hall reacts to what really happens (owner, 2026-10-19): every new call flies in as a comet in its
+  // entrant's colour to its corner of the triangle, and when a round's result arrives a wave of green (up) or
+  // red (down) runs out across the floor and up the beam.
+  const seenCalls = new Set(), callQueue = [];
+  let firstData = true, resultRound = null, resultPending = null;
   function hallData(d) {
     Object.assign(live, d);
+    for (const c of live.calls?.calls || []) {
+      if (seenCalls.has(c.id)) continue;
+      seenCalls.add(c.id);
+      if (!firstData || callQueue.length < 3) callQueue.push({ kind: c.kind, sealed: !!c.sealed }); // on arrival, the last few calls fly in too
+    }
+    const p = live.prev;
+    if (p?.result && p.round !== resultRound) {
+      if (!firstData) resultPending = p.result; // a result that was already in when the page opened isn't replayed
+      resultRound = p.round;
+    }
+    firstData = false;
     liveScreens.forEach(x => x.redraw());
     // The ring of ticks is the round clock: the last 72 rounds (18 hours), green up and red down, the round now in white.
     const cur = Math.floor(live.serverNow() / Q) * Q, by = new Map((live.rounds || []).map(r => [r.round, r.result]));
@@ -572,23 +592,24 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // corner to the centre, climbs the golden beam through the capstone and shoots out along the laser into
   // the sky, where it sends a pulse that lights up the dark (owner, 2026-10-18). It takes its corner's colour.
   const BASE_Y = 0.15; // the floor line from each corner to the centre, where the core sits
-  function respawnComet(c, time) {
-    if (Math.random() < 0.4) { // some just circle the pyramid on a slow, tilted orbit and fade away
+  function respawnComet(c, time, call = null) {
+    if (!call && Math.random() < 0.4) { // some just circle the pyramid on a slow, tilted orbit and fade away
       const tilt = (Math.random() - 0.5) * 0.9, spin = Math.random() * Math.PI * 2;
       const u = new THREE.Vector3(Math.cos(spin), 0, Math.sin(spin)), v = new THREE.Vector3(-Math.sin(spin), 0, Math.cos(spin)).applyAxisAngle(u, tilt);
-      Object.assign(c, { orbit: true, born: time, life: 5 + Math.random() * 5, u, v, r: 4.5 + Math.random() * 5, y: 1 + Math.random() * 4, a0: Math.random() * Math.PI * 2,
+      Object.assign(c, { orbit: true, live: false, born: time, life: 5 + Math.random() * 5, u, v, r: 4.5 + Math.random() * 5, y: 1 + Math.random() * 4, a0: Math.random() * Math.PI * 2,
         speed: (Math.random() < 0.5 ? -1 : 1) * (0.22 + Math.random() * 0.25), start: true, fired: true, size: 0.05 + Math.random() ** 2 * 0.25, color: new THREE.Color(pick()) });
       return;
     }
     c.orbit = false;
     // It circles the pyramid on a spiral, round and in, and lands on its corner (the circling the owner liked).
-    const k = Math.floor(Math.random() * 3), corner = CORNERS[keys[k]].clone().setY(0.08);
+    const k = call ? Math.max(0, keys.indexOf(call.kind === "caller" ? "callers" : call.kind === "script" ? "scripts" : "bots")) : Math.floor(Math.random() * 3);
+    const corner = CORNERS[keys[k]].clone().setY(0.08);
     const aK = Math.atan2(corner.z, corner.x), dir = Math.random() < 0.5 ? -1 : 1, turns = 0.6 + Math.random() * 1.2;
     const start = { a: aK - dir * turns * Math.PI * 2, r: 5 + Math.random() * 7, y: 0.8 + Math.random() * 4.5 };
     Object.assign(c, {
-      born: time, tIn: 3.5 + Math.random() * 3.5, aK, tBase: 0.9 + Math.random() * 0.6, vUp: 2.2 + Math.random() * 1.8, fired: false,
-      start, corner, size: 0.06 + Math.random() ** 2 * 0.34,
-      color: new THREE.Color(Math.random() < 0.25 ? 0xffffff : C[keys[k]]),
+      born: time, tIn: call ? 2.4 + Math.random() : 3.5 + Math.random() * 3.5, aK, tBase: 0.9 + Math.random() * 0.6, vUp: 2.2 + Math.random() * 1.8, fired: false,
+      start, corner, size: call ? 0.34 : 0.06 + Math.random() ** 2 * 0.34, live: !!call, // a real call: bigger and quicker
+      color: new THREE.Color(call ? (call.sealed ? 0xffffff : C[keys[k]]) : Math.random() < 0.25 ? 0xffffff : C[keys[k]]),
     });
   }
   const SKY = 40; // how far the laser reaches into the sky
@@ -610,6 +631,11 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const cTmp = new THREE.Vector3();
   const pulses = new Array(8).fill(-100); let nextPulse = 0; // when each recent pulse left the capstone
   function moveLights(time, apexY) {
+    // A new call takes over the comet furthest from doing anything of its own (an orbiting one, or the oldest).
+    while (callQueue.length && !reducedMotion) {
+      const free = comets.filter(c => !c.live).sort((a, b) => (b.orbit - a.orbit) || (a.born - b.born))[0] || comets[0];
+      respawnComet(free, time, callQueue.shift());
+    }
     for (const m of beams) {
       const d = m.userData, age = time - d.born;
       if (age > d.life) { const first = !d.life; respawnBeam(m, time); if (first) d.born -= Math.random() * d.life; continue; } // the first ones start part-way, so they don't all appear at once
@@ -808,7 +834,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   if (showFps) { fpsEl = document.createElement("div"); fpsEl.className = "w3d-fps"; document.body.append(fpsEl); }
   const tmp = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), clock = new THREE.Clock();
   let raf = 0, last = performance.now(), frames = [], judged = false, started = performance.now(), fpsAcc = 0, fpsN = 0, fpsAt = last;
-  let clockAt = 0, spotAt = 0;
+  let clockAt = 0, spotAt = 0, resultFx = null;
+  const GOLD_C = new THREE.Color(C.callers), FLOOR_C = glow.material.color.clone();
   const minFrame = full ? 0 : 1000 / 40; // Lite caps at about 40 frames a second
   function frame(now) {
     raf = requestAnimationFrame(frame);
@@ -854,6 +881,15 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
     for (const m of [beam, beamGlow, beam2]) { m.scale.set(1, beamLen, 1); m.position.set(m === beam2 ? 0.05 : 0, 0.15 + beamLen / 2, m === beam2 ? 0.03 : 0); }
     beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
+    if (resultPending) { resultFx = { start: time, color: new THREE.Color(resultPending === "up" ? 0x37e08a : 0xff4d5e) }; resultPending = null; for (let i = 0; i < 3; i++) { pulses[nextPulse] = time + i * 0.35; nextPulse = (nextPulse + 1) % pulses.length; } }
+    const fx = resultFx ? clamp01((time - resultFx.start) / 4) : 1;
+    if (fx < 1) {
+      const swell = Math.sin(fx * Math.PI);
+      wave.scale.setScalar(0.2 + fx * 6); wave.material.color.copy(resultFx.color); wave.material.opacity = inside * (1 - fx);
+      glow.material.color.copy(FLOOR_C).lerp(resultFx.color, swell * 0.8);
+      beam.material.color.copy(GOLD_C).lerp(resultFx.color, swell); beamGlow.material.color.copy(GOLD_C).lerp(resultFx.color, swell);
+      beamGlow.material.opacity = inside * (0.18 + 0.6 * swell); beamGlow.scale.x = beamGlow.scale.z = 1 + 1.5 * swell;
+    } else if (resultFx) { resultFx = null; wave.material.opacity = 0; beam.material.color.copy(GOLD_C); beamGlow.material.color.copy(GOLD_C); beamGlow.scale.x = beamGlow.scale.z = 1; glow.material.color.copy(FLOOR_C); }
     marks.children.forEach((m, i) => { if (m.isMesh) m.rotation.y = time * (0.15 + i * 0.03); });
 
     // Particles flow from the corners to the apex and along the base; during the rise they lift too.
