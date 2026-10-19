@@ -330,13 +330,13 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // The hall's chat (GET /hall/chat): the Cortex chat's main floor, the latest messages; a click opens the chat
   // panel to read more and type. The D3MON Discord can be mirrored into it later.
   const chatScreen = liveScreen(0x5865f2, at1(-2), g => {
-    title(g, "D3MON CHAT", "The trading floor · click to chat");
+    title(g, "D3MON CHAT", live.chat?.discord ? "With the D3MON Discord · click to chat" : "The trading floor · click to chat");
     const msgs = (live.chat?.messages || []).slice(-6);
     g.font = `19px ${FONT}`;
     if (!msgs.length) { g.fillStyle = DIM; g.fillText("No messages yet. Say hello.", 22, 120); return; }
     msgs.forEach((m, i) => {
       const y = 104 + i * 34;
-      g.fillStyle = m.as === "bot" ? hex(C.bots) : m.as === "script" ? hex(C.scripts) : hex(C.callers);
+      g.fillStyle = m.from === "discord" ? "#8b93ff" : m.as === "bot" ? hex(C.bots) : m.as === "script" ? hex(C.scripts) : hex(C.callers);
       const name = clip(m.name, 12); g.fillText(name, 22, y);
       g.fillStyle = INK; g.fillText(clip(m.text, 34 - name.length), 32 + g.measureText(name).width, y);
     });
