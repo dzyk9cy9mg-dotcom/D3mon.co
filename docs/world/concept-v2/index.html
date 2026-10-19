@@ -35,6 +35,32 @@ h1 i{font-style:normal;background:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C
 .tag::before{content:"";position:absolute;width:8px;height:8px;border-radius:50%;left:-22px;top:50%;margin-top:-4px;background:currentColor;box-shadow:0 0 14px currentColor}
 .label{position:absolute;left:56px;top:110px;font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.08em}
 .label b{display:block;margin-top:10px;font:700 34px Syncopate;letter-spacing:.08em;color:var(--ink)}
+/* the cinematic profile (inspiration/06's style, never its character): "I am NAME." in the kind's colour, HUD labels, a glass quote card */
+.pf{position:absolute;left:56px;top:50%;transform:translateY(-38%);max-width:560px}
+.pf .kind{font:500 12px "IBM Plex Mono";letter-spacing:.12em;color:#8ec2ff;display:flex;gap:10px;align-items:center}
+.pf .kind b{width:7px;height:7px;border-radius:50%;background:#3EE6A0;box-shadow:0 0 12px #3EE6A0}
+.pf h1{font:700 76px/1.02 Syncopate,sans-serif;letter-spacing:.02em;margin:18px 0 0;background:none;-webkit-background-clip:initial;background-clip:initial;color:#EEF4FA}
+.pf h1 em{font-style:normal;display:block;color:#5AA9FF;text-shadow:0 0 40px rgba(61,139,255,.45)}
+.pf .by{margin-top:18px;font:400 17px/1.5 Manrope;color:#B4C3D4}.pf .by b{color:var(--ink);font-weight:600}.pf .by i{font-style:normal}
+.stats{display:grid;grid-template-columns:repeat(4,auto);gap:26px;margin-top:30px}
+.stats div{display:grid;gap:4px}.stats small{font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}.stats strong{font:600 26px Manrope;font-variant-numeric:tabular-nums}
+.ver{margin-top:14px;font:500 12px "IBM Plex Mono";color:#3EE6A0;letter-spacing:.04em}
+.ver span{color:var(--ink2)}
+.quote{position:absolute;right:56px;top:150px;width:300px;padding:18px 20px;border-radius:16px}
+.quote p{margin:0;font:400 16px/1.5 Manrope;color:var(--ink)}.quote small{display:block;margin-top:10px;font:500 11px "IBM Plex Mono";color:var(--ink2);letter-spacing:.06em}
+.hud{position:absolute;font:500 11px "IBM Plex Mono";color:#8193a8;letter-spacing:.12em;line-height:1.8}
+.hud b{color:#C9D6E4;font-weight:500}
+.frame{position:absolute;inset:96px 28px 28px 28px;pointer-events:none}
+.frame i{position:absolute;width:22px;height:22px;border:1px solid rgba(142,194,255,.45)}
+.frame i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}.frame i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}.frame i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}.frame i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
+.cue{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);font:500 12px "IBM Plex Mono";color:var(--ink2);letter-spacing:.1em}
+@media (max-width:600px){
+.pf{left:16px;right:16px;top:auto;bottom:150px;transform:none}.pf .by i{display:none}.ver{font-size:11px}
+.pf h1{font-size:44px;margin-top:12px}.pf .by{font-size:15px;margin-top:12px}
+.stats{grid-template-columns:1fr 1fr;gap:14px 20px;margin-top:20px}.stats strong{font-size:22px}
+.quote{left:16px;right:16px;top:auto;bottom:24px;width:auto;padding:14px 16px}.quote p{font-size:15px}
+.hud{display:none}.frame{inset:76px 10px 10px 10px}.cue{display:none}
+}
 .menu,.pager{display:none}
 /* phones: one menu button, 44px+ touch targets, text off the pyramid, the ticker as a 2×2 grid */
 @media (max-width:600px){
@@ -320,6 +346,41 @@ if (shot === "hall") {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(9, 0.02, 8, 240), glow(0x6fa8ff, 2)); ring.rotation.x = Math.PI / 2; ring.position.set(0, 0.03, -7.4); hall.add(ring);
 }
 
+
+// ---- a profile: the entrant's generated emblem in engraved line art, in its kind's colour, in smoky light ----
+function emblemTex() {
+  const c = document.createElement("canvas"); c.width = c.height = 2048; const g = c.getContext("2d"), C = 1024; rnd = 23;
+  const ink = a => `rgba(120,185,255,${a})`;
+  g.translate(C, C);
+  const poly = (n, r, rot = 0) => { g.beginPath(); for (let i = 0; i <= n; i++) { const t = rot + i / n * Math.PI * 2; g[i ? "lineTo" : "moveTo"](Math.cos(t) * r, Math.sin(t) * r); } g.stroke(); };
+  // engraved rings of fine hatching
+  for (let ring = 0; ring < 3; ring++) { const r0 = 560 + ring * 150, r1 = r0 + 90;
+    for (let i = 0; i < 360; i++) { const t = i / 360 * Math.PI * 2 + ring * 0.01; g.strokeStyle = ink(0.16 + 0.18 * rand()); g.lineWidth = 1.4; g.beginPath(); g.moveTo(Math.cos(t) * r0, Math.sin(t) * r0); g.lineTo(Math.cos(t) * r1, Math.sin(t) * r1); g.stroke(); }
+    g.strokeStyle = ink(0.7); g.lineWidth = 2.5; g.beginPath(); g.arc(0, 0, r0, 0, 7); g.stroke(); g.beginPath(); g.arc(0, 0, r1, 0, 7); g.stroke(); }
+  // the Bots mark: nested hexagons and a triangle, drawn as engraved line
+  g.lineWidth = 3; for (let k = 0; k < 7; k++) { g.strokeStyle = ink(0.95 - k * 0.1); poly(6, 520 - k * 46, Math.PI / 6); }
+  g.lineWidth = 4; g.strokeStyle = ink(1); poly(3, 380, -Math.PI / 2); g.lineWidth = 2; g.strokeStyle = ink(0.6); poly(3, 330, -Math.PI / 2); // one triangle, D3MON's, never a star
+  for (let i = 0; i < 6; i++) { const t = i / 6 * Math.PI * 2 + Math.PI / 6; g.strokeStyle = ink(0.5); g.lineWidth = 2; g.beginPath(); g.moveTo(Math.cos(t) * 120, Math.sin(t) * 120); g.lineTo(Math.cos(t) * 520, Math.sin(t) * 520); g.stroke(); }
+  for (let r = 40; r < 200; r += 18) { g.strokeStyle = ink(0.35 + r / 400); g.lineWidth = 2; g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); }
+  const core = g.createRadialGradient(0, 0, 0, 0, 0, 150); core.addColorStop(0, "rgba(235,246,255,1)"); core.addColorStop(0.35, "rgba(120,185,255,.6)"); core.addColorStop(1, "rgba(60,120,255,0)");
+  g.fillStyle = core; g.beginPath(); g.arc(0, 0, 150, 0, 7); g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+function smokeTex() { const c = document.createElement("canvas"); c.width = c.height = 512; const g = c.getContext("2d"); rnd = 41;
+  for (let i = 0; i < 70; i++) { const x = 256 + (rand() - 0.5) * 300, y = 256 + (rand() - 0.5) * 300, r = 40 + rand() * 120, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, "rgba(255,255,255,.05)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 512, 512); }
+  return new THREE.CanvasTexture(c); }
+const prof = new THREE.Group(); scene.add(prof); prof.visible = shot === "profile";
+if (shot === "profile") {
+  const em = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.MeshBasicMaterial({ map: emblemTex(), color: new THREE.Color(0.95, 0.95, 0.95), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  em.position.set(0, 2.7, -2); prof.add(em);
+  const st = smokeTex(); rnd = 9;
+  for (let i = 0; i < 14; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: st, color: new THREE.Color(i % 3 ? 0x6fa8ff : 0x9aa9c0).multiplyScalar(0.5), transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    m.position.set((rand() - 0.5) * 7, 0.6 + rand() * 4, -3 + rand() * 2.5); m.rotation.z = rand() * 6; prof.add(m); }
+  // the emblem's pieces drifting in as it assembles (the scroll would play this)
+  const n = 500, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = rand() * 6.283, r = 2.6 + rand() * 2.2; p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = 2.7 + Math.sin(a) * r * 0.8; p[i * 3 + 2] = -2 + (rand() - 0.5); }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute("position", new THREE.BufferAttribute(p, 3));
+  prof.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: new THREE.Color(1.6, 2.2, 3.2), size: 0.02, transparent: true, opacity: 0.8, depthWrite: false })));
+}
 // ---- shots ----
 const shots = {
   hero: { pos: [3.4, 2.4, 14.5], look: [1.6, 2.5, 0], world: [4.4, 0, 0] },
@@ -327,12 +388,14 @@ const shots = {
   crystal: { pos: [2.6, 3.1, 6.6], look: [0, 3.7, 0], world: [0, 0, 0] },
   hall: { pos: [0, 2.5, 8.6], look: [0, 2.6, -3], world: [6, 0, -26] },
 };
+shots.profile = { pos: [-2.6, 2.7, 9], look: [-2.6, 2.7, 0], world: [0, 0, 0] };
 const phone = W / H < 0.8; // a phone held upright: the pyramid centred above the text; the hall shows one screen at a time
-if (phone) { shots.hero = { pos: [0, 2.2, 23], look: [0, -1.6, 0], world: [0, 0, 0] }; shots.hall = { pos: [0, 2.6, 11.5], look: [0, 2.0, -1.2], world: [6, 0, -26] }; }
+if (phone) { shots.hero = { pos: [0, 2.2, 23], look: [0, -1.6, 0], world: [0, 0, 0] }; shots.hall = { pos: [0, 2.6, 11.5], look: [0, 2.0, -1.2], world: [6, 0, -26] }; shots.profile = { pos: [0, 2.7, 13], look: [0, 0.4, 0], world: [0, 0, 0] }; }
 if (phone) world.traverse(o => { if (o.userData.mirrorGlow) o.visible = false; }); // its reflection would sit behind the text
 const s = shots[shot]; camera.position.set(...s.pos); camera.lookAt(...s.look);
 world.position.set(...s.world); floor.position.x = s.world[0]; floor.position.z = s.world[2];
 if (shot === "hall") { floor.position.set(0, 0, -7); floor.scale.setScalar(1.3); world.visible = false; }
+if (shot === "profile") { world.visible = false; floor.position.set(0, 0, -2); }
 scene.updateMatrixWorld(true);
 world.traverse(o => { if (o.userData.face) { const p = o.getWorldPosition(new THREE.Vector3()), d = camera.position.clone().sub(p).setY(0); o.lookAt(p.clone().add(d)); } });
 
@@ -353,6 +416,16 @@ if (shot === "close") ui.innerHTML = nav + `<div class="tag glass" style="left:6
 if (shot === "crystal") ui.innerHTML = nav + `<div class="label">THE CRYSTAL TIP<b>VIP Room</b></div>`;
 if (shot === "hall") ui.innerHTML = nav + `<div class="label">THE GRAND HALL<b>Live floor</b></div><div class="pager"><div class="btn glass">‹</div><div class="mid">THIS ROUND · 2 OF 10<div class="dots"><b></b><b class="on"></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div></div><div class="btn glass">›</div></div>`;
 
+
+if (shot === "profile") ui.innerHTML = nav + `<div class="frame"><i></i><i></i><i></i><i></i></div>
+  <div class="hud" style="left:56px;top:122px">BOT · D3MON ENTRANT<br><b>ODIN</b></div>
+  <div class="hud" style="right:56px;bottom:56px;text-align:right">IN TOURNAMENTS <b>· JOINED</b><br>THIS ROUND <b>· UP @62¢</b><br>ACTIVE SINCE <b>· OCT 2026</b></div>
+  <div class="pf"><div class="kind"><b></b>BOT · LIVE THIS ROUND</div><h1>I am<em>Odin.</em></h1>
+  <div class="by">Made by <b>nova_labs</b>. <i>Calls every round, priced at Kalshi's own price.</i></div>
+  <div class="stats"><div><small>CORRECT</small><strong>31 of 48</strong></div><div><small>ACCURACY</small><strong>65%</strong></div><div><small>PAPER PER $1</small><strong class="up">+$4.12</strong></div><div><small>AVG LEAD</small><strong>6m 12s</strong></div></div>
+  <div class="ver">✓ VERIFIED BY KALSHI <span>· shown because the owner made these public · not financial advice</span></div></div>
+  <div class="quote glass"><p>"Trend first, then the crowd. Never the other way round."</p><small>ODIN'S TAGLINE · EXAMPLE</small></div>
+  <div class="cue">SCROLL · STATS · RECENT CALLS · STREAM · DISCORD ↓</div>`;
 for (let i = 0; i < 3; i++) composer.render();
 window.__ready = true;
 </script></body></html>

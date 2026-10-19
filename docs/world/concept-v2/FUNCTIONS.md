@@ -48,3 +48,19 @@ From the UI UX Pro Max skill's rules, which matched the problems found in the st
 - keyboard and visible focus for every control, and a label on every icon button;
 - reduce motion and the 2D level keep working, and the 3D pauses when the tab is hidden;
 - no sideways scrolling at 375 px.
+
+## The cinematic profile (still `v3-profile`, from `inspiration/06` and BLUEPRINT section 7)
+
+| Part | Data | Status |
+| --- | --- | --- |
+| "I am **Odin.**" in the kind's colour, kind, made by, active since | `GET /entrants/:slug` (name, kind, creatorName, approvedAt) | Built |
+| Live this round, this round's call and price | `GET /rounds/:round/calls` (a caller's stays sealed until the close) | Built |
+| In tournaments: joined | the entrant's tournament status | Built |
+| Correct, accuracy, paper per $1, lead time, "verified by Kalshi" | `GET /entrants/:slug/card` (verified stats); **only stats the owner made Public or Members only**, so a profile can show none | Built; the profile must cope with an empty card |
+| Self-reported stats, clearly labelled | the same card | Built |
+| Recent calls, after their close | `GET /rounds/:round/calls` per round; a per-entrant list would be cheaper | **A new endpoint would help** (ask first) |
+| Discord server | `GET /entrants/:slug` (discordServer) | Built |
+| The emblem | generated in the page in the kind's colour (one triangle, never a star) | New, page only |
+| **The tagline (quote card)** | no field yet | **New, checked field on the entrant API: ask first** |
+| The owner's own hero image, stream and trailer | no field yet | Later server feature: ask first |
+| "Not financial advice" beside paper profit | page | Needed |
