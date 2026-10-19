@@ -979,7 +979,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const hero = shots[2];
     if (w < h) { hero.pos.set(0, 3.0, 15); hero.look.set(0, -2.9, 0); }
     else if (w < 900) { hero.pos.set(0, 2.0, 10.5); hero.look.set(0, 1.0, 0); }
-    else { hero.pos.set(-3.0, 2.0, 10.5); hero.look.set(-3.0, 1.6, 0); }
+    else { hero.pos.set(-3.4, 2.0, 10.5); hero.look.set(-3.4, 1.6, 0); }
     camera.updateProjectionMatrix();
     cometPoints.material.uniforms.uScale.value = h / (2 * Math.tan((camera.fov * Math.PI) / 360)) * renderer.getPixelRatio();
   }

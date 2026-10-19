@@ -227,3 +227,51 @@ body.w3d-pick{cursor:pointer}
 .w-chatmsg{margin:0;padding:0 12px 8px;font:12px var(--mono);color:var(--dn)}
 .w-chatmsg:empty{display:none}
 @media (max-width:600px){.w-chat{left:16px;right:16px;width:auto;top:64px}}
+
+/* ---------- the new look (concept v2 stills, 2026-10-19) ----------
+   The stills' type (Syncopate for the wordmark and headings, Manrope for text, IBM Plex Mono for small labels),
+   the chrome D3MON with a gold 3, rounded glass buttons and panels, and the glass menu pill of places. */
+.w-body{--display:"Syncopate","Orbitron",sans-serif;--body:"Manrope",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
+  --edge:rgba(170,205,255,.18);--glass:linear-gradient(180deg,rgba(150,195,255,.10),rgba(120,160,255,.035)),rgba(6,10,18,.72);
+  --chrome:linear-gradient(180deg,#fff 10%,#C9D6E4 52%,#6F7E92 100%);--gold:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C7333);font-family:var(--body)}
+.w-logo svg{display:none}
+.w-logo{font:700 15px var(--display);letter-spacing:.42em;padding:12px 4px}
+.w-logo span{background:var(--chrome);-webkit-background-clip:text;background-clip:text;color:transparent}
+.w-logo b{background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent}
+.w-places{display:flex;gap:4px;padding:5px;border-radius:999px;background:rgba(4,8,18,.72);border:1px solid var(--edge);box-shadow:inset 0 1px 0 rgba(220,235,255,.14),0 20px 60px rgba(0,0,0,.45);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.w-places a{font:500 14px var(--body);color:#B4C3D4;text-decoration:none;padding:9px 16px;border-radius:999px;white-space:nowrap}
+.w-places a:hover{color:var(--ink)}
+.w-places a.on{color:var(--ink);background:rgba(170,205,255,.10)}
+@media (max-width:1060px){.w-places{display:none}}
+.w-btn,.w-join{min-height:40px;box-sizing:border-box;padding:0 18px;border-radius:999px;font:600 14px var(--body);letter-spacing:.01em;text-transform:none;border:1px solid var(--edge);background:rgba(4,8,18,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.w-btn:hover{border-color:rgba(170,205,255,.4)}
+.w-join{color:#06101e;background:linear-gradient(180deg,#F4F9FF,#B8CCE6);border-color:transparent;box-shadow:inset 0 1px 0 #fff,0 8px 30px rgba(140,190,255,.28)}
+.w-join:hover{filter:brightness(1.06)}
+.w-icon{width:40px;height:40px;border-radius:50%;border:1px solid var(--edge);background:rgba(4,8,18,.72)}
+.w-panel{border-radius:16px;border:1px solid var(--edge);background:var(--glass);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%)}
+.w-panel a{font:500 15px var(--body);border-radius:8px}
+.w-card{border-radius:16px;border-color:var(--edge)}
+.w-eyebrow{font:500 12px var(--mono);letter-spacing:.08em;color:#9fc6ff}
+.w-out h1{font-family:var(--display);font-weight:700;background:var(--chrome);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 2px 18px rgba(5,8,12,.8))}
+.w-out h1 span{background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent}
+.w-lede{font:400 19px/1.55 var(--body)}
+.w-lede b{font-weight:600}
+.w-cta .big{min-height:48px;padding:0 26px;font-size:15px}
+.w-skipintro{font:500 15px var(--body)}
+.w-ticker{border-radius:16px;border:1px solid var(--edge);background:var(--glass);box-shadow:inset 0 1px 0 rgba(220,235,255,.16),0 20px 60px rgba(0,0,0,.45)}
+.w-ticker small{font:500 11px var(--mono);letter-spacing:.08em}
+.w-ticker b{font:600 22px var(--body)}
+.w-ticker #tkLeft{color:#8ec2ff}
+body[data-three="on"] .w-out h1{font-size:clamp(48px,6.4vw,92px);letter-spacing:.06em;text-shadow:none}
+@media (max-width:600px){.w-lede{font-size:16px}.w-ticker b{font-size:20px}body[data-three="on"] .w-out h1{font-size:42px}.w-btn,.w-join{padding:0 14px}}
+body[data-three="on"] .w-hero>*{max-width:470px}
+body[data-three="on"] .w-cta{justify-content:flex-start}
+.w-tabs{gap:4px;border:0}
+.w-tabs button{border-radius:999px;font:600 13px var(--body);letter-spacing:.01em;text-transform:none;border:1px solid var(--edge);background:rgba(4,8,18,.6);color:#B4C3D4}
+.w-tabs button[aria-selected="true"]{color:var(--ink);background:rgba(170,205,255,.14);border-color:rgba(170,205,255,.4)}
+@media (max-width:600px){
+  body[data-three="on"] .w-hero{top:calc(100vh - 524px)}
+  body[data-three="on"] .w-ticker{top:calc(100vh - 196px)}
+  .w-ticker small{letter-spacing:.04em}
+}
+@media (min-width:601px){body[data-three="on"] .w-out h1{font-size:clamp(48px,5.6vw,80px)}body[data-three="on"] .w-hero>*{max-width:440px}}
