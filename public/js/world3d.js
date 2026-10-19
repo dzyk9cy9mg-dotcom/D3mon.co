@@ -217,7 +217,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   sg.dot = sigilLayer('<circle r="4" fill="#DCE7EE"/>', 0.014, sigil, true);
   const spin = (t, s) => (t / s) * Math.PI * 2; // one turn every s seconds
   // ---------- inside, rising up: the 10118 video (owner, 2026-10-18; its booths with people and its stars left out) ----------
-  // Rings of glass chart screens, a glass ramp spiralling up with hexagon bot pods along it, floating code and
+  // Rings of glass chart screens, a glass ramp spiralling up, floating code and
   // maths for the chart scripts near the top, and the people online as little lights in the stands.
   const tower = new THREE.Group();
   scene.add(tower);
@@ -539,18 +539,8 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   const walkers = new THREE.Points(new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(walkPos, 3)),
     add(new THREE.PointsMaterial({ color: 0xe8f0ff, size: 0.05, map: radial(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9));
   tower.add(walkers);
-  // Hexagon pods for the bots, standing on the ramp like stations, each with a glowing heart.
-  const pods = [];
-  for (let i = 0; i < 5; i++) {
-    const t = 0.3 + i * 0.13, P = rampAt(t, 0), pod = new THREE.Group();
-    const hex = new THREE.CylinderGeometry(0.045, 0.045, 0.08, 6);
-    pod.add(new THREE.Mesh(hex, add(new THREE.MeshBasicMaterial({ color: 0x5be3ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.16)));
-    pod.add(new THREE.LineSegments(new THREE.EdgesGeometry(hex), glassLine(0x5be3ff, 0.95)));
-    const heart = new THREE.Sprite(add(new THREE.SpriteMaterial({ map: radial(), color: 0x7fe9ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9));
-    heart.scale.setScalar(0.11); pod.add(heart);
-    pod.position.copy(P).setY(P.y + 0.045);
-    tower.add(pod); pods.push(pod);
-  }
+  // The hexagon pods that stood on the ramp were taken out (owner, 2026-10-19: cleaner); stops for moving
+  // through the site can go here once those places are rooms in the world.
   // The VIP Room is the crystal capstone: the whole tip of the pyramid above the landing, built from the
   // pyramid's own corners so it's perfectly straight, glowing brighter toward the top, with the featured
   // callers as three gold lights inside. No screens up here: it stays clean (owner, 2026-10-18).
@@ -947,7 +937,6 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     for (const [m, o] of fades) m.opacity = o * inside;
     const bob = reducedMotion ? 0 : 1;
     screens.forEach((g, i) => { g.position.y = g.userData.y + Math.sin(time * 0.6 + i) * 0.02 * bob; });
-    pods.forEach((g, i) => { g.rotation.y = time * 0.5 * bob + i; g.children[2].material.opacity = inside * (0.6 + 0.4 * Math.sin(time * 2.4 + i * 1.7)); });
     for (let i = 0; i < walkN; i++) { walkT[i] = (walkT[i] + dt * 0.035 * bob) % 1; walkPos.set(rampAt(walkT[i]).toArray().map((v, k) => (k === 1 ? v + 0.03 : v)), i * 3); }
     walkers.geometry.attributes.position.needsUpdate = true;
     featured.forEach((f, i) => { f.material.opacity = inside * (0.7 + 0.3 * Math.sin(time * 1.8 + i * 2.1)); });
