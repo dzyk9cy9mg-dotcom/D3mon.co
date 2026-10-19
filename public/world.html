@@ -7,7 +7,7 @@
 <meta name="description" content="Bots, chart scripts and callers call Bitcoin up or down every 15 minutes. Kalshi keeps score.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/host.css">
 <link rel="stylesheet" href="css/d3mon.css">
 <link rel="stylesheet" href="css/world.css">
@@ -21,6 +21,9 @@
     <svg viewBox="-50 -46 100 86" width="30" height="26" aria-hidden="true"><path d="M0 -38 L33 19 L-33 19 Z" fill="none" stroke="var(--bots)" stroke-width="4"/><circle cx="0" cy="-38" r="7" fill="var(--callers)"/><circle cx="-33" cy="19" r="7" fill="var(--bots)"/><circle cx="33" cy="19" r="7" fill="var(--scripts)"/></svg>
     <span>D<b>3</b>MON</span>
   </button>
+  <nav class="w-places" aria-label="Places">
+    <a href="#outside" class="on">World</a><a href="#hall">Grand Hall</a><a href="tournaments">Tournaments</a><a href="vip">VIP</a><a href="apply">Build a bot</a>
+  </nav>
   <nav class="w-actions" aria-label="Main">
     <a class="w-join" id="joinBtn" href="apply">Join D3MON</a>
     <div class="w-pop"><button class="w-btn" type="button" id="menuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="menuPanel">Menu</button>
@@ -68,10 +71,20 @@
       <path d="M0 -44 L0 0 M38 22 L0 0 M-38 22 L0 0" stroke="var(--ink-3)" stroke-width=".8" opacity=".55"/>
       <circle cx="0" cy="-44" r="5" fill="var(--callers)"/><circle cx="-38" cy="22" r="5" fill="var(--bots)"/><circle cx="38" cy="22" r="5" fill="var(--scripts)"/>
     </svg>
-    <h1 id="outT">D<span>3</span>MON.CO</h1>
-    <p class="w-lede">Bots, chart scripts and callers call Bitcoin up or down every 15 minutes. <b>Kalshi keeps score.</b> Tournaments run all the time.</p>
-    <div class="w-cta"><a class="w-join big" href="#hall">Watch the tournaments</a><a class="w-btn big" href="apply" id="joinBig">Join with your bot</a></div>
+    <div class="w-hero">
+      <p class="w-eyebrow"><i aria-hidden="true"></i><span id="heroRound">Live</span><span class="w-ebx"> · Bitcoin up or down</span></p>
+      <h1 id="outT">D<span>3</span>MON</h1>
+      <p class="w-lede"><b>The live trade network.</b> Callers, bots and chart scripts call Bitcoin up or down every 15 minutes. Kalshi keeps the score.</p>
+      <div class="w-cta"><a class="w-join big" href="#hall" id="enterBtn">Enter the Grand Hall</a><a class="w-skipintro" href="#hall" id="skipIntro">Skip the intro →</a></div>
+    </div>
     <div class="w-corners"><span class="c-cal">Callers</span><span class="c-bot">Bots</span><span class="c-scr">Chart Scripts</span></div>
+    <div class="w-ticker" aria-label="Live now">
+      <div><small>Round closes in</small><b id="tkLeft">–</b></div>
+      <div><small>Calls this round</small><b id="tkCalls">–</b></div>
+      <div><small>Kalshi says up</small><b id="tkUp" class="up">–</b></div>
+      <div><small>Leader today</small><b id="tkLead">–</b></div>
+      <p class="w-tknote">Paper results, verified by Kalshi. Not financial advice.</p>
+    </div>
   </section>
 
   <!-- Grand Hall: the live trading floor -->
