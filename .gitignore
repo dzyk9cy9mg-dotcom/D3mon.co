@@ -13,3 +13,6 @@ node_modules/
 
 # Local copy of the published artifact, kept only to compare against
 artifact-original/
+
+# The concept stills' fonts, fetched by docs/world/concept-v2/fetch-fonts.sh
+docs/world/concept-v2/fonts/
