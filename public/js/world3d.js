@@ -17,7 +17,7 @@ const CORNERS = { callers: new THREE.Vector3(0, 0, -R), bots: new THREE.Vector3(
 const smooth = t => t * t * (3 - 2 * t);
 const clamp01 = v => Math.min(1, Math.max(0, v));
 
-export function start({ level = "lite", reducedMotion = false, showFps = false, onSlow = () => {}, onVideo = () => {} } = {}) {
+export function start({ level = "lite", reducedMotion = false, showFps = false, onSlow = () => {}, onVideo = () => {}, onChat = () => {} } = {}) {
   const full = level === "full", phone = level === "mobile-lite";
   let renderer;
   try {
@@ -327,10 +327,19 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     if (best && best.paperPerContract > 0) { g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText(`Best on paper: ${clip(best.name, 16)} +${Math.round(best.paperPerContract * 100)}¢ per $1`, 22, 236); }
     g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Settled by Kalshi. Paper results only.", 22, 306);
   });
-  liveScreen(0x5865f2, at1(-2), g => {
-    title(g, "D3MON DISCORD", "The Grand Hall's chat and voice");
-    g.fillStyle = INK; g.font = `24px ${FONT}`; g.fillText("Talk with everyone trading", 22, 140); g.fillText("the rounds, right here.", 22, 172);
-    g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText("Coming soon, mirrored with the Discord.", 22, 236);
+  // The hall's chat (GET /hall/chat): the Cortex chat's main floor, the latest messages; a click opens the chat
+  // panel to read more and type. The D3MON Discord can be mirrored into it later.
+  const chatScreen = liveScreen(0x5865f2, at1(-2), g => {
+    title(g, "D3MON CHAT", "The trading floor · click to chat");
+    const msgs = (live.chat?.messages || []).slice(-6);
+    g.font = `19px ${FONT}`;
+    if (!msgs.length) { g.fillStyle = DIM; g.fillText("No messages yet. Say hello.", 22, 120); return; }
+    msgs.forEach((m, i) => {
+      const y = 104 + i * 34;
+      g.fillStyle = m.as === "bot" ? hex(C.bots) : m.as === "script" ? hex(C.scripts) : hex(C.callers);
+      const name = clip(m.name, 12); g.fillText(name, 22, y);
+      g.fillStyle = INK; g.fillText(clip(m.text, 34 - name.length), 32 + g.measureText(name).width, y);
+    });
   });
   // The rest of the hall's circle: two spotlights on the bots and scripts (each cycles through them), a
   // special event and its stream, Kalshi's prices now (the crowd's odds), the hourly tournament and the callers.
@@ -497,7 +506,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       g.fillStyle = DIM; g.textAlign = "right"; g.fillText("→", 486, top + 30); g.textAlign = "left";
     });
   }, { ring: ring3, y: 2.3, r: inr(2.3) * 0.62, w: 0.6 });
-  const liveScreens = [roundScreen, standingsScreen, lastScreen, scriptsScreen, scriptRoundScreen, scriptLastScreen, menuScreen, spotA, spotB, eventScreen, marketScreen, hourlyScreen, callersScreen];
+  const liveScreens = [chatScreen, roundScreen, standingsScreen, lastScreen, scriptsScreen, scriptRoundScreen, scriptLastScreen, menuScreen, spotA, spotB, eventScreen, marketScreen, hourlyScreen, callersScreen];
   try { document.fonts?.ready.then(() => liveScreens.forEach(x => x.redraw())); } catch (e) {}
   const GREY = new THREE.Color(0x2a3a4c), WHITE = new THREE.Color(0xffffff), GREEN = new THREE.Color(0x37e08a), RED = new THREE.Color(0xff4d5e);
   // The hall reacts to what really happens (owner, 2026-10-19): every new call flies in as a comet in its
@@ -816,12 +825,13 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     if (next >= 0 && next < L.steps.length) L.turn = L.steps[next];
   }
   nav.addEventListener("click", e => { const b = e.target.closest("button"); if (b) turn(+b.dataset.d); });
-  const onKey = e => { if (atLevel && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); turn(e.key === "ArrowLeft" ? -1 : 1); } };
+  const typing = e => !!e.target.closest?.("input, textarea, select, .w-chat, .w-video"); // keys and swipes there aren't for the world
+  const onKey = e => { if (!typing(e) && atLevel && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); turn(e.key === "ArrowLeft" ? -1 : 1); } };
   addEventListener("keydown", onKey);
   let touchX = null, touchY = null;
   const onTouchStart = e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; };
   const onTouchEnd = e => {
-    if (touchX === null || !atLevel) return;
+    if (touchX === null || !atLevel || typing(e)) return;
     const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) turn(dx < 0 ? 1 : -1);
     touchX = null;
@@ -835,7 +845,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     L.turn = L.steps.reduce((a, b) => (Math.abs(b - L.turn) < Math.abs(a - L.turn) ? b : a));
   };
   const onDown = e => {
-    if (!atLevel || atLevel.menu || e.button !== 0 || e.pointerType === "touch" || e.target.closest("a, button, input, select, textarea, label, .w-panel")) return;
+    if (!atLevel || atLevel.menu || e.button !== 0 || e.pointerType === "touch" || e.target.closest("a, button, input, select, textarea, label, .w-panel, .w-chat, .w-video")) return;
     drag = { L: atLevel, x: e.clientX, turn: atLevel.turn, moved: false }; dragged = false;
   };
   const onMove = e => {
@@ -865,23 +875,25 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   };
   const setHover = i => { if (i !== menuHover) { menuHover = i; menuScreen.redraw(); } document.body.classList.toggle("w3d-pick", i >= 0); };
   // Pointing at the live event screen while the hall's video is up: click it to watch.
-  const videoAt = e => {
-    if (!live.video || atLevel?.ring !== ring1) return false;
+  const screenAt = (e, sc) => {
+    if (atLevel?.ring !== ring1) return false;
     ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    return !!ray.intersectObject(eventScreen.mesh)[0];
+    return !!ray.intersectObject(sc.mesh)[0];
   };
+  const videoAt = e => !!live.video && screenAt(e, eventScreen), chatAt = e => screenAt(e, chatScreen); // the two screens you can click
   let dragged = false; // a drag that ends over the screen isn't a click on it
   const onMenuMove = e => {
-    if (atLevel?.menu) setHover(menuAt(e)); else { if (menuHover >= 0) setHover(-1); document.body.classList.toggle("w3d-pick", !drag?.moved && videoAt(e)); }
+    if (atLevel?.menu) setHover(menuAt(e)); else { if (menuHover >= 0) setHover(-1); document.body.classList.toggle("w3d-pick", !drag?.moved && (videoAt(e) || chatAt(e))); }
   };
   const onMenuClick = e => {
-    if (e.target.closest("a, button, input, .w-panel, .w-video")) return;
+    if (e.target.closest("a, button, input, .w-panel, .w-video, .w-chat")) return;
     if (!dragged && videoAt(e)) { onVideo(live.video); return; }
+    if (!dragged && chatAt(e)) { onChat(); return; }
     const i = menuAt(e); if (i >= 0) go(MENU[i][1]);
   };
   const onMenuKey = e => {
-    if (!atLevel?.menu) return;
+    if (!atLevel?.menu || typing(e)) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setHover((Math.max(0, menuHover) + (e.key === "ArrowDown" ? 1 : MENU.length - 1)) % MENU.length); }
     else if (e.key === "Enter" && menuHover >= 0) go(MENU[menuHover][1]);
   };
