@@ -152,6 +152,7 @@ export function createArena({ store, accounts, cfg }) {
     }
 
     if (route === "GET /rounds") return ok(roundsView(url));
+    if (route === "GET /market") return ok(prices.market());
     if ((m = route.match(/^GET \/rounds\/(\d{1,16})\/calls$/))) return ok(calls.roundCalls(ctx, m[1]));
     if (route === "GET /vip") return ok(vip.info(ctx));
     if (route === "GET /vip/room") return ok(vip.room(ctx));

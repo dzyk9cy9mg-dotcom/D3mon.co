@@ -143,7 +143,7 @@
   const left = ms => { const m = Math.max(0, Math.ceil(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; };
 
   // The 3D Grand Hall shows the same live data on its screens, ring and spokes.
-  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, serverNow }); }
+  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, entrants: S.entrants, battles: S.battles, market: S.market, hourly: S.hourly, serverNow }); }
 
   async function loadStandings() {
     const cur = await api("GET", "tournaments");
@@ -156,6 +156,12 @@
     const now = serverNow(), cur = Math.floor(now / Q) * Q;
     const [rounds, calls, prev] = await Promise.all([api("GET", "rounds"), api("GET", `rounds/${cur}/calls`), api("GET", `rounds/${cur - Q}/calls`)]);
     S.rounds = rounds.rounds; S.calls = calls; S.prev = prev;
+    // Only the 3D hall shows these (Kalshi's prices now, the events, the hourly tournament); a failure here never stops the page.
+    if (scene3d) await Promise.all([
+      api("GET", "market").then(m => (S.market = m)),
+      api("GET", "battles").then(b => (S.battles = b.battles)),
+      api("GET", "tournaments").then(c => api("GET", `tournaments/${c.tournaments.find(t => t.kind === "hourly").id}`)).then(t => (S.hourly = t.tournament)),
+    ].map(p => p.catch(() => {})));
     renderRing(); renderCalls();
     await loadStandings();
   }
@@ -193,6 +199,7 @@
       setInterval(() => loadHall().catch(() => {}), 20000); // new calls reach the hall (and its 3D screens) within 20 s
       const [e] = await Promise.all([api("GET", "entrants"), loadHall()]);
       S.entrants = e.entrants.filter(x => x.status === "active").sort((a, b) => a.name.localeCompare(b.name));
+      push3d();
       renderHelix();
       if (me) {
         const mine = (await api("GET", "entrants?mine=1")).entrants;

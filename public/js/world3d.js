@@ -203,7 +203,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   screens.push(panel(chartTex(10, C.bots), 0.52, 0.32, C.bots, Math.PI / 2, inr(1.6) * 0.64, 1.6, 1, false, ring2)); // the rest of this level is below, with the live screens
   // ---------- the Grand Hall's live screens: the everyday trading room (docs/world/SITEMAP.md) ----------
   // This round with its clock and every call as it arrives, the tournament standings, the last round's result,
-  // and the place kept for the Demon Discord, which becomes the hall's chat and voice. world.js hands the data
+  // and the place kept for the D3MON Discord, which becomes the hall's chat and voice. world.js hands the data
   // in with hall(); the ring of ticks is the round clock and the spokes are this round's calls.
   const live = { calls: null, prev: null, standings: null, rounds: [], serverNow: () => Date.now() };
   const Q = 15 * 60000, hhmm = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -227,8 +227,9 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   }
   const title = (g, text, sub) => { g.fillStyle = INK; g.font = `700 24px ${HEAD}`; g.fillText(text, 22, 42); if (sub) { g.fillStyle = DIM; g.font = `18px ${FONT}`; g.fillText(sub, 22, 68); } };
   const arrow = d => (d === "up" ? "▲" : "▼");
-  const FRONT = Math.PI / 2; // they form a curved wall facing the way in, so they're read on the way in
-  const roundScreen = liveScreen(C.callers, FRONT + 0.32, g => {
+  const FRONT = Math.PI / 2; // facing the way in, so the first ones are read on the way in
+  const S1 = (2 * Math.PI) / 10, at1 = k => FRONT + (k + 0.5) * S1; // ten screens all the way round the hall
+  const roundScreen = liveScreen(C.callers, at1(0), g => {
     const now = live.serverNow(), cur = Math.floor(now / Q) * Q, left = Math.max(0, cur + Q - now);
     title(g, "THIS ROUND", `${hhmm(cur)}–${hhmm(cur + Q)} · Bitcoin up or down`);
     g.fillStyle = INK; g.font = `700 40px ${FONT}`; g.textAlign = "right";
@@ -244,7 +245,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       g.fillText(c.sealed ? "sealed" : c.price ? `@${Math.round(c.price.paid * 100)}¢` : "", 490, y); g.textAlign = "left";
     });
   });
-  const standingsScreen = liveScreen(C.bots, FRONT - 0.32, g => {
+  const standingsScreen = liveScreen(C.bots, at1(-1), g => {
     const t = live.standings;
     title(g, "TOURNAMENT", t ? clip(t.title, 34) : "Loading…");
     const rows = (t?.standings || []).slice(0, 6);
@@ -259,7 +260,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     });
     g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Not financial advice. D3MON never trades.", 22, 306);
   });
-  const lastScreen = liveScreen(C.scripts, FRONT + 0.96, g => {
+  const lastScreen = liveScreen(C.scripts, at1(1), g => {
     const p = live.prev;
     title(g, "LAST ROUND", p ? `${hhmm(p.round)}–${hhmm(p.round + Q)}` : "");
     if (!p) return;
@@ -271,11 +272,79 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     if (best && best.paperPerContract > 0) { g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText(`Best on paper: ${clip(best.name, 16)} +${Math.round(best.paperPerContract * 100)}¢ per $1`, 22, 236); }
     g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Settled by Kalshi. Paper results only.", 22, 306);
   });
-  liveScreen(0x5865f2, FRONT - 0.96, g => {
-    title(g, "DEMON DISCORD", "The Grand Hall's chat and voice");
+  liveScreen(0x5865f2, at1(-2), g => {
+    title(g, "D3MON DISCORD", "The Grand Hall's chat and voice");
     g.fillStyle = INK; g.font = `24px ${FONT}`; g.fillText("Talk with everyone trading", 22, 140); g.fillText("the rounds, right here.", 22, 172);
     g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText("Coming soon, mirrored with the Discord.", 22, 236);
   });
+  // The rest of the hall's circle: two spotlights on the bots and scripts (each cycles through them), a
+  // special event and its stream, Kalshi's prices now (the crowd's odds), the hourly tournament and the callers.
+  const spot = (g, e, label) => {
+    title(g, label, e ? `${e.kind === "script" ? "Chart script" : "Bot"} · by ${clip(e.creatorName || "?", 22)}` : "");
+    if (!e) { g.fillStyle = DIM; g.font = `22px ${FONT}`; g.fillText("No bots or scripts yet.", 22, 120); return; }
+    g.fillStyle = hex(KIND[e.kind] || C.bots); g.font = `700 34px ${HEAD}`; g.fillText(clip(e.name, 18), 22, 122);
+    const row = (live.standings?.standings || []).find(r => r.entrant.id === e.id);
+    g.fillStyle = INK; g.font = `22px ${FONT}`;
+    g.fillText(row ? `Today: ${row.correct} right of ${row.calls} · ${row.accuracy === null ? "–" : Math.round(row.accuracy * 100) + "%"}` : "Not in today's tournament yet", 22, 172);
+    const c = (live.calls?.calls || []).find(x => x.entrantId === e.id);
+    g.fillText(c ? `This round: ${c.sealed ? "sealed" : `${arrow(c.direction)} ${c.direction}`}${c.price ? ` @${Math.round(c.price.paid * 100)}¢` : ""}` : "This round: no call yet", 22, 212);
+    const pc = (live.prev?.calls || []).find(x => x.entrantId === e.id);
+    if (pc && pc.correct !== undefined) { g.fillStyle = pc.correct ? UP : DOWN; g.fillText(`Last round: ${pc.correct ? "right" : "wrong"}${pc.paperPerContract !== undefined ? ` (${pc.paperPerContract >= 0 ? "+" : "−"}${Math.abs(Math.round(pc.paperPerContract * 100))}¢)` : ""}`, 22, 252); }
+    g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText(`d3mon.co/card?e=${clip(e.slug || "", 30)}`, 22, 306);
+  };
+  const spotlit = offset => { const list = (live.entrants || []).filter(e => e.kind !== "caller"); return list.length ? list[(Math.floor(live.serverNow() / 12000) + offset) % list.length] : null; };
+  const spotA = liveScreen(C.bots, at1(2), g => spot(g, spotlit(0), "BOT SPOTLIGHT"));
+  const spotB = liveScreen(C.scripts, at1(4), g => spot(g, spotlit(Math.max(1, Math.floor((live.entrants || []).length / 2))), "SPOTLIGHT"));
+  const eventScreen = liveScreen(0xff7a45, at1(-3), g => {
+    const now = live.serverNow(), bs = (live.battles || []).filter(b => b.status !== "draft");
+    const on = bs.find(b => b.startsAt <= now && now < b.startsAt + b.rounds * Q && !b.over), next = bs.filter(b => b.startsAt > now).sort((a, b) => a.startsAt - b.startsAt)[0];
+    title(g, on ? "LIVE EVENT" : "SPECIAL EVENTS", on ? "Happening now in the Grand Hall" : "Battles with a host and a stream");
+    g.font = `22px ${FONT}`;
+    if (on) {
+      g.fillStyle = INK; g.font = `700 30px ${HEAD}`; g.fillText(clip(on.title, 22), 22, 124);
+      g.font = `22px ${FONT}`; g.fillText(`Round ${Math.min(on.rounds, Math.floor((now - on.startsAt) / Q) + 1)} of ${on.rounds}`, 22, 172);
+      g.fillText(`${(on.entrants || []).length} in the lineup`, 22, 208);
+      g.fillStyle = DIM; g.fillText("Its live stream plays here", 22, 256);
+    } else if (next) {
+      g.fillStyle = INK; g.fillText(`Next: ${clip(next.title, 26)}`, 22, 124);
+      g.fillStyle = DIM; g.fillText(new Date(next.startsAt).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }), 22, 162);
+    } else { g.fillStyle = DIM; g.fillText("No event right now.", 22, 124); g.fillText("When one is on, its stream", 22, 172); g.fillText("plays on this screen.", 22, 204); }
+  });
+  const marketScreen = liveScreen(0x37e08a, at1(3), g => {
+    const m = live.market;
+    title(g, "KALSHI NOW", "What Up and Down cost this round");
+    if (!m?.price) { g.fillStyle = DIM; g.font = `22px ${FONT}`; g.fillText("Waiting for Kalshi's prices…", 22, 130); return; }
+    g.font = `700 54px ${HEAD}`;
+    g.fillStyle = UP; g.fillText(`▲ ${m.price.up === null ? "–" : Math.round(m.price.up * 100) + "¢"}`, 22, 150);
+    g.fillStyle = DOWN; g.fillText(`▼ ${m.price.down === null ? "–" : Math.round(m.price.down * 100) + "¢"}`, 270, 150);
+    g.fillStyle = INK; g.font = `21px ${FONT}`;
+    if (m.price.up !== null) g.fillText(`The crowd gives Up a ${Math.round(m.price.up * 100)}% chance`, 22, 212);
+    g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Kalshi's prices. Not financial advice.", 22, 306);
+  });
+  const hourlyScreen = liveScreen(C.bots, at1(-4), g => {
+    const t = live.hourly, rows = (t?.standings || []).slice(0, 5);
+    title(g, "THIS HOUR", t ? clip(t.title, 34) : "Hourly tournament");
+    g.font = `22px ${FONT}`;
+    if (t && !rows.length) { g.fillStyle = DIM; g.fillText("No bots in it yet.", 22, 120); }
+    rows.forEach((r, i) => {
+      const y = 112 + i * 34;
+      g.fillStyle = r.rank === 1 ? hex(C.callers) : DIM; g.fillText(String(r.rank).padStart(2, " "), 22, y);
+      g.fillStyle = INK; g.fillText(clip(r.entrant.name, 18), 66, y);
+      g.textAlign = "right"; g.fillText(`${r.correct} right`, 490, y); g.textAlign = "left";
+    });
+    g.fillStyle = DIM; g.font = `15px ${FONT}`; g.fillText("Not financial advice. D3MON never trades.", 22, 306);
+  });
+  const callersScreen = liveScreen(C.callers, at1(-5), g => {
+    title(g, "CALLERS", "The people who read the charts");
+    const now = (live.calls?.calls || []).filter(c => c.kind === "caller"), last = (live.prev?.calls || []).filter(c => c.kind === "caller");
+    g.fillStyle = INK; g.font = `24px ${FONT}`;
+    g.fillText(`${now.length} called this round`, 22, 124);
+    g.fillStyle = DIM; g.font = `19px ${FONT}`; g.fillText("Their calls stay sealed until the close", 22, 158);
+    const right = last.filter(c => c.correct === true).length, wrong = last.filter(c => c.correct === false).length;
+    g.fillStyle = INK; g.font = `22px ${FONT}`; g.fillText(last.length ? `Last round: ${right} right, ${wrong} wrong` : "Last round: no callers", 22, 214);
+    g.fillStyle = DIM; g.font = `17px ${FONT}`; g.fillText("Callers make their calls on My bots", 22, 290);
+  });
+
   // The second level is also the chart scripts' (the strand of the three that reads the charts): the top scripts
   // in the tournament, how to bring one, and a script's code, round the chart. It turns round like the level below.
   const L2 = { ring: ring2, y: 1.6, r: inr(1.6) * 0.64, w: 0.52 };
@@ -320,7 +389,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
       g.fillStyle = DIM; g.textAlign = "right"; g.fillText("→", 486, top + 30); g.textAlign = "left";
     });
   }, { ring: ring3, y: 2.3, r: inr(2.3) * 0.62, w: 0.6 });
-  const liveScreens = [roundScreen, standingsScreen, lastScreen, scriptsScreen, menuScreen];
+  const liveScreens = [roundScreen, standingsScreen, lastScreen, scriptsScreen, menuScreen, spotA, spotB, eventScreen, marketScreen, hourlyScreen, callersScreen];
   try { document.fonts?.ready.then(() => liveScreens.forEach(x => x.redraw())); } catch (e) {}
   const GREY = new THREE.Color(0x2a3a4c), WHITE = new THREE.Color(0xffffff), GREEN = new THREE.Color(0x37e08a), RED = new THREE.Color(0xff4d5e);
   function hallData(d) {
@@ -376,7 +445,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // Hexagon pods for the bots, standing on the ramp like stations, each with a glowing heart.
   const pods = [];
   for (let i = 0; i < 5; i++) {
-    const t = 0.1 + i * 0.17, P = rampAt(t, 0), pod = new THREE.Group();
+    const t = 0.3 + i * 0.13, P = rampAt(t, 0), pod = new THREE.Group();
     const hex = new THREE.CylinderGeometry(0.045, 0.045, 0.08, 6);
     pod.add(new THREE.Mesh(hex, add(new THREE.MeshBasicMaterial({ color: 0x5be3ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0.16)));
     pod.add(new THREE.LineSegments(new THREE.EdgesGeometry(hex), glassLine(0x5be3ff, 0.95)));
@@ -607,12 +676,16 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     const angles = ring.children.map(g => Math.atan2(g.position.z, g.position.x)), front = Math.PI / 2;
     return angles.map(a => a - front).sort((x, y) => y - x); // left to right, as the turn that brings each to the front
   };
-  for (const L of LEVELS) { L.turn = 0; L.steps = stepsOf(L.ring); L.wrap = L.ring !== ring1; } // the upper rings are even: round and round
+  for (const L of LEVELS) { L.turn = 0; L.steps = stepsOf(L.ring); L.wrap = true; L.step = (2 * Math.PI) / L.steps.length; L.base = ((L.steps[0] % L.step) + L.step) % L.step; } // even rings: round and round
   let atLevel = null;
   function turn(dir) {
     const L = atLevel;
     if (!L || L.menu) return;
-    if (L.wrap) { L.turn -= dir * (2 * Math.PI / L.steps.length); return; } // an even ring: round and round (▶ brings the one on the right)
+    if (L.wrap) { // ▶ brings the screen on the right round to the front, ◀ the one on the left
+      const k = (L.turn - L.base) / L.step;
+      L.turn = L.base + L.step * (dir > 0 ? Math.ceil(k - 1e-6) - 1 : Math.floor(k + 1e-6) + 1);
+      return;
+    }
     const i = L.steps.findIndex(a => Math.abs(a - L.turn) < 1e-3);
     const next = i < 0 ? (dir > 0 ? L.steps.findIndex(a => a < L.turn) : L.steps.findLastIndex(a => a > L.turn)) : i + dir;
     if (next >= 0 && next < L.steps.length) L.turn = L.steps[next];
@@ -633,7 +706,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   // Drag with the mouse to turn the ring by hand; let go and it settles on the nearest screen.
   let drag = null;
   const snap = L => {
-    if (L.wrap) { const step = 2 * Math.PI / L.steps.length; L.turn = Math.round(L.turn / step) * step; return; }
+    if (L.wrap) { L.turn = L.base + L.step * Math.round((L.turn - L.base) / L.step); return; }
     L.turn = L.steps.reduce((a, b) => (Math.abs(b - L.turn) < Math.abs(a - L.turn) ? b : a));
   };
   const onDown = e => {
@@ -735,7 +808,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
   if (showFps) { fpsEl = document.createElement("div"); fpsEl.className = "w3d-fps"; document.body.append(fpsEl); }
   const tmp = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), clock = new THREE.Clock();
   let raf = 0, last = performance.now(), frames = [], judged = false, started = performance.now(), fpsAcc = 0, fpsN = 0, fpsAt = last;
-  let clockAt = 0;
+  let clockAt = 0, spotAt = 0;
   const minFrame = full ? 0 : 1000 / 40; // Lite caps at about 40 frames a second
   function frame(now) {
     raf = requestAnimationFrame(frame);
@@ -777,7 +850,7 @@ export function start({ level = "lite", reducedMotion = false, showFps = false, 
     ticks.forEach((t, i) => { t.material.opacity = inside * (t.userData.on ?? 1) * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(time * 1.4 - i * 0.35))); });
     spokes.forEach((l, i) => { l.material.opacity = inside * (l.userData.on ?? 1) * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 2 + i * 1.3))); });
     nodes.forEach((n, i) => { n.material.opacity = inside * (n.userData.on ?? 1) * (0.6 + 0.4 * Math.sin(time * 2 + i * 1.3)); });
-    if (inside > 0.01 && time - clockAt >= 1) { clockAt = time; roundScreen.redraw(); } // the round clock ticks
+    if (inside > 0.01 && time - clockAt >= 1) { clockAt = time; roundScreen.redraw(); if (Math.floor(live.serverNow() / 12000) !== spotAt) { spotAt = Math.floor(live.serverNow() / 12000); spotA.redraw(); spotB.redraw(); eventScreen.redraw(); } } // the round clock ticks
     const top = H * rise - 0.2, beamLen = Math.max(0.001, (top - 0.15) * inside);
     for (const m of [beam, beamGlow, beam2]) { m.scale.set(1, beamLen, 1); m.position.set(m === beam2 ? 0.05 : 0, 0.15 + beamLen / 2, m === beam2 ? 0.03 : 0); }
     beam.material.opacity = 0.95 * inside; beamGlow.material.opacity = 0.18 * inside;
