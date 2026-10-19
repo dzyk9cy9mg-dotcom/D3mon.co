@@ -3,12 +3,17 @@
 // Only the video's id is kept, never the rest of the link (share links carry tracking). YouTube only for now;
 // Twitch and Kick can be added the same way.
 //
+// The thumbnail is fetched by the server from YouTube and served from D3MON itself (GET /hall/video/thumb), so
+// the 3D screen can draw it (a browser won't let WebGL use another site's image) and visitors' browsers never
+// call YouTube until they press play. One image is kept in memory; a failed fetch is retried after 5 minutes.
+//
 // Ledger line: { t: "hall_video", video: { provider: "youtube", id, kind: "video"|"short"|"live", title } | null }
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
 
 const SET = { url: { type: "string", required: true, max: 300 }, title: { type: "string", max: 80 } };
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
+const THUMB_MAX = 1024 * 1024, THUMB_RETRY = 5 * 60000, THUMB_TYPES = /^image\/(jpeg|png|webp)$/;
 
 // The video in a YouTube link, or null: watch?v=, youtu.be/, /shorts/, /live/ and /embed/ links.
 export function parseVideoUrl(text) {
@@ -28,8 +33,9 @@ export function parseVideoUrl(text) {
 }
 
 export class Hall {
-  constructor({ ledger, feed, now = () => Date.now() }) {
-    Object.assign(this, { ledger, feed, now });
+  constructor({ ledger, feed, thumbBase = "https://i.ytimg.com", fetch = globalThis.fetch, now = () => Date.now() }) {
+    Object.assign(this, { ledger, feed, thumbBase, fetch, now });
+    this.thumbCache = null; // { id, bytes, type } or { id, failedAt }
     this.video = null; this.videoAt = null;
     const index = lines => { for (const l of lines) if (l.t === "hall_video") { this.video = l.video; this.videoAt = l.at; } };
     index(ledger.lines);
@@ -46,7 +52,26 @@ export class Hall {
     const v = this.video;
     if (!v) return { video: null };
     const watch = v.kind === "short" ? `https://www.youtube.com/shorts/${v.id}` : `https://www.youtube.com/watch?v=${v.id}`;
-    return { video: { ...v, watch, embed: `https://www.youtube-nocookie.com/embed/${v.id}`, setAt: this.videoAt } };
+    return { video: { ...v, watch, embed: `https://www.youtube-nocookie.com/embed/${v.id}`, thumb: `/api/v1/hall/video/thumb?v=${v.id}`, setAt: this.videoAt } };
+  }
+
+  // GET /hall/video/thumb: the video's thumbnail image, or null when there's no video or YouTube has none.
+  async thumb() {
+    const v = this.video;
+    if (!v) return null;
+    const c = this.thumbCache;
+    if (c?.id === v.id && (c.bytes || this.now() - c.failedAt < THUMB_RETRY)) return c.bytes ? c : null;
+    try {
+      const res = await this.fetch(`${this.thumbBase}/vi/${v.id}/hqdefault.jpg`, { signal: AbortSignal.timeout(5000) });
+      const type = (res.headers.get("content-type") || "").split(";")[0].trim();
+      if (!res.ok || !THUMB_TYPES.test(type)) throw new Error(`thumbnail: ${res.status} ${type}`);
+      const bytes = Buffer.from(await res.arrayBuffer());
+      if (bytes.length > THUMB_MAX) throw new Error("thumbnail too big");
+      this.thumbCache = { id: v.id, bytes, type };
+    } catch (e) {
+      this.thumbCache = { id: v.id, failedAt: this.now() };
+    }
+    return this.thumbCache.bytes ? this.thumbCache : null;
   }
 
   // PUT /hall/video { url, title }: shows that video in the hall. DELETE /hall/video takes it down.

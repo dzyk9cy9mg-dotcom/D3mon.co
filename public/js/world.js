@@ -151,7 +151,11 @@
   function renderVideo() {
     const v = S.video;
     $("videoBox").hidden = !v;
-    if (v) $("videoTitle").textContent = v.title || (v.kind === "short" ? "A new Short" : v.kind === "live" ? "Live now" : "Watch now");
+    if (!v) return;
+    $("videoTitle").textContent = v.title || (v.kind === "short" ? "A new Short" : v.kind === "live" ? "Live now" : "Watch now");
+    const img = $("videoThumb");
+    if (img.dataset.id !== v.id) { img.dataset.id = v.id; img.hidden = true; img.onload = () => (img.hidden = false); img.src = v.thumb; }
+    img.classList.toggle("tall", v.kind === "short");
   }
   function openVideo(v = S.video) {
     if (!v) return;

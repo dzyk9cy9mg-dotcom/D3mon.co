@@ -131,7 +131,7 @@
 
   // ---------- the Grand Hall's video (GET/PUT/DELETE /api/v1/hall/video) ----------
   function renderVideo(v) {
-    $("videoNow").innerHTML = v ? `On the screen now: <b>${esc(v.title || "(no title)")}</b> · ${esc(v.kind === "short" ? "Short" : v.kind === "live" ? "live stream" : "video")} · <a href="${esc(v.watch)}" target="_blank" rel="noopener">open on YouTube ↗</a>` : "Nothing on the screen.";
+    $("videoNow").innerHTML = v ? `<img src="${esc(v.thumb)}" alt="" style="height:72px;vertical-align:middle;margin-right:10px;border:1px solid var(--line)" onerror="this.remove()">On the screen now: <b>${esc(v.title || "(no title)")}</b> · ${esc(v.kind === "short" ? "Short" : v.kind === "live" ? "live stream" : "video")} · <a href="${esc(v.watch)}" target="_blank" rel="noopener">open on YouTube ↗</a>` : "Nothing on the screen.";
     $("vClear").disabled = !v;
   }
   $("videoForm").addEventListener("submit", async ev => {

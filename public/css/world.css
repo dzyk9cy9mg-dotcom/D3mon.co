@@ -161,7 +161,9 @@ body.w3d-pick{cursor:pointer}
 
 /* The hall's video: a button in the 2D hall, and a panel over the world that plays it (YouTube embeds can't play on the 3D glass). */
 .w-videobox{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0 0;padding:10px 12px;border:1px solid var(--line);background:var(--surface)}
-.w-videobox span{font:500 14px var(--body);color:var(--ink-2)}.w-videobox b{color:var(--ink)}
+.w-videobox img{width:112px;aspect-ratio:16/9;object-fit:cover;border:1px solid var(--line)}
+.w-videobox img.tall{width:56px;aspect-ratio:9/16}
+.w-videobox span{flex:1;font:500 14px var(--body);color:var(--ink-2)}.w-videobox b{color:var(--ink)}
 .w-video{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:rgba(3,6,10,.82);backdrop-filter:blur(6px)}
 .w-video[hidden]{display:none}
 .w-vbox{width:min(960px,100%);display:grid;gap:8px}

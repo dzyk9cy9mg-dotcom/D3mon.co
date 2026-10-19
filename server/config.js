@@ -56,6 +56,7 @@ export function loadConfig(overrides = {}) {
     // Step 5: poll Kalshi's public market data for round results. D3MON_KALSHI=off turns it off.
     kalshi: flag(env.D3MON_KALSHI, true),
     kalshiUrl: (env.D3MON_KALSHI_URL || "").replace(/\/+$/, ""), // tests point this at a stand-in
+    ytThumbUrl: (env.D3MON_YT_THUMB_URL || "").replace(/\/+$/, ""), // YouTube's thumbnail host; tests point this at a stand-in
     saveDelayMs: 1000,
   };
   return { ...cfg, ...overrides };

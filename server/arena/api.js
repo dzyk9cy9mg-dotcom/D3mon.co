@@ -70,7 +70,7 @@ export function createArena({ store, accounts, cfg }) {
   const tournaments = new Tournaments({ ledger, registry, feed, calls, metrics });
   if (cfg.kalshi !== false) tournaments.start(); // no Kalshi, no results to save
   const vip = new Vip({ ledger, registry, calls, feed, accounts });
-  const hall = new Hall({ ledger, feed });
+  const hall = new Hall({ ledger, feed, ...(cfg.ytThumbUrl ? { thumbBase: cfg.ytThumbUrl } : {}) });
   const displays = new Displays({ store, registry, stats, catalog, feed });
   displays.seed();
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
@@ -157,6 +157,13 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /market") return ok(prices.market());
     if ((m = route.match(/^GET \/rounds\/(\d{1,16})\/calls$/))) return ok(calls.roundCalls(ctx, m[1]));
     if (route === "GET /hall/video") return ok(hall.view());
+    if (route === "GET /hall/video/thumb") {
+      const t = await hall.thumb();
+      if (!t) throw new ApiError(404, "not_found", "No thumbnail right now.");
+      res.writeHead(200, { "content-type": t.type, "content-length": t.bytes.length, "cache-control": "public, max-age=600", "x-content-type-options": "nosniff" });
+      res.end(t.bytes);
+      return true;
+    }
     if (route === "PUT /hall/video") { writer(); return ok(hall.set(ctx, await body())); }
     if (route === "DELETE /hall/video") { writer(); return ok(hall.clear(ctx)); }
     if (route === "GET /vip") return ok(vip.info(ctx));
