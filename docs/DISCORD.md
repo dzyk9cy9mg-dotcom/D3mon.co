@@ -35,20 +35,27 @@ You need to be an admin of the D3MON Discord server.
    - Right-click the main channel and choose **Copy Channel ID**.
    - Right-click each category to link and choose **Copy Category ID**.
    - You don't need to keep track of which id is which: D3MON asks Discord. Just put the main channel's id first.
-4. **Put them on the server.** They go in `/srv/d3mon/.env`, which git never touches:
-   ```sh
-   sudo nano /srv/d3mon/.env
-   ```
-   Add these two lines with your values, then save (Ctrl+O, Enter, Ctrl+X). The ids are separated by commas, with the main channel first:
-   ```
-   D3MON_DISCORD_BOT_TOKEN=the bot token
-   D3MON_DISCORD_IDS=main channel id,category id,another id
-   ```
-   Each id may be a channel or a category. A category links every channel in it, and a channel links itself. The first channel in the line is the main one. (`D3MON_DISCORD_CHANNEL_ID` names the main channel instead, if you prefer to say it outright.)
-   Then restart:
-   ```sh
-   sudo systemctl restart d3mon
-   ```
+4. **Put them on the server.**
+   - The settings go in `/srv/d3mon/.env`, which git never touches. Open it with:
+     ```sh
+     sudo nano /srv/d3mon/.env
+     ```
+   - Put these two lines in it, with your values, each on its own line and with no spaces around the `=`. The ids are separated by commas, with the main channel first.
+     ```
+     D3MON_DISCORD_BOT_TOKEN=the bot token
+     D3MON_DISCORD_IDS=main channel id,category id,another id
+     ```
+   - Save with Ctrl+O, Enter (nano should say "Wrote 2 lines"), then close with Ctrl+X.
+   - Each id may be a channel or a category: a category links every channel in it, and a channel links itself. The first channel in the line is the main one. (`D3MON_DISCORD_CHANNEL_ID` names the main channel instead, if you prefer to say it outright.)
+   - **The `d3mon` service doesn't read `.env` by itself:** its unit sets `D3MON_DOTENV=off`. So systemd loads the file instead, through a drop-in. It only needs doing once:
+     ```sh
+     sudo chmod 600 /srv/d3mon/.env
+     sudo mkdir -p /etc/systemd/system/d3mon.service.d
+     printf '[Service]\nEnvironmentFile=/srv/d3mon/.env\n' | sudo tee /etc/systemd/system/d3mon.service.d/discord.conf
+     sudo systemctl daemon-reload && sudo systemctl restart d3mon
+     ```
+   - To check the file without showing the token, run `sudo grep -o '^[A-Z0-9_]*=' /srv/d3mon/.env`. It should list both names.
+   - If you change `.env` later, run `sudo systemctl restart d3mon` afterwards.
 5. **Check it.**
    - Post in a linked Discord channel. Within a few seconds it should show on the site, marked "Discord".
    - Post in the hall, and it should show in Discord.
