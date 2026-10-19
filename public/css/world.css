@@ -181,6 +181,10 @@ body.w3d-pick{cursor:pointer}
 .w-chathead b{font:700 13px var(--display);letter-spacing:.08em;color:var(--ink)}
 .w-chathead span{flex:1;font:500 11px var(--mono);color:var(--ink-3)}
 .w-chathead .w-btn{padding:4px 9px}
+.w-chattabs{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.w-chattabs[hidden]{display:none}
+.w-chattabs button{flex:none;padding:4px 9px;font:600 12px var(--mono);color:var(--ink-2);background:transparent;border:1px solid var(--line);cursor:pointer}
+.w-chattabs button[aria-pressed="true"]{color:var(--ink);border-color:#5865f2;background:rgba(88,101,242,.18)}
 .w-chatlist{flex:1;overflow-y:auto;list-style:none;margin:0;padding:10px 12px;display:grid;align-content:start;gap:8px;font:500 14px/1.4 var(--body);color:var(--ink-2);overflow-wrap:anywhere}
 .w-chatlist b{margin-right:4px}.w-chatlist i{font-style:normal;margin-right:4px}.w-chatlist i.up{color:var(--up)}.w-chatlist i.dn{color:var(--dn)}
 .w-dc{display:inline-block;margin-right:5px;padding:0 5px;font:600 10px/16px var(--mono);letter-spacing:.06em;color:#fff;background:#5865f2;vertical-align:1px}

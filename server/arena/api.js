@@ -75,8 +75,9 @@ export function createArena({ store, accounts, cfg }) {
   const hallChat = new HallChat({ store, feed, userName });
   // The hall chat and one D3MON Discord channel as one conversation, when the bot's settings are in .env.
   const discord = DiscordBridge.configured(cfg)
-    ? new DiscordBridge({ store, hallChat, userName, token: cfg.discordToken, channel: cfg.discordChannel, webhook: cfg.discordWebhook, api: cfg.discordApi })
+    ? new DiscordBridge({ store, hallChat, userName, token: cfg.discordToken, channel: cfg.discordChannel, webhook: cfg.discordWebhook, categories: cfg.discordCategories, api: cfg.discordApi })
     : null;
+  if (discord) hallChat.linked = () => discord.channels();
   if (discord && cfg.discordPoll) discord.start();
   const hall = new Hall({ ledger, feed, ...(cfg.ytThumbUrl ? { thumbBase: cfg.ytThumbUrl } : {}) });
   const displays = new Displays({ store, registry, stats, catalog, feed });
@@ -164,7 +165,7 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /rounds") return ok(roundsView(url));
     if (route === "GET /market") return ok(prices.market());
     if ((m = route.match(/^GET \/rounds\/(\d{1,16})\/calls$/))) return ok(calls.roundCalls(ctx, m[1]));
-    if (route === "GET /hall/chat") return ok({ ...hallChat.read(+url.searchParams.get("limit") || 30), discord: !!discord, ...(isAdmin(ctx) && discord ? { link: discord.status() } : {}) });
+    if (route === "GET /hall/chat") return ok({ ...hallChat.read(+url.searchParams.get("limit") || 30, url.searchParams.get("channel") || "main"), discord: !!discord, ...(isAdmin(ctx) && discord ? { link: discord.status() } : {}) });
     if (route === "POST /hall/chat") { writer(); return ok(hallChat.send(ctx, await body()), 201); }
     if (route === "GET /hall/video") return ok(hall.view());
     if (route === "GET /hall/video/thumb") {

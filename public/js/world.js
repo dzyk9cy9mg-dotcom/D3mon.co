@@ -9,7 +9,7 @@
   const Q = 15 * 60000;
   const KINDS = [["hourly", "Hourly"], ["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"]];
   const STRANDS = [["caller", "Callers", "c-cal"], ["bot", "Bots", "c-bot"], ["script", "Chart Scripts", "c-scr"]];
-  const S = { kind: "daily", t: null, rounds: [], calls: null, prev: null, entrants: [], strand: "all", round: null };
+  const S = { kind: "daily", t: null, rounds: [], calls: null, prev: null, entrants: [], strand: "all", round: null, chatChannel: "main" };
 
   const msg = text => { $("msg").textContent = text || ""; };
   const tz = { timeZone: "America/New_York" };
@@ -146,7 +146,7 @@
   const left = ms => { const m = Math.max(0, Math.ceil(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; };
 
   // The 3D Grand Hall shows the same live data on its screens, ring and spokes.
-  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, entrants: S.entrants, battles: S.battles, market: S.market, hourly: S.hourly, video: S.video, chat: S.chat, serverNow }); }
+  function push3d() { scene3d?.hall?.({ calls: S.calls, prev: S.prev, standings: S.t, rounds: S.rounds, entrants: S.entrants, battles: S.battles, market: S.market, hourly: S.hourly, video: S.video, chat: S.chatMain, serverNow }); }
 
   // ---------- the hall's video (GET /hall/video): a button in 2D, the live event screen in 3D ----------
   function renderVideo() {
@@ -172,19 +172,30 @@
   const KIND_C = { bot: "var(--bots)", script: "var(--scripts)", member: "var(--callers)" };
   function renderChat() {
     const box = $("chatList"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
-    const msgs = S.chat?.messages || [];
+    const msgs = S.chat?.messages || [], chans = S.chatMain?.channels || [];
+    // the channel tabs: the main floor, then each channel linked with the D3MON Discord
+    $("chatTabs").hidden = chans.length < 2;
+    $("chatTabs").innerHTML = chans.map(c => `<button type="button" data-chan="${esc(c.id)}" aria-pressed="${c.id === S.chatChannel}">#${esc(c.name)}</button>`).join("");
+    $("chatIn").placeholder = `Message #${(chans.find(c => c.id === S.chatChannel) || { name: "main-floor" }).name}`;
     $("chatSub").textContent = S.chat?.discord ? "The trading floor, shared with the Cortex and the D3MON Discord" : "The trading floor, shared with the Cortex";
     box.innerHTML = msgs.length ? msgs.map(m => `<li>${m.from === "discord" ? `<span class="w-dc" title="From the D3MON Discord">Discord</span>` : ""}<b style="color:${m.from === "discord" ? "#8b93ff" : KIND_C[m.as] || KIND_C.member}">${esc(m.name)}</b>${m.direction ? `<i class="${m.direction === "up" ? "up" : "dn"}">${m.direction === "up" ? "▲" : "▼"}</i>` : ""} ${esc(m.text)}<time>${new Date(m.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time></li>`).join("") : `<li class="w-empty">No messages yet. Say hello.</li>`;
     if (atEnd) box.scrollTop = box.scrollHeight; // stay at the newest unless they scrolled up to read
   }
-  async function loadChat() { try { S.chat = await api("GET", "hall/chat?limit=40"); renderChat(); push3d(); } catch (e) {} }
+  async function loadChat() {
+    try {
+      S.chatMain = await api("GET", "hall/chat?limit=40"); // the main floor: the hall's screen, and the channel list
+      if (!S.chatMain.channels.some(c => c.id === S.chatChannel)) S.chatChannel = "main";
+      S.chat = S.chatChannel === "main" ? S.chatMain : await api("GET", `hall/chat?limit=40&channel=${encodeURIComponent(S.chatChannel)}`);
+      renderChat(); push3d();
+    } catch (e) {}
+  }
   function openChat() { $("chatPanel").hidden = false; renderChat(); $("chatList").scrollTop = $("chatList").scrollHeight; (S.me ? $("chatIn") : $("chatSignIn")).focus(); }
   function closeChat() { $("chatPanel").hidden = true; }
   async function sendChat() {
     const text = $("chatIn").value.trim();
     if (!text) return;
     $("chatSend").disabled = true;
-    try { await api("POST", "hall/chat", { text }); $("chatIn").value = ""; $("chatMsg").textContent = ""; await loadChat(); $("chatList").scrollTop = $("chatList").scrollHeight; }
+    try { await api("POST", "hall/chat", { text, ...(S.chatChannel !== "main" ? { channel: S.chatChannel } : {}) }); $("chatIn").value = ""; $("chatMsg").textContent = ""; await loadChat(); $("chatList").scrollTop = $("chatList").scrollHeight; }
     catch (x) { $("chatMsg").textContent = x.message; }
     finally { $("chatSend").disabled = false; $("chatIn").focus(); }
   }
@@ -233,6 +244,7 @@
     if (b.id === "videoBtn") return openVideo();
     if (b.id === "videoClose") return closeVideo();
     if (b.id === "chatBtn") return openChat();
+    if (b.dataset.chan) { S.chatChannel = b.dataset.chan; $("chatList").innerHTML = ""; await loadChat(); $("chatList").scrollTop = $("chatList").scrollHeight; return; }
     if (b.id === "chatClose") return closeChat();
     if (b.dataset.kind) { S.kind = b.dataset.kind; renderStandings(); try { await loadStandings(); } catch (x) { msg(x.message); } }
     if (b.dataset.strand) { S.strand = b.dataset.strand; renderHelix(); }

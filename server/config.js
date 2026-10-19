@@ -56,11 +56,12 @@ export function loadConfig(overrides = {}) {
     // Step 5: poll Kalshi's public market data for round results. D3MON_KALSHI=off turns it off.
     kalshi: flag(env.D3MON_KALSHI, true),
     kalshiUrl: (env.D3MON_KALSHI_URL || "").replace(/\/+$/, ""), // tests point this at a stand-in
-    // The hall chat's link to one D3MON Discord channel (server/arena/discord.js). All three must be set; secrets
-    // stay in .env, never in the repo.
+    // The site chat's link with the D3MON Discord (server/arena/discord.js): the bot's key, and the main channel
+    // and/or whole categories (the webhook is optional: the bot makes its own). Secrets stay in .env, never in the repo.
     discordToken: (env.D3MON_DISCORD_BOT_TOKEN || "").trim(),
     discordChannel: (env.D3MON_DISCORD_CHANNEL_ID || "").trim(),
     discordWebhook: (env.D3MON_DISCORD_WEBHOOK_URL || "").trim(),
+    discordCategories: (env.D3MON_DISCORD_CATEGORY_IDS || "").split(",").map(x => x.trim()).filter(x => /^\d{5,25}$/.test(x)),
     discordApi: (env.D3MON_DISCORD_API || "https://discord.com/api/v10").replace(/\/+$/, ""), // tests point this at a stand-in
     discordPoll: flag(env.D3MON_DISCORD_POLL, true),
     ytThumbUrl: (env.D3MON_YT_THUMB_URL || "").replace(/\/+$/, ""), // YouTube's thumbnail host; tests point this at a stand-in
