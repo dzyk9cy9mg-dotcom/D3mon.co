@@ -164,8 +164,9 @@
     $("videoFrame").innerHTML = `<iframe src="${esc(v.embed)}?autoplay=1&playsinline=1&rel=0" title="${esc(v.title || "Video")}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
     $("videoLink").href = v.watch;
     box.hidden = false; $("videoClose").focus();
+    scene3d?.hold?.(true); // the 3D world stops drawing while the video plays, so the video isn't starved
   }
-  function closeVideo() { $("videoPanel").hidden = true; $("videoFrame").innerHTML = ""; } // emptying it stops the video
+  function closeVideo() { $("videoPanel").hidden = true; $("videoFrame").innerHTML = ""; scene3d?.hold?.(false); } // emptying it stops the video
   async function loadVideo() { try { S.video = (await api("GET", "hall/video")).video; } catch (e) {} renderVideo(); }
 
   async function loadStandings() {
