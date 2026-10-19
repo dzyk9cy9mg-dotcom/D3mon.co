@@ -34,16 +34,17 @@ You need to be an admin of the D3MON Discord server.
    - In Discord, turn on **User Settings → Advanced → Developer Mode**.
    - Right-click the main channel and choose **Copy Channel ID**.
    - Right-click each category to link and choose **Copy Category ID**.
+   - You don't need to keep track of which id is which: D3MON asks Discord. Just put the main channel's id first.
 4. **Put them on the server.** They go in `/srv/d3mon/.env`, which git never touches:
    ```sh
    sudo nano /srv/d3mon/.env
    ```
-   Add these lines with your values, then save (Ctrl+O, Enter, Ctrl+X). Separate several categories with commas.
+   Add these two lines with your values, then save (Ctrl+O, Enter, Ctrl+X). The ids are separated by commas, with the main channel first:
    ```
    D3MON_DISCORD_BOT_TOKEN=the bot token
-   D3MON_DISCORD_CHANNEL_ID=the main channel's id
-   D3MON_DISCORD_CATEGORY_IDS=the category id,another category id
+   D3MON_DISCORD_IDS=main channel id,category id,another id
    ```
+   Each id may be a channel or a category. A category links every channel in it, and a channel links itself. The first channel in the line is the main one. (`D3MON_DISCORD_CHANNEL_ID` names the main channel instead, if you prefer to say it outright.)
    Then restart:
    ```sh
    sudo systemctl restart d3mon

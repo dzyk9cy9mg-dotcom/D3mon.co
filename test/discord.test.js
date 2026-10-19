@@ -61,7 +61,9 @@ describe("discord link", () => {
     });
     await new Promise(r => dc.listen(0, "127.0.0.1", r));
     const base = `http://127.0.0.1:${dc.address().port}`;
-    srv = await startServer({ discordToken: TOKEN, discordChannel: MAIN, discordCategories: [CAT], discordApi: base, discordPoll: false });
+    // The ids come mixed, in any order, as the owner pasted them: the category and the main channel, with no line saying
+    // which is which. Discord tells the server; the first plain channel is the main one.
+    srv = await startServer({ discordToken: TOKEN, discordCategories: [CAT, MAIN], discordApi: base, discordPoll: false });
     [hs, odin, loki, guest] = Array.from({ length: 4 }, () => new Client(srv.base));
     await hs.register("hardsmoke", "smoke-pass-1", "HardSmoke");
     await odin.register("odin", "odin-pass-12", "Odin");

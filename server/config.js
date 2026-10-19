@@ -61,7 +61,7 @@ export function loadConfig(overrides = {}) {
     discordToken: (env.D3MON_DISCORD_BOT_TOKEN || "").trim(),
     discordChannel: (env.D3MON_DISCORD_CHANNEL_ID || "").trim(),
     discordWebhook: (env.D3MON_DISCORD_WEBHOOK_URL || "").trim(),
-    discordCategories: (env.D3MON_DISCORD_CATEGORY_IDS || "").split(",").map(x => x.trim()).filter(x => /^\d{5,25}$/.test(x)),
+    discordCategories: [env.D3MON_DISCORD_IDS, env.D3MON_DISCORD_CATEGORY_IDS].filter(Boolean).join(",").split(/[\s,]+/).map(x => x.trim()).filter(x => /^\d{5,25}$/.test(x)),
     discordApi: (env.D3MON_DISCORD_API || "https://discord.com/api/v10").replace(/\/+$/, ""), // tests point this at a stand-in
     discordPoll: flag(env.D3MON_DISCORD_POLL, true),
     ytThumbUrl: (env.D3MON_YT_THUMB_URL || "").replace(/\/+$/, ""), // YouTube's thumbnail host; tests point this at a stand-in

@@ -1,7 +1,8 @@
 // The site's chat and the D3MON Discord as one conversation (owner, 2026-10-19).
 //
-// Links: one main channel (D3MON_DISCORD_CHANNEL_ID) is the hall's chat and the Cortex main floor; whole categories
-// (D3MON_DISCORD_CATEGORY_IDS) add every text channel in them, and the text chat of their voice channels, each as
+// Links: D3MON_DISCORD_IDS is a list of ids in any order; each is a channel or a whole category, and Discord says
+// which. The main channel (D3MON_DISCORD_CHANNEL_ID, or else the first channel in the list) is the hall's chat and
+// the Cortex main floor; categories add every text channel in them, and the text chat of their voice channels, each as
 // a channel of its own on the site. A Discord channel named like one of the Cortex's own channels (btc, eth, sol,
 // xrp, kalshi, polymarket, off-topic) joins that one; any other becomes a Cortex channel of its own (config/cortex
 // chx["dc<id>"]), so it shows in the main page's Cortex too. Categories are looked at again every 5 minutes, so a
@@ -40,7 +41,8 @@ export function plainText(m) {
 export class DiscordBridge {
   constructor({ store, hallChat, userName, token, channel = "", webhook = "", categories = [], api, fetch = globalThis.fetch, now = () => Date.now() }) {
     if (!/^https:\/\/|^http:\/\/127\./.test(webhook)) webhook = ""; // only a real webhook link (or a test's stand-in)
-    Object.assign(this, { store, hallChat, userName, token, mainId: channel, mainWebhook: webhook, categories, api, fetch, now });
+    Object.assign(this, { store, hallChat, userName, token, mainChannel: channel, mainWebhook: webhook, categories, api, fetch, now });
+    this.mainId = channel || Object.entries(this.#links()).find(([, l]) => l.tab === "main")?.[0] || null; // settled by find()
     this.queue = []; this.sending = false; this.timer = null; this.foundAt = 0; this.health = {}; this.lastError = null;
     // Out: new messages in a linked tab, wherever they were written.
     store.on("change", c => {
@@ -94,20 +96,30 @@ export class DiscordBridge {
   async find() {
     this.foundAt = this.now();
     const links = this.#links(), want = new Map(); // id -> { name, type }
+    // Each id given may be a category or a channel: Discord says which (owner, 2026-10-19: the ids are easy to mix
+    // up, so any order works). The main channel is the one named as main, or else the first channel given.
+    let main = this.mainChannel;
     try {
-      if (this.mainId) {
-        const r = await this.#get(`/channels/${this.mainId}`);
-        if (!r.ok) throw new Error(`Discord said ${r.status} when looking up the main channel`);
-        const c = await r.json(); want.set(c.id, { name: c.name });
-      }
-      for (const cat of this.categories) {
-        const r = await this.#get(`/channels/${cat}`);
-        if (!r.ok) throw new Error(`Discord said ${r.status} when looking up a category`);
-        const c = await r.json(), gr = await this.#get(`/guilds/${c.guild_id}/channels`);
-        if (!gr.ok) throw new Error(`Discord said ${gr.status} when listing the server's channels`);
-        for (const ch of await gr.json()) if (ch.parent_id === cat && TEXT_TYPES.has(ch.type) && want.size < MAX_LINKS) want.set(ch.id, { name: ch.name });
+      for (const id of [...new Set([this.mainChannel, ...this.categories].filter(Boolean))]) {
+        const r = await this.#get(`/channels/${id}`);
+        if (!r.ok) throw new Error(`Discord said ${r.status} when looking up ${id}`);
+        const c = await r.json();
+        if (c.type === 4) { // a category: every text channel and voice channel's chat in it
+          const gr = await this.#get(`/guilds/${c.guild_id}/channels`);
+          if (!gr.ok) throw new Error(`Discord said ${gr.status} when listing the server's channels`);
+          for (const ch of (await gr.json()).sort((a, b) => (a.position ?? 0) - (b.position ?? 0)))
+            if (ch.parent_id === c.id && TEXT_TYPES.has(ch.type) && want.size < MAX_LINKS) want.set(ch.id, { name: ch.name });
+        } else if (TEXT_TYPES.has(c.type)) {
+          if (!main) main = c.id;
+          if (want.size < MAX_LINKS || c.id === main) want.set(c.id, { name: c.name });
+        }
       }
     } catch (e) { this.#fail(e); return; } // a failed look leaves the links as they were
+    if (main && this.mainId !== main) { // the main floor moves to this channel
+      for (const l of Object.values(links)) if (l.tab === "main") l.tab = null;
+      if (links[main]) links[main].tab = "main";
+    }
+    this.mainId = main || null;
     const cortex = this.store.get("config/cortex").data || {}, chx = { ...(cortex.chx || {}) }, used = new Set();
     for (const [id, l] of Object.entries(links)) if (want.has(id)) used.add(l.tab);
     for (const [id, l] of Object.entries(links)) if (!want.has(id)) { delete links[id]; if (chx[l.tab]?.dc) chx[l.tab] = { ...chx[l.tab], del: true }; }
