@@ -1,0 +1,124 @@
+/* The new D3MON look on every page (owner, 2026-10-20: one site, one look). Loaded last on the member and admin pages
+   (after host.css, d3mon.css and standalone.css), it brings them into the front page's style (css/next.css): the
+   Syncopate, Manrope and IBM Plex Mono faces, glass panels with the cut corner, amber cut-corner buttons, readable
+   sizes (nothing under 13px, form fields 16px so phones don't zoom) and controls at least 44px tall. It works mostly
+   by re-pointing the old pages' own tokens, so every old component follows. The shared menu is built by menuBar()
+   in js/arena.js. */
+:root{
+  /* the old pages' tokens, re-pointed at the new look */
+  --bg:#05070B; --surface:rgba(14,19,28,.72); --surface-2:rgba(18,25,36,.72); --surface-3:rgba(26,34,48,.85);
+  --ink:#EEF3F8; --ink-2:#B4C1D0; --ink-3:#8494A8;
+  --line:rgba(170,200,240,.14); --line-2:rgba(170,200,240,.09);
+  --display:"Syncopate",system-ui,sans-serif; --body:"Manrope",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  /* the front page's own */
+  --s-edge:rgba(170,200,240,.14); --s-edge2:rgba(170,200,240,.26); --s-card:rgba(14,19,28,.66);
+  --s-chrome:linear-gradient(180deg,#fff 15%,#C9D6E4 55%,#7A889B); --s-goldfx:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C7333);
+  --s-cut:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);
+  --s-max:1100px; --s-gut:max(20px,calc((100vw - var(--s-max)) / 2));
+}
+body{font:400 16px/1.6 var(--body);color:var(--ink);-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--callers);outline-offset:3px}
+
+/* ---------- the menu (same as the front page's) */
+.s-skip{position:absolute;left:-999px;top:8px;z-index:100;background:var(--callers);color:#140c02;padding:10px 14px;font:700 14px var(--body)}
+.s-skip:focus{left:12px}
+.s-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;display:flex;align-items:center;gap:20px;padding:14px var(--s-gut);background:rgba(5,7,11,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--s-edge)}
+.s-mark{display:inline-flex;align-items:center;min-height:44px;font:700 17px var(--display);letter-spacing:.32em;color:var(--ink);text-decoration:none;white-space:nowrap}
+.s-mark b{background:var(--s-goldfx);-webkit-background-clip:text;background-clip:text;color:transparent}
+.s-nav{display:flex;align-items:center;gap:2px;margin:0 auto}
+.s-nav>a,.s-admin>summary{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;text-decoration:none;color:var(--ink-2);font:500 14px var(--body);cursor:pointer;transition:color .2s,background .2s;list-style:none}
+.s-admin>summary::-webkit-details-marker{display:none}
+.s-admin>summary::after{content:"";width:6px;height:6px;margin-left:8px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg)}
+.s-nav>a:hover,.s-nav>a[aria-current],.s-admin>summary:hover,.s-admin.here>summary{color:var(--ink);background:rgba(170,200,240,.08)}
+.s-admin{position:relative}
+.s-drop{position:absolute;right:0;top:calc(100% + 8px);min-width:230px;padding:10px;display:grid;gap:2px;background:rgba(10,14,21,.97);border:1px solid var(--s-edge2);clip-path:var(--s-cut)}
+.s-drop b{font:500 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);padding:10px 10px 4px}
+.s-drop a{display:flex;align-items:center;min-height:40px;padding:0 10px;color:var(--ink-2);text-decoration:none;font:500 14px var(--body)}
+.s-drop a:hover,.s-drop a[aria-current]{color:var(--ink);background:rgba(170,200,240,.07)}
+.s-acts{display:flex;align-items:center;gap:14px}
+.s-link{color:var(--ink-2);text-decoration:none;font:500 14px var(--body);white-space:nowrap}
+.s-link:hover{color:var(--ink)}
+.s-amber{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:0 20px;background:var(--callers);color:#140c02;font:700 14px var(--body);text-decoration:none;white-space:nowrap;clip-path:polygon(0 0,100% 0,100% 64%,calc(100% - 10px) 100%,0 100%);transition:filter .2s,transform .2s}
+.s-amber:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.s-nav>a.s-phone{display:none}
+.s-menu{display:none;min-height:44px;padding:0 16px;border:1px solid var(--s-edge2);border-radius:999px;background:transparent;color:var(--ink);font:500 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+@media (max-width:980px){
+  .s-bar{flex-wrap:wrap;gap:12px}
+  .s-menu{display:inline-flex;align-items:center;margin-left:auto}
+  .s-nav{display:none;order:4;flex-basis:100%;flex-direction:column;align-items:stretch;margin:4px 0 6px}
+  .s-bar.open .s-nav{display:flex}
+  .s-nav>a,.s-admin>summary{min-height:52px;padding:0 4px;border-radius:0;border-top:1px solid var(--s-edge);font-size:16px}
+  .s-nav>a:hover,.s-nav>a[aria-current]{background:none;color:var(--ink)}
+  .s-drop{position:static;clip-path:none;border:0;background:none;padding:0 0 8px 12px}
+  .s-drop a{min-height:48px;font-size:16px}
+  .s-acts .s-link{display:none}
+  .s-nav>a.s-phone{display:flex}
+}
+@media (max-width:520px){.s-acts .s-amber{display:none}}
+
+/* ---------- the page: a wider column, a real title, readable text */
+.arena{max-width:var(--s-max);padding:44px 0 72px;gap:22px}
+body>main.arena{padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));box-sizing:content-box}
+.s-title{margin:0;font:700 clamp(30px,4.2vw,48px)/1.05 var(--display);letter-spacing:.04em;text-transform:uppercase;background:var(--s-chrome);-webkit-background-clip:text;background-clip:text;color:transparent;text-wrap:balance}
+.s-title::before{content:"";display:block;width:14px;height:13px;margin-bottom:16px;background:linear-gradient(135deg,var(--callers),var(--bots) 60%,var(--scripts));clip-path:polygon(50% 0,100% 100%,0 100%)}
+.blurb{max-width:68ch;margin:0;padding:0;border:0;color:var(--ink-2);font:400 17px/1.65 var(--body)}
+.arena .blurb a,.arena p a,.acct a{color:var(--ink);text-underline-offset:3px}
+
+/* panels: glass with the cut corner, as on the front page */
+.panel,.arena .panel{background:var(--s-card);border:1px solid var(--s-edge);clip-path:var(--s-cut);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.panel::before,.panel::after{display:none}
+.arena .panel{padding:24px}
+.arena h2{font:600 19px/1.3 var(--body);letter-spacing:0;text-transform:none;margin:0 0 14px;color:var(--ink)}
+.arena h3,.arena h3.sub{font:600 16px var(--body);letter-spacing:0;text-transform:none;color:var(--ink);margin:20px 0 10px}
+.arena .meta,.arena .item .meta{font-size:15px;color:var(--ink-2)}
+.arena .tag,.arena .empty,.arena .tnotice{font:400 14px/1.6 var(--body);color:var(--ink-3)}
+.arena .empty{padding:22px 0;text-align:center}
+.arena code{font:13px var(--mono)}
+
+/* forms: visible labels, 16px fields, 48px tall */
+.arena label{font:500 13px var(--body);letter-spacing:0;text-transform:none;color:var(--ink-2);margin-bottom:6px}
+.arena input,.arena select,.arena textarea{min-height:48px;padding:10px 14px;background:rgba(5,7,11,.7);border:1px solid var(--s-edge2);border-radius:0;color:var(--ink);font:400 16px var(--body)}
+.arena textarea{min-height:110px}
+.arena input:focus,.arena select:focus,.arena textarea:focus{outline:none;border-color:var(--callers);box-shadow:0 0 0 3px rgba(255,181,71,.18)}
+.arena input[type=checkbox],.arena input[type=radio]{min-height:0;width:20px;height:20px;accent-color:var(--callers)}
+.arena .checks label,.arena .pick{font:500 15px var(--body);color:var(--ink);min-height:44px}
+.arena .pick{border-color:var(--s-edge2);padding:12px 14px}
+.arena .pick:has(input:checked){border-color:var(--callers);background:rgba(255,181,71,.06)}
+.arena ::placeholder{color:var(--ink-3)}
+
+/* buttons: amber with the cut corner; ghost ones as outlined pills; never under 44px */
+.btn{min-height:44px;padding:0 20px;background:var(--callers);color:#140c02;font:700 14px var(--body);letter-spacing:0;text-transform:none;clip-path:polygon(0 0,100% 0,100% 64%,calc(100% - 10px) 100%,0 100%)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--s-edge2);clip-path:none;border-radius:999px}
+.btn.ghost:hover{background:rgba(170,200,240,.08);filter:none}
+.btn.danger{background:rgba(255,90,114,.14);color:#FF8A9C;clip-path:none;border:1px solid rgba(255,90,114,.4)}
+.btn.sm{min-height:40px;padding:0 16px;font-size:14px}
+.arena .seg2{display:flex;flex-wrap:wrap;gap:6px}
+.arena .seg2 button+button{border-left-width:1px}
+.arena .seg2 button,.arena .rounds button,.arena .monsum button{min-height:44px;padding:0 16px;font:600 14px var(--body);letter-spacing:0;text-transform:none;border-radius:999px;background:transparent;border-color:var(--s-edge2);color:var(--ink-2)}
+.arena .seg2 button[aria-pressed="true"],.arena .rounds button[aria-pressed="true"],.arena .monsum button[aria-pressed="true"]{background:var(--ink);color:#05070B;border-color:var(--ink)}
+
+/* lists, badges and tables */
+.arena .item{border-color:var(--s-edge);background:rgba(5,7,11,.35);padding:14px 16px}
+.arena .st,.arena .vbadge{font:600 12px var(--mono);padding:3px 8px}
+.arena .live-dot{font:500 13px var(--mono)}
+.arena .mgrid{font-size:15px}
+.arena .mgrid th{font:500 12px var(--mono);letter-spacing:.08em;color:var(--ink-3);padding:10px 12px}
+.arena .mgrid td{padding:12px;border-color:var(--line-2)}
+.arena .mgrid input,.arena .mgrid select{min-height:40px;font-size:15px}
+.arena .tablewrap,.arena .monwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* the account page */
+.acct label{font:500 13px var(--body);letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.acct input{min-height:48px;padding:10px 14px;background:rgba(5,7,11,.7);border:1px solid var(--s-edge2);color:var(--ink);font:400 16px var(--body)}
+.acct-tabs button{min-height:44px;font:600 15px var(--body);letter-spacing:0;text-transform:none}
+.acct-who span,.acct-foot{font-size:14px}
+.acct{max-width:480px;padding:56px 20px 40px}
+.acct .acct-brand{display:none}
+.acct-msg{font:500 15px var(--body)}
+
+@media (max-width:620px){
+  .arena{padding-top:28px;gap:16px}
+  .arena .panel{padding:18px}
+  .blurb{font-size:16px}
+}
+@media (prefers-reduced-motion:reduce){.s-amber,.s-nav>a{transition:none}.s-amber:hover{transform:none}}
