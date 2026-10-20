@@ -14,12 +14,27 @@ import { RenderPass } from "../vendor/three-addons-0.169.0/postprocessing/Render
 import { UnrealBloomPass } from "../vendor/three-addons-0.169.0/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "../vendor/three-addons-0.169.0/postprocessing/OutputPass.js";
 
-const COL = [0xffb547, 0x4da3ff, 0xb98cff].map(c => new THREE.Color(c)); // callers, bots, chart scripts
-const GOLD = new THREE.Color(0xffe2a8), TIPC = new THREE.Color(0xfff1cf);
-const R = 1, HT = 1.72;
-let sheen = null; // base corner radius and height, in world units
-const SEAM = 0.8; // the Capstone's gold seam, as a share of the height
-const BASE = (2 * Math.PI) / 40; // one turn in 40 s
+// ===== THE PYRAMID'S SETTINGS =====
+// The owner may revise the triangle at any time (2026-10-20): change it here first. Each line is one thing you can
+// see; the code below reads these and nothing else decides them.
+const LOOK = {
+  colors: { callers: 0xffb547, bots: 0x4da3ff, scripts: 0xb98cff, capstone: 0xffe2a8, tip: 0xfff1cf },
+  shape: { height: 1.72, capstone: 0.8 },        // height against a base corner 1 away; where the Capstone's seam sits (share of the height)
+  turnSeconds: 40,                                // one full turn when left alone
+  glass: { clarity: 0.13, tint: 0.016, bend: 1.3, rainbow: 0.6 }, // sheen at the edges, body tint, refraction, colour split
+  edgeWidth: 0.0075,                              // the glowing edges
+  glow: 0.5,                                      // the bloom over everything bright
+  flowSpeed: 0.12,                                // the little lights from the corners to the heart and up (loops per second)
+  synergyEvery: 6.4,                              // seconds between the three lights meeting and hitting the Capstone
+  chargeSeconds: 1.6,                             // how long a press-and-hold takes to charge fully
+  symbolSeconds: 0.45,                            // how fast a corner's symbol draws in when pointed at
+};
+const COL = [LOOK.colors.callers, LOOK.colors.bots, LOOK.colors.scripts].map(c => new THREE.Color(c)); // callers, bots, chart scripts
+const GOLD = new THREE.Color(LOOK.colors.capstone), TIPC = new THREE.Color(LOOK.colors.tip);
+const R = 1, HT = LOOK.shape.height; // base corner radius and height, in world units
+let sheen = null;
+const SEAM = LOOK.shape.capstone; // the Capstone's gold seam, as a share of the height
+const BASE = (2 * Math.PI) / LOOK.turnSeconds;
 
 // a round soft light, for glows (drawn on a canvas once)
 function glowTex() {
@@ -96,7 +111,7 @@ export function start({ hero, labels, stageAt, onGo }) {
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
     geo.computeVertexNormals();
     const glass = new THREE.MeshPhysicalMaterial({
-      vertexColors: true, metalness: 0, roughness: 0.03, transmission: 1, thickness: 0.35, ior: 1.3, dispersion: 0.6, depthWrite: false,
+      vertexColors: true, metalness: 0, roughness: 0.03, transmission: 1, thickness: 0.35, ior: LOOK.glass.bend, dispersion: LOOK.glass.rainbow, depthWrite: false,
       specularIntensity: 1, envMapIntensity: 1.3, clearcoat: 1, clearcoatRoughness: 0.05, attenuationColor: new THREE.Color(0.75, 0.82, 1), attenuationDistance: 3,
       polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
     });
@@ -111,13 +126,13 @@ export function start({ hero, labels, stageAt, onGo }) {
         void main(){ float d = dot(normalize(vN), vV); float front = gl_FrontFacing ? 1.0 : 0.45;
           float fres = pow(1.0 - abs(d), 2.0); float lift = mix(1.0, 0.45, clamp(vY / ${HT.toFixed(2)}, 0.0, 1.0));
           float band = exp(-pow((vY - mod(uT * 0.42, 3.4) + 0.6) * 5.0, 2.0));
-          vec3 c = vC * (0.016 + 0.13 * fres) * lift + mix(vC, vec3(1.0), 0.35) * band * 0.06;
+          vec3 c = vC * (${LOOK.glass.tint.toFixed(4)} + ${LOOK.glass.clarity.toFixed(4)} * fres) * lift + mix(vC, vec3(1.0), 0.35) * band * 0.06;
           gl_FragColor = vec4(c * front * uF, 1.0); }`,
     });
     turn.add(new THREE.Mesh(geo, sheen));
   }
   // the edges: base corner to corner, each corner up to the tip
-  const EDGE = 0.0075, edges = [];
+  const EDGE = LOOK.edgeWidth, edges = [];
   const edge = (A, B, ca, cb, r, k, at, dur) => { const m = tube(A, B, ca, cb, r, k, false, true); Object.assign(m.userData, { mid: A.clone().add(B).multiplyScalar(0.5), A: A.clone(), d: B.clone().sub(A), at, dur }); edges.push(m); turn.add(m); };
   // on arrival the base triangle draws itself corner to corner, then each corner's edge climbs to the tip
   [[0, 1], [1, 2], [2, 0]].forEach(([i, j], n) => edge(V[i], V[j], COL[i], COL[j], EDGE, 1.25, 0.15 + n * 0.22, 0.6));
@@ -205,7 +220,7 @@ export function start({ hero, labels, stageAt, onGo }) {
   }
   const flow = [];
   for (let k = 0; k < 3; k++) for (let n = 0; n < 3; n++) { const s = sprite(COL[k], 0.1, 0.6); turn.add(s); flow.push({ s, k, off: n / 3 + k * 0.137 + Math.random() * 0.05 }); }
-  const SYN = 6.4; let synAt = 3.4; // when the next synergy starts
+  const SYN = LOOK.synergyEvery; let synAt = 3.4; // when the next synergy starts
   const big = [0, 1, 2].map(k => { const s = sprite(COL[k], 0.26, 1); s.visible = false; turn.add(s); return s; });
   // the charge (owner, 2026-10-20: "hold the mouse down and it charges up the centre; let go and it shoots a pulse up
   // and out"): while held, the heart swells and brightens, the rings spin up, the lights rush in from the corners and
@@ -223,19 +238,19 @@ export function start({ hero, labels, stageAt, onGo }) {
   // ---------- post: a gentle bloom so the gems, edges and beam glow without blowing out
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.5, 0.8);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), LOOK.glow, 0.5, 0.8);
   composer.addPass(bloom); composer.addPass(new OutputPass());
 
   // ---------- placing it: the pyramid's middle sits where the 2D one did (stageAt), about the same size
   let W = 1, H = 1, st = { x: 0, y: 0, s: 1 }, camDist = 10;
-  const LOOK = new THREE.Vector3(0, HT * 0.42, 0), ELEV = 0.3;
+  const AIM = new THREE.Vector3(0, HT * 0.42, 0), ELEV = 0.3; // where the camera looks
   function size() {
     W = hero.clientWidth; H = hero.clientHeight; st = stageAt(W, H);
     renderer.setSize(W, H, false); composer.setSize(W, H);
     bloom.resolution.set(Math.round(W / 2), Math.round(H / 2));
     const px = (st.s * 0.78) / (HT + 0.5); // pixels per world unit: the pyramid about 0.78 s tall with its floor
     const dist = H / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * px);
-    camera.position.set(0, LOOK.y + Math.sin(ELEV) * dist, Math.cos(ELEV) * dist); camera.lookAt(LOOK); camDist = dist;
+    camera.position.set(0, AIM.y + Math.sin(ELEV) * dist, Math.cos(ELEV) * dist); camera.lookAt(AIM); camDist = dist;
     camera.aspect = W / H;
     camera.setViewOffset(W, H, W / 2 - st.x, H / 2 - st.y, W, H);
     camera.updateProjectionMatrix();
@@ -278,7 +293,7 @@ export function start({ hero, labels, stageAt, onGo }) {
     sheen.uniforms.uF.value = ss(1.2, 1.2);
     floor.rotation.z = clock * 0.03; sheen.uniforms.uT.value = clock;
     // the Cortex's rings and heart
-    charge = charging ? Math.min(1, charge + dt / 1.6) : Math.max(0, charge - dt * 3);
+    charge = charging ? Math.min(1, charge + dt / LOOK.chargeSeconds) : Math.max(0, charge - dt * 3);
     const sp = (fast ? 2.6 : 1) * (1 + 5 * charge * charge), T = Math.PI * 2; ringT += dt * sp;
     rings[0].tumble.rotation.x = (ringT / 14) * T; rings[0].spin.rotation.z = (ringT / 30) * T;
     rings[1].tumble.rotation.y = (ringT / 11) * T; rings[1].spin.rotation.z = -(ringT / 16) * T;
@@ -288,7 +303,7 @@ export function start({ hero, labels, stageAt, onGo }) {
     // the gems breathe; the one under the pointer swells
     gems.forEach((G, k) => { const on = k === hot, s = G.base * (on ? 1.9 : 1 + 0.08 * Math.sin(clock * 2 + k * 2)); G.halo.scale.x += (s - G.halo.scale.x) * 0.15; G.halo.scale.y = G.halo.scale.x; G.stone.rotation.y = clock * 0.8 + k; });
     // the light flow
-    flowT += dt * 0.12 * (1 + 4 * charge);
+    flowT += dt * LOOK.flowSpeed * (1 + 4 * charge);
     for (const f of flow) { const u = (flowT + f.off) % 1; along(f.k, u, f.s.position); f.s.material.color.copy(COL[f.k]).lerp(TIPC, Math.max(0, (u - 0.42) / 0.4)); f.s.material.opacity = 0.65 * Math.min(1, u * 12) * (u > 0.8 ? 1 - (u - 0.8) / 0.2 : 1); }
     // the synergy: 0..1 s the three run in to the heart; 1..1.7 s the merged light rises; at 1.7 s it hits the Capstone
     if (clock >= synAt + SYN) synAt += SYN * Math.ceil((clock - synAt - SYN) / SYN + 1e-9);
@@ -301,7 +316,7 @@ export function start({ hero, labels, stageAt, onGo }) {
     surge = Math.max(0, surge - dt * 0.9);
     flare.material.opacity = 0.85 * surge ** 1.5; flare.scale.setScalar(0.4 + (1 - surge) * 0.75);
     sky.visible = surge > 0; sky.position.set(0, HT + (1 - surge) * 1.6, 0); sky.material.opacity = surge; sky.scale.setScalar(0.24 + 0.2 * surge);
-    beamUp.scale.set(1 + 3 * surge, 1, 1 + 3 * surge); bloom.strength = 0.5 + 0.55 * surge;
+    beamUp.scale.set(1 + 3 * surge, 1, 1 + 3 * surge); bloom.strength = LOOK.glow + 0.55 * surge;
     capHot += ((hot === 3 ? 0.7 : 0) - capHot) * 0.12;
     capMat.uniforms.uGlow.value = Math.max(surge, capHot); capMat.uniforms.uF.value = ss(1.8, 0.6);
     heart.scale.multiplyScalar(1 + surge * 0.4);
@@ -343,7 +358,7 @@ export function start({ hero, labels, stageAt, onGo }) {
       });
       for (let k = 0; k < 4; k++) {
         const A = scr[k], P = sym[k], on = k === hot, c = SIG.S[KIND[k]].color;
-        shown[k] = Math.max(0, Math.min(1, shown[k] + (on ? dt / 0.45 : -dt / 0.25))); const t = shown[k]; // only while pointed at (owner: keep it clean)
+        shown[k] = Math.max(0, Math.min(1, shown[k] + (on ? dt / LOOK.symbolSeconds : -dt / 0.25))); const t = shown[k]; // only while pointed at (owner: keep it clean)
         if (!t || k === 3) continue; // the Capstone is the crystal tip itself
         const a = Math.min(1, t * 1.6);
         // the hairline from the gem to the symbol
