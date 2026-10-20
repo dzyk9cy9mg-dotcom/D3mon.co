@@ -29,7 +29,7 @@ function glowTex() {
   g.fillStyle = r; g.fillRect(0, 0, 128, 128);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-// the floor under the pyramid: a pool of blue light, a fine circle and a dotted outer ring (it turns slowly)
+// the floor under the pyramid: a soft pool of blue light that fades out with no edge (owner: no circles)
 function floorTex() {
   const N = 1024, c = document.createElement("canvas"); c.width = c.height = N;
   const g = c.getContext("2d"), m = N / 2;
@@ -37,10 +37,6 @@ function floorTex() {
   const pool = g.createRadialGradient(m, m, 0, m, m, m * 0.9);
   pool.addColorStop(0, "rgba(77,163,255,.34)"); pool.addColorStop(0.45, "rgba(60,120,210,.12)"); pool.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = pool; g.fillRect(0, 0, N, N);
-  g.strokeStyle = "rgba(120,170,230,.35)"; g.lineWidth = 2; g.beginPath(); g.arc(m, m, m * 0.62, 0, 6.2832); g.stroke();
-  g.fillStyle = "rgba(150,190,240,.7)";
-  for (let k = 0; k < 120; k++) { const a = (k / 120) * 6.2832; g.beginPath(); g.arc(m + Math.cos(a) * m * 0.86, m + Math.sin(a) * m * 0.86, k % 10 === 0 ? 4 : 2, 0, 6.2832); g.fill(); }
-  g.strokeStyle = "rgba(77,163,255,.18)"; g.lineWidth = 1.5; g.setLineDash([60, 18, 8, 18]); g.beginPath(); g.arc(m, m, m * 0.74, 0, 6.2832); g.stroke();
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
@@ -108,33 +104,56 @@ export function start({ hero, labels, stageAt, onGo }) {
     // the sheen: each face glows faintly in its tint, more as it turns edge-on to us, and a soft band of light
     // sweeps up the glass every few seconds; brighter toward the base, back faces fainter
     sheen = new THREE.ShaderMaterial({
-      uniforms: { uT: { value: 0 } }, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false,
+      uniforms: { uT: { value: 0 }, uF: { value: 0 } }, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false,
       vertexShader: `varying vec3 vC; varying vec3 vN; varying vec3 vV; varying float vY;
         void main(){ vC = color; vec4 w = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); vY = position.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
-      fragmentShader: `uniform float uT; varying vec3 vC; varying vec3 vN; varying vec3 vV; varying float vY;
+      fragmentShader: `uniform float uT; uniform float uF; varying vec3 vC; varying vec3 vN; varying vec3 vV; varying float vY;
         void main(){ float d = dot(normalize(vN), vV); float front = gl_FrontFacing ? 1.0 : 0.45;
           float fres = pow(1.0 - abs(d), 2.0); float lift = mix(1.0, 0.45, clamp(vY / ${HT.toFixed(2)}, 0.0, 1.0));
           float band = exp(-pow((vY - mod(uT * 0.42, 3.4) + 0.6) * 5.0, 2.0));
           vec3 c = vC * (0.016 + 0.13 * fres) * lift + mix(vC, vec3(1.0), 0.35) * band * 0.06;
-          gl_FragColor = vec4(c * front, 1.0); }`,
+          gl_FragColor = vec4(c * front * uF, 1.0); }`,
     });
     turn.add(new THREE.Mesh(geo, sheen));
   }
   // the edges: base corner to corner, each corner up to the tip
   const EDGE = 0.0075, edges = [];
-  const edge = (A, B, ca, cb, r, k) => { const m = tube(A, B, ca, cb, r, k, false, true); m.userData.mid = A.clone().add(B).multiplyScalar(0.5); edges.push(m); turn.add(m); };
-  for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) edge(V[i], V[j], COL[i], COL[j], EDGE, 1.25);
-  for (let k = 0; k < 3; k++) edge(V[k], tip, COL[k], TIPC, EDGE, 1.25);
+  const edge = (A, B, ca, cb, r, k, at, dur) => { const m = tube(A, B, ca, cb, r, k, false, true); Object.assign(m.userData, { mid: A.clone().add(B).multiplyScalar(0.5), A: A.clone(), d: B.clone().sub(A), at, dur }); edges.push(m); turn.add(m); };
+  // on arrival the base triangle draws itself corner to corner, then each corner's edge climbs to the tip
+  [[0, 1], [1, 2], [2, 0]].forEach(([i, j], n) => edge(V[i], V[j], COL[i], COL[j], EDGE, 1.25, 0.15 + n * 0.22, 0.6));
+  for (let k = 0; k < 3; k++) edge(V[k], tip, COL[k], TIPC, EDGE, 1.25, 0.95 + k * 0.12, 0.75);
   // the Capstone's seam: a fine gold triangle round the glass near the tip
   const seam = V.slice(0, 3).map(c => c.clone().lerp(tip, SEAM));
-  for (let k = 0; k < 3; k++) edge(seam[k], seam[(k + 1) % 3], GOLD, GOLD, EDGE * 0.6, 1.1);
+  for (let k = 0; k < 3; k++) edge(seam[k], seam[(k + 1) % 3], GOLD, GOLD, EDGE * 0.6, 1.1, 1.85 + k * 0.08, 0.35);
+  // the Capstone itself (owner, 2026-10-20: "the capstone symbol is the actual top of the triangle"): the tip above
+  // the seam is a crystal of gold light. It glows brighter toward its point, lights up when pointed at, and flares
+  // when the three streams of light hit it together (the synergy). It's the way into the Capstone.
+  const capC = seam.reduce((a, c) => a.add(c), tip.clone()).multiplyScalar(0.25);
+  const capMat = new THREE.ShaderMaterial({
+    uniforms: { uGlow: { value: 0 }, uF: { value: 0 } }, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false,
+    vertexShader: `varying vec3 vN; varying vec3 vV; varying float vY;
+      void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); vY = position.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform float uGlow; uniform float uF; varying vec3 vN; varying vec3 vV; varying float vY;
+      void main(){ float fres = pow(1.0 - abs(dot(normalize(vN), vV)), 1.6); float up = smoothstep(${(HT * SEAM).toFixed(3)}, ${HT.toFixed(3)}, vY);
+        float front = gl_FrontFacing ? 1.0 : 0.6;
+        vec3 gold = vec3(1.0, 0.78, 0.42), white = vec3(1.0, 0.96, 0.86);
+        vec3 c = mix(gold, white, up * 0.7 + uGlow * 0.3) * (0.07 + 0.22 * fres + 0.25 * up) * (1.0 + 2.6 * uGlow);
+        gl_FragColor = vec4(c * front * uF, 1.0); }`,
+  });
+  {
+    const pos = [], faces = [[0, 1], [1, 2], [2, 0]];
+    for (const [i, j] of faces) pos.push(...seam[i].toArray(), ...seam[j].toArray(), ...tip.toArray());
+    pos.push(...seam[0].toArray(), ...seam[2].toArray(), ...seam[1].toArray());
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.computeVertexNormals();
+    const cap = new THREE.Mesh(geo, capMat); cap.scale.setScalar(1.004); turn.add(cap);
+  }
 
   // the gems at the corners and the tip, each with a soft glow
   const sprite = (c, s, o = 1) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, toneMapped: false })); m.scale.setScalar(s); return m; };
   const gems = V.map((p, k) => {
     const c = k === 3 ? TIPC : COL[k];
     const g = new THREE.Group(); g.position.copy(p);
-    const stone = new THREE.Mesh(new THREE.OctahedronGeometry(k === 3 ? 0.05 : 0.042), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.5), toneMapped: false }));
+    const stone = new THREE.Mesh(new THREE.OctahedronGeometry(k === 3 ? 0.05 : 0.042), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.5), toneMapped: false, transparent: true }));
     const halo = sprite(c, k === 3 ? 0.34 : 0.3, 0.5);
     g.add(stone, halo); turn.add(g);
     return { g, stone, halo, base: halo.scale.x };
@@ -165,7 +184,7 @@ export function start({ hero, labels, stageAt, onGo }) {
   heart.position.y = HEART; cortex.add(heart);
   const heartGlow = sprite(COL[1], 0.55, 0.9); heartGlow.position.y = HEART; cortex.add(heartGlow);
   // the beam: from the heart up through the tip, then fading out above it
-  rig.add(tube(new THREE.Vector3(0, HEART, 0), tip, new THREE.Color(0xbfe0ff), TIPC, 0.005, 1.5));
+  const beam = tube(new THREE.Vector3(0, HEART, 0), tip, new THREE.Color(0xbfe0ff), TIPC, 0.005, 1.5); rig.add(beam);
   const beamUp = tube(tip, new THREE.Vector3(0, HT + 0.5, 0), TIPC, TIPC, 0.0045, 1.3, true);
   beamUp.material.transparent = true; beamUp.material.blending = THREE.AdditiveBlending; beamUp.material.depthWrite = false;
   rig.add(beamUp);
@@ -173,10 +192,25 @@ export function start({ hero, labels, stageAt, onGo }) {
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.7), new THREE.MeshBasicMaterial({ map: floorTex(), toneMapped: false }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.006; rig.add(floor);
 
-  // lights that climb each edge to the tip in turn, and pulses up the beam
-  const climbers = [0, 1, 2].map(k => { const s = sprite(COL[k], 0.2, 0.9); turn.add(s); return s; });
-  const pulses = [];
-  const pulse = c => { const s = sprite(c, 0.4, 1); rig.add(s); pulses.push({ s, t: clock, c }); };
+  // the light flow (owner, 2026-10-20: "dots of light go in from the corners toward the centre of the base and out
+  // the top like the Luxor light"): small lights run from each corner across the floor to the heart, rise up the
+  // beam through the Capstone and out into the sky. Every few seconds the synergy: one big light from each corner,
+  // all three meeting at the heart at once, merge into one that rises and hits the Capstone, which flares; the
+  // beam above surges. A click on the glass sets one off now.
+  const BC = new THREE.Vector3(0, 0.02, 0), cornerF = corner.map(c => c.clone().setY(0.02));
+  function along(k, u, out) { // a point on corner k's path: floor (0..0.42), up the beam (..0.8), out the top (..1)
+    if (u < 0.42) { const f = u / 0.42; return out.copy(cornerF[k]).lerp(BC, f * f * (3 - 2 * f)); }
+    if (u < 0.8) { const f = (u - 0.42) / 0.38; return out.set(0, 0.02 + (HT - 0.02) * f ** 1.25, 0); }
+    return out.set(0, HT + ((u - 0.8) / 0.2) * 0.75, 0);
+  }
+  const flow = [];
+  for (let k = 0; k < 3; k++) for (let n = 0; n < 3; n++) { const s = sprite(COL[k], 0.1, 0.6); turn.add(s); flow.push({ s, k, off: n / 3 + k * 0.137 + Math.random() * 0.05 }); }
+  const SYN = 6.4; let synAt = 3.4; // when the next synergy starts
+  const big = [0, 1, 2].map(k => { const s = sprite(COL[k], 0.26, 1); s.visible = false; turn.add(s); return s; });
+  const merged = sprite(TIPC, 0.34, 1), flare = sprite(GOLD, 1, 0), sky = sprite(TIPC, 0.3, 0), heartFlash = sprite(new THREE.Color(1, 1, 1), 0.5, 0);
+  merged.visible = false; heartFlash.position.set(0, 0.03, 0); turn.add(merged, flare, sky, heartFlash);
+  flare.position.copy(capC); let surge = 0, capHot = 0;
+  const pulse = () => { if (clock > 2.4) synAt = Math.min(synAt, clock); };
 
   // ---------- post: a gentle bloom so the gems, edges and beam glow without blowing out
   const composer = new EffectComposer(renderer);
@@ -202,13 +236,15 @@ export function start({ hero, labels, stageAt, onGo }) {
   const lg = labels.getContext("2d");
 
   // ---------- motion and the ways in (as in the 2D version)
-  const NAMES = ["Callers", "Bots", "Chart scripts", "Capstone"];
+  const SIG = window.D3Sigils, KIND = SIG ? SIG.kinds : [], NAMES = KIND.map(k => SIG.S[k].name);
+  let sym = [], shown = [0, 0, 0, 0]; // where each symbol sits on screen, and how far each is drawn in (0..1)
   let theta = 0.35, omega = 0, tiltX = 0, tiltY = 0, mx = -1e4, my = -1e4, drag = null, fast = false, hot = -1;
   let clock = 0, last = performance.now(), running = true, seen = true, raf = 0, scr = [];
   const tmp = new THREE.Vector3();
   const project = p => { tmp.copy(p).applyMatrix4(turn.matrixWorld).project(camera); return { x: (tmp.x + 1) / 2 * W, y: (1 - tmp.y) / 2 * H }; };
   const onIt = (x, y) => Math.hypot(x - st.x, y - st.y) < st.s * 0.48;
-  const cornerAt = (x, y) => { let best = -1, bd = st.s * 0.085; scr.forEach((A, k) => { const d = Math.hypot(x - A.x, y - A.y); if (d < bd) { bd = d; best = k; } }); return best; };
+  // the corner (or its symbol) under a point, generous enough to catch while it turns
+  const cornerAt = (x, y) => { let best = -1, bd = st.s * 0.09; [...scr, ...sym.map((P, k) => (shown[k] > 0.3 || k === 3 ? P : null))].forEach((A, n) => { if (!A) return; const d = Math.hypot(x - A.x, y - A.y); if (d < bd) { bd = d; best = n % 4; } }); return best; };
   const frames = [];
 
   function frame(now) {
@@ -220,9 +256,18 @@ export function start({ hero, labels, stageAt, onGo }) {
     const tx = mx > -1e3 ? ((mx - st.x) / W) * 0.25 : 0, ty = my > -1e3 ? ((my - st.y) / H) * 0.18 : 0;
     tiltX += (tx - tiltX) * 0.04; tiltY += (ty - tiltY) * 0.04;
     // the arrival: it rises a little and settles as it fades in
-    const io = Math.min(1, clock / 2.2), e = 1 - (1 - io) ** 3;
-    turn.rotation.y = -(theta + tiltX) + (1 - e) * 1.2;
-    rig.rotation.x = tiltY * 0.9; rig.position.y = -(1 - e) * 0.25;
+    // the arrival (the loading story): the base triangle draws itself, its edges climb to the tip, the glass fills
+    // in and the Cortex rises at the heart, while the whole turns into place
+    const io = Math.min(1, clock / 2.4), e = 1 - (1 - io) ** 3, ss = (a, b) => { const x = Math.min(1, Math.max(0, (clock - a) / b)); return x * x * (3 - 2 * x); };
+    turn.rotation.y = -(theta + tiltX) + (1 - e) * 0.7;
+    rig.rotation.x = tiltY * 0.9; rig.position.y = -(1 - e) * 0.1;
+    if (clock < 3) {
+      for (const m of edges) { const { A, d, at, dur } = m.userData, g = Math.max(1e-3, ss(at, dur)); m.scale.y = g; m.position.copy(A).addScaledVector(d, g / 2); m.visible = g > 2e-3; }
+      gems.forEach((G, k) => G.g.scale.setScalar(k < 3 ? ss(0.1 + k * 0.22, 0.4) : ss(1.6, 0.4)));
+      cortex.scale.setScalar(Math.max(1e-3, ss(1.3, 0.9))); beam.scale.y = Math.max(1e-3, ss(1.7, 0.5)); beam.position.y = HEART + (HT - HEART) * beam.scale.y / 2;
+      beamUp.visible = clock > 2.1; flow.forEach(f => (f.s.visible = clock > 2.2));
+    }
+    sheen.uniforms.uF.value = ss(1.2, 1.2);
     floor.rotation.z = clock * 0.03; sheen.uniforms.uT.value = clock;
     // the Cortex's rings and heart
     const sp = fast ? 2.6 : 1, T = Math.PI * 2;
@@ -233,41 +278,58 @@ export function start({ hero, labels, stageAt, onGo }) {
     heart.scale.setScalar(1 + beat * 0.25); heartGlow.material.opacity = 0.55 + beat * 0.4;
     // the gems breathe; the one under the pointer swells
     gems.forEach((G, k) => { const on = k === hot, s = G.base * (on ? 1.9 : 1 + 0.08 * Math.sin(clock * 2 + k * 2)); G.halo.scale.x += (s - G.halo.scale.x) * 0.15; G.halo.scale.y = G.halo.scale.x; G.stone.rotation.y = clock * 0.8 + k; });
-    // the climbers
-    climbers.forEach((s, k) => { const u = (clock * 0.22 + k / 3) % 1, f = Math.min(1, u / 0.85); s.position.copy(corner[k]).lerp(tip, f); s.material.color.copy(COL[k]).lerp(TIPC, f); s.material.opacity = u < 0.85 ? 0.95 * Math.sin(Math.PI * f) ** 0.5 : 0; });
-    // a pulse up the beam every 3.2 s, and on a click
-    if (Math.floor(clock / 3.2) !== Math.floor((clock - dt) / 3.2)) pulse(TIPC);
-    for (let i = pulses.length - 1; i >= 0; i--) {
-      const p = pulses[i], u = (clock - p.t) / 1.6;
-      if (u >= 1) { rig.remove(p.s); p.s.material.dispose(); pulses.splice(i, 1); continue; }
-      p.s.position.set(0, HT + (1 - (1 - u) ** 2) * 0.5, 0); p.s.material.opacity = 0.9 * (1 - u); p.s.scale.setScalar(0.4 * (1 - u * 0.4));
-    }
+    // the light flow
+    for (const f of flow) { const u = (clock * 0.12 + f.off) % 1; along(f.k, u, f.s.position); f.s.material.color.copy(COL[f.k]).lerp(TIPC, Math.max(0, (u - 0.42) / 0.4)); f.s.material.opacity = 0.65 * Math.min(1, u * 12) * (u > 0.8 ? 1 - (u - 0.8) / 0.2 : 1); }
+    // the synergy: 0..1 s the three run in to the heart; 1..1.7 s the merged light rises; at 1.7 s it hits the Capstone
+    if (clock >= synAt + SYN) synAt += SYN * Math.ceil((clock - synAt - SYN) / SYN + 1e-9);
+    const tau = clock - synAt;
+    big.forEach((b, k) => { b.visible = tau >= 0 && tau < 1; if (b.visible) { along(k, (tau / 1) * 0.42, b.position); b.material.opacity = Math.min(1, tau * 5); } });
+    merged.visible = tau >= 1 && tau < 1.7;
+    if (merged.visible) { const f = (tau - 1) / 0.7; merged.position.set(0, 0.02 + (HT * SEAM - 0.02) * f * f, 0); merged.material.opacity = 1; merged.scale.setScalar(0.34 + 0.1 * f); }
+    heartFlash.material.opacity = tau >= 1 && tau < 1.5 ? 1 - (tau - 1) / 0.5 : 0; heartFlash.scale.setScalar(0.5 + (tau - 1) * 1.4);
+    if (tau >= 1.7 && tau - dt < 1.7) surge = 1; // the hit
+    surge = Math.max(0, surge - dt * 0.9);
+    flare.material.opacity = 0.85 * surge ** 1.5; flare.scale.setScalar(0.4 + (1 - surge) * 0.75);
+    sky.visible = surge > 0; sky.position.set(0, HT + (1 - surge) * 1.6, 0); sky.material.opacity = surge; sky.scale.setScalar(0.24 + 0.2 * surge);
+    beamUp.scale.set(1 + 3 * surge, 1, 1 + 3 * surge); bloom.strength = 0.5 + 0.55 * surge;
+    capHot += ((hot === 3 ? 0.7 : 0) - capHot) * 0.12;
+    capMat.uniforms.uGlow.value = Math.max(surge, capHot); capMat.uniforms.uF.value = ss(1.8, 0.6);
+    heart.scale.multiplyScalar(1 + surge * 0.4);
     // the edges at the back read dimmer, as if seen through the glass
     rig.updateMatrixWorld();
     for (const m of edges) { tmp.copy(m.userData.mid).applyMatrix4(turn.matrixWorld).applyMatrix4(camera.matrixWorldInverse); m.material.opacity = THREE.MathUtils.clamp(0.95 + (tmp.z + camDist) * 0.9, 0.35, 1); }
-    canvas.style.opacity = String(e);
+    canvas.style.opacity = String(Math.min(1, clock / 0.4));
     composer.render(dt);
 
-    // the names: on arrival all four show for a few seconds, then only the one under the pointer
+    // the symbols: each corner's own (js/sigils.js), floating just outside it with a hairline back to its gem.
+    // They draw themselves in turn on arrival and stay; the one under the pointer lights up and names itself
     rig.updateMatrixWorld(); scr = V.map(project);
     lg.clearRect(0, 0, W, H);
-    const teach = Math.max(0, Math.min(1, (clock - 1.6) / 0.6, (5.4 - clock) / 0.8));
-    for (let k = 0; k < 4; k++) {
-      const A = scr[k], on = k === hot, a = on ? 1 : teach * 0.8;
-      if (!a) continue;
-      const c = k === 3 ? TIPC : COL[k], css = `#${c.getHexString()}`;
-      lg.save(); lg.globalAlpha = a; lg.textBaseline = "middle";
-      if (on) { lg.strokeStyle = css; lg.lineWidth = 1; lg.beginPath(); lg.arc(A.x, A.y, st.s * 0.045, 0, 6.2832); lg.stroke(); }
-      lg.font = '600 11px "IBM Plex Mono", monospace'; lg.letterSpacing = "2px"; lg.fillStyle = css; lg.shadowColor = "rgba(0,0,0,.85)"; lg.shadowBlur = 8;
-      let ox = k === 3 ? 1 : Math.sign(A.x - st.x) || 1;
-      const label = NAMES[k].toUpperCase() + (on ? "  →" : ""), wn = lg.measureText(label).width;
-      if (ox > 0 && A.x + st.s * 0.07 + wn > W - 16) { // no room beside it: centre it under the corner, kept on screen
-        lg.textAlign = "center"; lg.fillText(label, Math.min(W - 16 - wn / 2, Math.max(16 + wn / 2, A.x)), A.y + st.s * 0.11);
-      } else {
-        lg.textAlign = ox > 0 ? "left" : "right";
-        lg.fillText(ox > 0 ? label : NAMES[k].toUpperCase(), A.x + ox * st.s * 0.07, k === 3 ? A.y : A.y + st.s * 0.06);
+    if (SIG) {
+      const bx = (scr[0].x + scr[1].x + scr[2].x) / 3, by = (scr[0].y + scr[1].y + scr[2].y) / 3, size = Math.max(40, st.s * 0.1), off = st.s * 0.15;
+      sym = scr.map((A, k) => {
+        if (k === 3) return project(capC);
+        let dx = A.x - bx, dy = A.y - by; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+        return { x: Math.min(W - size * 0.7, Math.max(size * 0.7, A.x + dx * off)), y: A.y + dy * off * 0.8 + off * 0.12 };
+      });
+      for (let k = 0; k < 4; k++) {
+        const A = scr[k], P = sym[k], on = k === hot, c = SIG.S[KIND[k]].color;
+        shown[k] = Math.max(0, Math.min(1, shown[k] + (on ? dt / 0.45 : -dt / 0.25))); const t = shown[k]; // only while pointed at (owner: keep it clean)
+        if (!t || k === 3) continue; // the Capstone is the crystal tip itself
+        const a = Math.min(1, t * 1.6);
+        // the hairline from the gem to the symbol
+        const hx = P.x - A.x, hy = P.y - A.y, hl = Math.hypot(hx, hy) || 1, g0 = st.s * 0.035, g1 = hl - size * 0.62;
+        if (g1 > g0) { lg.save(); lg.globalAlpha = 0.5 * t; lg.strokeStyle = c; lg.lineWidth = 1; lg.setLineDash([2, 4]); lg.beginPath(); lg.moveTo(A.x + (hx / hl) * g0, A.y + (hy / hl) * g0); lg.lineTo(A.x + (hx / hl) * (g0 + (g1 - g0) * t), A.y + (hy / hl) * (g0 + (g1 - g0) * t)); lg.stroke(); lg.restore(); }
+        SIG.draw(lg, KIND[k], P.x, P.y, size, { t, a, lit: 0.6 });
+        if (t > 0.6) { // its name, small, under it
+          lg.save(); lg.globalAlpha = (t - 0.6) / 0.4; lg.font = '500 10px "IBM Plex Mono", monospace'; lg.letterSpacing = "2px"; lg.fillStyle = c; lg.textAlign = "center"; lg.textBaseline = "top";
+          lg.shadowColor = "rgba(0,0,0,.9)"; lg.shadowBlur = 6; lg.fillText(NAMES[k].toUpperCase(), P.x, P.y + size * 0.72); lg.restore();
+        }
       }
-      lg.restore();
+    }
+    if (SIG && hot === 3 && sym[3]) { // pointing at the crystal tip: its name beside it
+      const P = sym[3]; lg.save(); lg.font = '500 10px "IBM Plex Mono", monospace'; lg.letterSpacing = "2px"; lg.fillStyle = SIG.S.capstone.color;
+      lg.textBaseline = "middle"; lg.shadowColor = "rgba(0,0,0,.9)"; lg.shadowBlur = 6; lg.fillText("CAPSTONE", P.x + st.s * 0.07, P.y); lg.restore();
     }
     if (running && seen && !document.hidden) raf = requestAnimationFrame(frame);
   }
@@ -288,8 +350,8 @@ export function start({ hero, labels, stageAt, onGo }) {
   };
   const onUp = e => {
     if (!drag) return;
-    if (drag.moved < 6 && drag.k >= 0) { const k = drag.k; drag = null; omega = BASE; onGo(k, e); return; }
-    if (drag.moved < 6) pulse(COL[Math.floor(Math.random() * 3)]);
+    if (drag.moved < 6 && drag.k >= 0) { const k = drag.k, r = hero.getBoundingClientRect(), P = sym[k] || scr[k]; drag = null; omega = BASE; onGo(k, e, P ? { x: r.left + P.x, y: r.top + P.y } : { x: e.clientX, y: e.clientY }); return; }
+    if (drag.moved < 6) pulse();
     omega = Math.max(-6, Math.min(6, omega)); drag = null;
   };
   const onLeave = () => { mx = my = -1e4; hot = -1; fast = false; };
@@ -300,7 +362,7 @@ export function start({ hero, labels, stageAt, onGo }) {
 
   { const m = /[?&]t=([\d.]+)/.exec(location.search); if (m) clock = +m[1]; } // testing: start partway in
   size(); raf = requestAnimationFrame(frame);
-  if (/[?&]fps\b/.test(location.search)) window.__prism = { get clock() { return clock; }, get opacity() { return canvas.style.opacity; }, renderer, scene, camera, composer, rig };
+  if (/[?&]fps\b/.test(location.search)) window.__prism = { get clock() { return clock; }, get sym() { return sym; }, corner: k => scr[k], get opacity() { return canvas.style.opacity; }, renderer, scene, camera, composer, rig };
 
   return {
     // average frame time over the first frames, so next.js can fall back to 2D on slow devices

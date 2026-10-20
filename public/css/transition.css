@@ -21,3 +21,7 @@
 /* no filter (it would scale with the triangle): a soft wide line under a fine one; the lines keep their width */
 .d3vt-tri path{fill:none;stroke:url(#d3vt-gold);stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .d3vt-tri path.glow{stroke:#E9C27A;opacity:.18}
+/* a part's symbol in place of the triangle (js/sigils.js), in its own colour (--c on its group) */
+.d3vt-sig path{stroke:var(--c)}
+.d3vt-sig path.fill{fill:var(--c);fill-opacity:.25;stroke:none}
+.d3vt-sig path.glow{stroke:var(--c);opacity:.2}

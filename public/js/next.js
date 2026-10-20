@@ -110,8 +110,8 @@
     const back = $("pyrBack"), front = $("pyrFront"), core = $("core"), hero = back.closest(".n-hero");
     const gb = back.getContext("2d"), gf = front.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
     const COL = [[255, 181, 71], [77, 163, 255], [185, 140, 255]], TIP = [255, 241, 207];
-    const NAMES = ["Callers", "Bots", "Chart scripts", "Capstone"], KINDS = ["caller", "bot", "script"];
-    let hot = -1, pts = null;
+    // the corners link through goTo() (below), with their symbols from js/sigils.js
+    let hot = -1, pts = null, sym = [], shown = [0, 0, 0, 0];
     let W, H, st, theta = 0.35, omega = 0, tiltX = 0, tiltY = 0, mx = -1e4, my = -1e4, drag = null, fast = false, pulses = [], seen = true, last = performance.now(), t0 = last;
     const BASE = (2 * Math.PI) / 40; // one turn in 40 s
     function size() {
@@ -204,24 +204,25 @@
         const A = v[k]; orb(A.z < C[1] ? gf : gb, A.x, A.y, s * 0.05, COL[k], (0.75 + 0.25 * Math.sin(tt * 2 + k * 2)) * io);
       }
       orb(gf, T.x, T.y, s * 0.055, TIP, (0.75 + 0.25 * Math.sin(tt * 1.4)) * io);
-      // the way in: the corner or tip under the pointer glows with a fine ring and its name; on arrival all four names
-      // show for a few seconds, then fade
+      // the way in: each corner's symbol (js/sigils.js) floats just outside it; they draw themselves in turn on
+      // arrival and stay; the one under the pointer lights up and names itself
       pts = v;
-      const teach = reduce ? 0 : Math.max(0, Math.min(1, (tt - 1.4) / 0.6, (5.2 - tt) / 0.8));
-      for (let k = 0; k < 4; k++) {
-        const A = v[k], on = k === hot, a = on ? 1 : teach * 0.75;
-        if (!a) continue;
-        const c = k === 3 ? TIP : COL[k];
-        if (on) { orb(gf, A.x, A.y, s * 0.085, c, 0.9); gf.strokeStyle = rgb(c, 0.85); gf.lineWidth = 1; gf.beginPath(); gf.arc(A.x, A.y, s * 0.045, 0, 6.2832); gf.stroke(); }
-        // the name sits outside the pyramid: beside the tip, beyond each corner
-        gf.save(); gf.globalCompositeOperation = "source-over"; gf.globalAlpha = a; gf.textBaseline = "middle";
-        gf.font = '600 11px "IBM Plex Mono", monospace'; gf.letterSpacing = "2px"; gf.fillStyle = rgb(c, 1); gf.shadowColor = "rgba(0,0,0,.8)"; gf.shadowBlur = 8;
-        let ox = k === 3 ? 1 : Math.sign(A.x - st.x) || 1;
-        const wn = gf.measureText(NAMES[k].toUpperCase() + "  →").width;
-        if (ox > 0 && A.x + s * 0.07 + wn > W - 16) ox = -1; // keep it on screen
-        const lx = A.x + ox * s * 0.07, ly = k === 3 ? A.y + s * 0.02 : A.y + s * 0.07;
-        gf.textAlign = ox > 0 ? "left" : "right";
-        gf.fillText(NAMES[k].toUpperCase() + (on ? (ox > 0 ? "  →" : "") : ""), lx, ly);
+      const SIG = window.D3Sigils;
+      if (SIG) {
+        const bx = (v[0].x + v[1].x + v[2].x) / 3, by = (v[0].y + v[1].y + v[2].y) / 3, size = Math.max(40, s * 0.1), off = s * 0.15;
+        sym = v.map((A, k) => {
+          if (k === 3) return { x: A.x + off * 0.95, y: A.y + off * 0.15 };
+          let dx = A.x - bx, dy = A.y - by; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+          return { x: Math.min(W - size * 0.7, Math.max(size * 0.7, A.x + dx * off)), y: A.y + dy * off * 0.8 + off * 0.12 };
+        });
+        gf.save(); gf.globalCompositeOperation = "source-over";
+        for (let k = 0; k < 4; k++) {
+          const P = sym[k], on = k === hot, kind = SIG.kinds[k];
+          shown[k] = reduce ? +on : Math.max(0, Math.min(1, shown[k] + (on ? dt / 0.45 : -dt / 0.25))); const t = shown[k]; // only while pointed at
+          if (!t) continue;
+          SIG.draw(gf, kind, P.x, P.y, size, { t, a: Math.min(1, t * 1.6), lit: 0.6 });
+          if (t > 0.6) { gf.save(); gf.globalAlpha = (t - 0.6) / 0.4; gf.font = '500 10px "IBM Plex Mono", monospace'; gf.letterSpacing = "2px"; gf.fillStyle = SIG.S[kind].color; gf.textAlign = "center"; gf.textBaseline = "top"; gf.fillText(SIG.S[kind].name.toUpperCase(), P.x, P.y + size * 0.72); gf.restore(); }
+        }
         gf.restore();
       }
       // the emblem sits at the pyramid's heart
@@ -243,16 +244,11 @@
     const cornerAt = (x, y) => { // the corner or tip under a point, generous enough to catch while it turns
       if (!pts) return -1;
       let best = -1, bd = st.s * 0.085;
-      pts.forEach((A, k) => { const d = Math.hypot(x - A.x, y - A.y); if (d < bd) { bd = d; best = k; } });
+      [...pts, ...sym.map((P, k) => (shown[k] > 0.3 ? P : null))].forEach((A, n) => { if (!A) return; const d = Math.hypot(x - A.x, y - A.y); if (d < bd) { bd = d; best = n % 4; } });
       return best;
     };
     // where each one leads: the marketplace showing that kind, or the Capstone page through the page transition
-    function go(k, e) {
-      if (k < 3) { document.querySelector(`[data-k="${KINDS[k]}"]`)?.click(); $("market").scrollIntoView({ behavior: "smooth" }); return; }
-      const a = document.createElement("a"); a.href = "vip"; a.hidden = true; document.body.appendChild(a);
-      a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, detail: 1 }));
-      a.remove();
-    }
+    const go = (k, e) => { const r = hero.getBoundingClientRect(), P = sym[k] || pts[k]; goTo(k, e, P && { x: r.left + P.x, y: r.top + P.y }); };
     addEventListener("pointermove", e => {
       const r = hero.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top;
       if (drag) { const dx = e.clientX - drag.x; drag.x = e.clientX; const dtm = Math.max(1, e.timeStamp - drag.t); drag.t = e.timeStamp; theta += dx * 0.008; omega = (dx * 0.008) / (dtm / 1000); drag.moved += Math.abs(dx); }
@@ -275,21 +271,30 @@
     document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; hot = -1; if (fast) { fast = false; core.classList.remove("fast"); } });
   }
 
+  // The way in from the pyramid's corners and tip: each part's symbol (js/sigils.js) opens like a gate where it was
+  // clicked. Callers, bots and chart scripts open the marketplace showing that kind; the tip opens the Capstone page
+  // (transition.js draws the Capstone's symbol before the page opens out of it).
+  const KINDS = ["caller", "bot", "script"];
+  function goTo(k, e, P) {
+    const x = P ? P.x : e.clientX, y = P ? P.y : e.clientY;
+    if (k < 3) {
+      const show = () => { document.querySelector(`[data-k="${KINDS[k]}"]`)?.click(); $("market").scrollIntoView({ behavior: "instant", block: "start" }); };
+      return window.D3Sigils ? window.D3Sigils.portal(KINDS[k], x, y, show) : show();
+    }
+    const a = document.createElement("a"); a.href = "vip"; a.dataset.sigil = "capstone"; a.hidden = true; document.body.appendChild(a);
+    a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x, clientY: y, detail: 1 }));
+    a.remove();
+  }
+
   // The glass pyramid: real 3D glass (js/prism3d.js, three.js) where WebGL works and motion is allowed; the 2D
   // pyramid above otherwise, or if the 3D one can't start or runs slower than about 30 fps (remembered for the visit).
   function pyramid() {
-    const hero = $("pyrBack").closest(".n-hero"), KINDS = ["caller", "bot", "script"];
+    const hero = $("pyrBack").closest(".n-hero");
     const gl = (() => { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2")); } catch { return false; } })();
     let slow = false; try { slow = sessionStorage.getItem("n.slow") === "1"; } catch {}
     if (reduce || !gl || slow || /[?&]flat\b/.test(location.search)) return pyramid2d();
-    function go(k, e) {
-      if (k < 3) { document.querySelector(`[data-k="${KINDS[k]}"]`)?.click(); $("market").scrollIntoView({ behavior: "smooth" }); return; }
-      const a = document.createElement("a"); a.href = "vip"; a.hidden = true; document.body.appendChild(a);
-      a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, detail: 1 }));
-      a.remove();
-    }
     import("./prism3d.js").then(m => {
-      const p = m.start({ hero, labels: $("pyrFront"), stageAt, onGo: go });
+      const p = m.start({ hero, labels: $("pyrFront"), stageAt, onGo: goTo });
       hero.classList.add("has3d");
       const check = setInterval(() => {
         const f = p.fps(); if (f == null) return; clearInterval(check);
