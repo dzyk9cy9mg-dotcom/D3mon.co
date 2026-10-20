@@ -60,11 +60,30 @@ a{color:inherit}
 .n-jewel{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen}
 .n-jewel img{width:100%;height:100%;object-fit:cover;object-position:70% 50%;opacity:0;transform:scale(1.04);transition:opacity 2s var(--ease),transform 2.6s var(--ease)}
 .n-jewel img.on{opacity:1;transform:none}
+/* the pyramid alive: light circling its edges, a pulse up the beam, the tip breathing; it drifts with the pointer */
+.n-jewel,.n-glint{transform:translate3d(var(--px,0px),var(--py,0px),0);transition:transform 1.2s var(--ease)}
+.n-glint{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen;opacity:0;transition:transform 1.2s var(--ease),opacity 2s ease 1.2s}
+.n-glint.on{opacity:1}
+.n-glint path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.n-glint .run{stroke:#FFF6E0;stroke-width:2.6;stroke-dasharray:.07 .93;animation:n-run 11s linear infinite;filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 12px rgba(233,194,122,.9))}
+.n-glint .run.two{stroke-width:1.2;stroke-dasharray:.025 .975;opacity:.6;animation-duration:17s;animation-delay:-6s}
+.n-glint .pulse{stroke:#fff;stroke-width:3;stroke-dasharray:.14 .86;stroke-dashoffset:.14;animation:n-pulse 6s cubic-bezier(.55,0,.35,1) infinite 2s;filter:drop-shadow(0 0 8px rgba(255,255,255,.8))}
+.n-glint .apex{transform-box:fill-box;transform-origin:center;animation:n-breathe 4.5s ease-in-out infinite}
+@keyframes n-run{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes n-pulse{0%{stroke-dashoffset:.14;opacity:1}45%{stroke-dashoffset:-.86;opacity:1}46%,100%{stroke-dashoffset:-.86;opacity:0}}
+@keyframes n-breathe{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:.85;transform:scale(1.1)}}
 .n-hero-in{position:relative;z-index:1;max-width:560px}
 .n-sigil{width:68px;height:62px;margin-bottom:26px;overflow:visible;filter:drop-shadow(0 0 14px rgba(255,181,71,.55))}
 .n-sigil path{fill:none;stroke:var(--callers);stroke-width:3;stroke-linejoin:round}
 .n-sigil path.in{stroke-width:1.5;opacity:.55}
 .n-sigil .c{fill:var(--callers)}.n-sigil .b{fill:var(--bots)}.n-sigil .s{fill:var(--scripts)}
+/* the little triangle draws itself in, then its corners light in turn: callers, bots, chart scripts */
+.n-sigil path{stroke-dasharray:1;stroke-dashoffset:1;animation:n-draw 1.6s var(--ease) .2s forwards}
+.n-sigil path.in{animation-delay:.9s}
+.n-sigil circle{opacity:.35;transform-box:fill-box;transform-origin:center;animation:n-corner 6s ease-in-out infinite}
+.n-sigil .b{animation-delay:2s}.n-sigil .s{animation-delay:4s}
+@keyframes n-draw{to{stroke-dashoffset:0}}
+@keyframes n-corner{0%,100%{opacity:.35;transform:scale(.8)}12%{opacity:1;transform:scale(1.35)}30%{opacity:.35;transform:scale(.8)}}
 .n-title{display:inline-block;width:max-content;margin:0;padding-right:.05em;font:700 clamp(52px,6.4vw,96px)/.92 var(--display);letter-spacing:.04em;background:var(--chrome);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 28px rgba(220,235,255,.18))}
 .n-title b{background:var(--goldfx);-webkit-background-clip:text;background-clip:text;color:transparent}
 .n-tag{margin:18px 0 0;font:600 20px var(--body);letter-spacing:.01em}
@@ -81,7 +100,7 @@ a{color:inherit}
 @media (max-width:700px){
   .n-hero{padding-top:52svh;padding-bottom:190px}
   .n-hero-in{max-width:none}
-  .n-jewel{inset:0 0 auto;height:58svh;-webkit-mask:linear-gradient(#000 70%,transparent);mask:linear-gradient(#000 70%,transparent)}
+  .n-jewel,.n-glint{inset:0 0 auto;height:58svh;-webkit-mask:linear-gradient(#000 55%,transparent 85%);mask:linear-gradient(#000 55%,transparent 85%)}
   .n-jewel img{object-position:50% 20%}
   .n-sigil{display:none}
   .n-hero .n-title{font-size:48px}
@@ -197,4 +216,8 @@ a{color:inherit}
   .n-amber,.n-item,.n-lineup a{transition:none}
   .n-jewel img{transition:none;opacity:1;transform:none}
   .n-capmark path{transition:none;stroke-dashoffset:0}
+  .n-glint .run,.n-glint .pulse{display:none}
+  .n-glint .apex,.n-sigil circle{animation:none;opacity:.7}
+  .n-sigil path{animation:none;stroke-dashoffset:0}
+  .n-jewel,.n-glint{transform:none}
 }

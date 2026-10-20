@@ -31,8 +31,10 @@
   <section class="n-hero" aria-labelledby="heroT">
     <canvas class="n-field" id="field" aria-hidden="true"></canvas>
     <picture class="n-jewel" aria-hidden="true"><source media="(max-width:700px)" srcset="img/pyramid-hero-phone.jpg"><img src="img/pyramid-hero.jpg" alt="" fetchpriority="high"></picture>
+    <svg class="n-glint" id="glint" aria-hidden="true"><defs><radialGradient id="apexGlow"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".35" stop-color="#E9C27A" stop-opacity=".35"/><stop offset="1" stop-color="#E9C27A" stop-opacity="0"/></radialGradient></defs>
+      <circle class="apex" r="46" fill="url(#apexGlow)"/><path class="run" pathLength="1"/><path class="run two" pathLength="1"/><path class="pulse" pathLength="1"/></svg>
     <div class="n-hero-in">
-      <svg class="n-sigil" viewBox="0 0 100 90" aria-hidden="true"><path d="M50 6 L94 84 L6 84 Z"/><path d="M50 6 L50 58 M94 84 L50 58 M6 84 L50 58" class="in"/><circle cx="50" cy="6" r="5" class="c"/><circle cx="6" cy="84" r="5" class="b"/><circle cx="94" cy="84" r="5" class="s"/></svg>
+      <svg class="n-sigil" viewBox="0 0 100 90" aria-hidden="true"><path pathLength="1" d="M50 6 L94 84 L6 84 Z"/><path pathLength="1" d="M50 6 L50 58 M94 84 L50 58 M6 84 L50 58" class="in"/><circle cx="50" cy="6" r="5" class="c"/><circle cx="6" cy="84" r="5" class="b"/><circle cx="94" cy="84" r="5" class="s"/></svg>
       <h1 id="heroT" class="n-title">D<b>3</b>MON</h1>
       <p class="n-tag">The live trade network</p>
       <p class="n-lede">Callers, bots and chart scripts call Bitcoin up or down every 15 minutes. Kalshi keeps the score, so no one can fake a record.</p>

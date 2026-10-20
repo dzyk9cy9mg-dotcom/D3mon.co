@@ -80,6 +80,37 @@
     document.addEventListener("visibilitychange", () => { if (!document.hidden && seen && !reduce) requestAnimationFrame(draw); });
   }
 
+  // ---------- the pyramid comes alive: a point of light slowly circles its edges, a pulse rises up the beam from the
+  // tip, the tip breathes, and the whole pyramid shifts a little with the pointer for depth. The lines are laid over
+  // the picture from its own pixels (FACE: tip, left and right corners; BEAM: where the beam leaves the top).
+  const FACE = { wide: [[1157, 322], [903, 742], [1488, 746]], phone: [[390, 466], [2, 1105], [778, 1105]] };
+  function jewel() {
+    const im = document.querySelector(".n-jewel img"), sv = $("glint"), hero = sv.closest(".n-hero");
+    const place = () => {
+      const c = sv.getBoundingClientRect(), b = im.parentNode.getBoundingClientRect(), iw = im.naturalWidth, ih = im.naturalHeight; // the frame, not the picture, which zooms in as it fades
+      if (!iw || !b.width) return;
+      const s = Math.max(b.width / iw, b.height / ih), [px, py] = getComputedStyle(im).objectPosition.split(" ").map(v => parseFloat(v) / 100);
+      const ox = b.left - c.left + (b.width - iw * s) * px, oy = b.top - c.top + (b.height - ih * s) * py;
+      const [T, L, R] = FACE[ih > iw ? "phone" : "wide"].map(([x, y]) => [ox + x * s, oy + y * s]);
+      const loop = `M${T} L${L} L${R} Z`;
+      sv.querySelectorAll(".run").forEach(p => p.setAttribute("d", loop));
+      sv.querySelector(".pulse").setAttribute("d", `M${T} L${T[0]} ${Math.max(0, oy)}`);
+      const ap = sv.querySelector(".apex"); ap.setAttribute("cx", T[0]); ap.setAttribute("cy", T[1]);
+      sv.classList.add("on");
+    };
+    const on = () => { im.classList.add("on"); place(); };
+    im.complete && im.naturalWidth ? on() : im.addEventListener("load", on);
+    addEventListener("resize", place);
+    if (reduce) return;
+    // depth: the pyramid drifts a few pixels against the pointer, easing there in CSS
+    hero.addEventListener("pointermove", e => {
+      const r = hero.getBoundingClientRect();
+      hero.style.setProperty("--px", `${(((e.clientX - r.left) / r.width) - 0.5) * -18}px`);
+      hero.style.setProperty("--py", `${(((e.clientY - r.top) / r.height) - 0.5) * -12}px`);
+    }, { passive: true });
+    hero.addEventListener("pointerleave", () => { hero.style.setProperty("--px", "0px"); hero.style.setProperty("--py", "0px"); });
+  }
+
   // ---------- live ----------
   function tick() {
     const now = serverNow(), cur = Math.floor(now / Q) * Q, left = cur + Q - now;
@@ -203,8 +234,7 @@
     if (t) { S.kind = t.dataset.kind; loadTour().catch(() => {}); }
   });
 
-  field(); motion();
-  { const im = document.querySelector(".n-jewel img"), on = () => im.classList.add("on"); im.complete ? on() : im.addEventListener("load", on); } // the pyramid fades in once loaded
+  field(); jewel(); motion();
   (async () => {
     const me = await session().catch(() => null);
     if (me) for (const a of [$("acct"), $("acct2")]) { a.textContent = me.name || me.username; a.href = "my"; }
