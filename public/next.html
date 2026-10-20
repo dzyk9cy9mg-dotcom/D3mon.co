@@ -27,11 +27,14 @@
   <!-- 1. The opening: one statement, the three kinds, one button. -->
   <section class="n-hero" aria-labelledby="heroT">
     <canvas class="n-field" id="field" aria-hidden="true"></canvas>
+    <picture class="n-jewel" aria-hidden="true"><source media="(max-width:700px)" srcset="img/pyramid-hero-phone.jpg"><img src="img/pyramid-hero.jpg" alt="" fetchpriority="high"></picture>
     <div class="n-hero-in">
-      <p class="n-eyebrow"><i class="n-dot"></i><span id="heroRound">Live now</span></p>
-      <h1 id="heroT"><span class="n-l">Callers.</span><span class="n-l n-b">Bots.</span><span class="n-l n-s">Chart scripts.</span><span class="n-l n-sub">One live scoreboard.</span></h1>
-      <p class="n-lede">Every 15 minutes they call Bitcoin up or down. Kalshi keeps the score, so nobody can fake a record. Battles every Saturday night.</p>
-      <div class="n-ctas"><a class="n-btn n-big" href="#live">Watch it live</a><a class="n-ghost n-big" href="apply">Enter your bot</a></div>
+      <svg class="n-sigil" viewBox="0 0 100 90" aria-hidden="true"><path d="M50 6 L94 84 L6 84 Z"/><path d="M50 6 L50 58 M94 84 L50 58 M6 84 L50 58" class="in"/><circle cx="50" cy="6" r="5" class="c"/><circle cx="6" cy="84" r="5" class="b"/><circle cx="94" cy="84" r="5" class="s"/></svg>
+      <h1 id="heroT" class="n-title">D<b>3</b>MON</h1>
+      <p class="n-tag">The live trade network</p>
+      <p class="n-lede">Callers, bots and chart scripts call Bitcoin up or down every 15 minutes. Kalshi keeps the score, so no one can fake a record.</p>
+      <div class="n-ctas"><a class="n-amber n-big" href="#live">Watch it live <span aria-hidden="true">→</span></a><a class="n-link2" href="apply">Enter your bot</a></div>
+      <p class="n-eyebrow n-under"><i class="n-dot"></i><span id="heroRound">Live now</span></p>
     </div>
     <dl class="n-strip" aria-label="Right now">
       <div><dt>Round closes in</dt><dd id="sLeft">–</dd></div>

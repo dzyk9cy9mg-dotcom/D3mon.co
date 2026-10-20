@@ -146,3 +146,38 @@ a{color:inherit}
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.n-dot,.n-calls li{animation:none}.n-btn,.n-item,.n-lineup a{transition:none}}
 @media (max-width:700px){.n-hero{padding-top:270px}.n-hero-in{max-width:none}}
+
+/* the crown jewel: the glass pyramid glowing over the tile wall (its black background drops away with "screen") */
+.n-jewel{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen}
+.n-jewel img{width:100%;height:100%;object-fit:cover;object-position:70% 50%;opacity:0;transform:scale(1.04);transition:opacity 1.6s var(--ease),transform 2.4s var(--ease)}
+.n-jewel img.on{opacity:1;transform:none}
+@media (max-width:700px){.n-jewel img{object-position:50% 0}}
+@media (prefers-reduced-motion:reduce){.n-jewel img{transition:none;opacity:1;transform:none}}
+
+/* the hero, after Rubric: a glowing outline triangle, one big title, a short line, one amber button */
+.n-sigil{width:68px;height:62px;margin-bottom:26px;overflow:visible;filter:drop-shadow(0 0 14px rgba(255,181,71,.55))}
+.n-sigil path{fill:none;stroke:var(--callers);stroke-width:3;stroke-linejoin:round}
+.n-sigil path.in{stroke-width:1.5;opacity:.55}
+.n-sigil .c{fill:var(--callers)}.n-sigil .b{fill:var(--bots)}.n-sigil .s{fill:var(--scripts)}
+.n-title{margin:0;font:700 clamp(56px,8.4vw,128px)/.92 var(--display);letter-spacing:.04em;background:linear-gradient(180deg,#fff 15%,#C9D6E4 55%,#7A889B);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 28px rgba(220,235,255,.18))}
+.n-title b{background:linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C7333);-webkit-background-clip:text;background-clip:text;color:transparent}
+.n-tag{margin:18px 0 0;font:600 20px var(--body);letter-spacing:.01em}
+.n-hero .n-lede{margin-top:12px;max-width:460px}
+.n-amber{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 26px;background:var(--callers);color:#140c02;font:700 15px var(--body);text-decoration:none;clip-path:polygon(0 0,100% 0,100% 70%,calc(100% - 14px) 100%,0 100%);transition:transform .25s var(--ease),filter .25s}
+.n-amber:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.n-link2{display:inline-flex;align-items:center;min-height:52px;padding:0 6px;color:var(--ink2);font:600 15px var(--body);text-decoration:none;border-bottom:1px solid var(--edge2)}
+.n-link2:hover{color:var(--ink)}
+.n-ctas{align-items:center}
+.n-under{margin:30px 0 0}
+.n-hero-in{max-width:560px}
+@media (max-width:700px){.n-title{font-size:56px}.n-sigil{width:52px;height:47px}}
+.n-hero .n-title{font:700 clamp(56px,8.4vw,128px)/.92 var(--display);letter-spacing:.04em}
+@media (max-width:700px){
+  .n-hero .n-title{font-size:52px}
+  .n-jewel{inset:0 0 auto;height:58svh;-webkit-mask:linear-gradient(#000 70%,transparent);mask:linear-gradient(#000 70%,transparent)}
+  .n-jewel img{object-position:50% 20%}
+  .n-hero{padding-top:52svh}
+  .n-sigil{display:none}
+}
+.n-hero .n-title{display:inline-block;width:max-content;font-size:clamp(52px,6.4vw,96px);padding-right:.05em}
+@media (max-width:700px){.n-hero .n-title{font-size:48px}}

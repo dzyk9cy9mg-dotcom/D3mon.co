@@ -12,36 +12,50 @@
   const pct = v => (v == null ? "–" : `${Math.round(v * 100)}%`);
   const KIND = { caller: "Caller", bot: "Bot", script: "Chart script" };
 
-  // ---------- the hero's field: tiny triangles drifting, gathering into one large triangle (after Dala) ----------
+  // ---------- the hero's wall: dark triangle tiles that slowly push in and out (after Rubric's tile wall), rising
+  // toward the pointer. Lit from above: a tile further forward catches more light. The glass pyramid glows on top.
   function field() {
     const cv = $("field"), g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
-    const COLS = ["255,181,71", "77,163,255", "185,140,255"];
-    let W, H, pts = [], t0 = performance.now();
+    let W, H, S, tiles = [], mx = -1e4, my = -1e4, ease = 0;
     function size() {
       W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.round(Math.min(900, W * H / 1500)), cx = W > 900 ? W * 0.72 : W * 0.5, cy = W > 900 ? H * 0.48 : 150, R = W > 900 ? Math.min(W, H) * 0.34 : Math.min(W * 0.22, 90);
-      const A = [[cx, cy - R], [cx + R * 0.866, cy + R * 0.5], [cx - R * 0.866, cy + R * 0.5]];
-      pts = Array.from({ length: n }, (_, i) => {
-        const side = i % 3, a = A[side], b = A[(side + 1) % 3], f = Math.random(), inset = Math.random() < 0.7 ? 0 : Math.random() * 0.35;
-        const ex = a[0] + (b[0] - a[0]) * f, ey = a[1] + (b[1] - a[1]) * f; // a home on the triangle's edge, some inside it
-        return { hx: ex + (cx - ex) * inset, hy: ey + (cy - ey) * inset, x: Math.random() * W, y: Math.random() * H, s: 1.2 + Math.random() * 2.6, c: COLS[side], r: Math.random() * 6.3, p: Math.random() * 6.3 };
-      });
+      S = W > 900 ? 96 : 64; // a tile's side
+      const h = S * 0.866; tiles = [];
+      for (let r = -1; r * h < H + h; r++) for (let c = -2; c * S / 2 < W + S; c++) {
+        const up = (r + c) % 2 === 0, x = c * S / 2, y = r * h;
+        tiles.push({ up, x, y, cx: x + S / 2, cy: y + (up ? h * 2 / 3 : h / 3), p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.35 });
+      }
+    }
+    function tri(t, inset) {
+      const h = S * 0.866, x = t.x, y = t.y, k = inset;
+      const pts = t.up ? [[x + S / 2, y], [x + S, y + h], [x, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
+      g.beginPath();
+      pts.forEach(([px, py], i) => { const qx = px + (t.cx - px) * k, qy = py + (t.cy - py) * k; g[i ? "lineTo" : "moveTo"](qx, qy); });
+      g.closePath();
     }
     function draw(now) {
-      const k = reduce ? 1 : Math.min(1, (now - t0) / 2600), e = 1 - (1 - k) ** 3, tt = now / 1000;
-      g.clearRect(0, 0, W, H);
-      for (const q of pts) {
-        const wob = reduce ? 0 : 3;
-        const x = q.x + (q.hx - q.x) * e + Math.sin(tt * 0.6 + q.p) * wob, y = q.y + (q.hy - q.y) * e + Math.cos(tt * 0.5 + q.p) * wob, s = q.s, r = q.r + (reduce ? 0 : tt * 0.3);
-        g.fillStyle = `rgba(${q.c},${0.35 + 0.45 * (0.5 + 0.5 * Math.sin(tt + q.p))})`;
-        g.beginPath();
-        for (let j = 0; j < 3; j++) { const a = r + j * 2.094; g[j ? "lineTo" : "moveTo"](x + Math.cos(a) * s, y + Math.sin(a) * s); }
-        g.fill();
+      const tt = now / 1000;
+      ease = Math.min(1, ease + 0.02);
+      g.fillStyle = "#06080c"; g.fillRect(0, 0, W, H);
+      for (const t of tiles) {
+        // how far forward the tile sits: a slow swell across the wall, plus the pointer pulling nearby tiles out
+        const swell = reduce ? 0.4 : 0.5 + 0.5 * Math.sin(tt * t.f + t.p + t.cx * 0.004 - t.cy * 0.003);
+        const d = Math.hypot(t.cx - mx, t.cy - my), pull = Math.max(0, 1 - d / 260);
+        const z = (0.25 + 0.55 * swell + 0.6 * pull) * ease;
+        // the wall darkens toward the middle-left, where the text sits, so it never fights the words
+        const quiet = Math.min(1, Math.hypot((t.cx - W * 0.28) / (W * 0.45), (t.cy - H * 0.5) / (H * 0.6)));
+        const lit = Math.round(10 + 22 * z * (0.35 + 0.65 * quiet));
+        // the tile's face, lighter at the top edge (light from above), then a dark seam around it
+        const grd = g.createLinearGradient(0, t.y, 0, t.y + S * 0.866);
+        grd.addColorStop(0, `rgb(${lit + 8},${lit + 10},${lit + 14})`); grd.addColorStop(1, `rgb(${lit - 4},${lit - 3},${lit})`);
+        g.fillStyle = grd; tri(t, 0.06 + 0.05 * (1 - z)); g.fill();
+        g.strokeStyle = `rgba(170,200,240,${0.03 + 0.07 * z * quiet})`; g.lineWidth = 1; g.stroke();
       }
       if (!reduce && !document.hidden) requestAnimationFrame(draw);
     }
     size(); requestAnimationFrame(draw);
     addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
+    addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }, { passive: true });
     document.addEventListener("visibilitychange", () => { if (!document.hidden && !reduce) requestAnimationFrame(draw); });
   }
 
@@ -159,6 +173,7 @@
   });
 
   field(); motion();
+  { const im = document.querySelector(".n-jewel img"); const on = () => im.classList.add("on"); im.complete ? on() : im.addEventListener("load", on); } // the pyramid fades in once loaded
   (async () => {
     const me = await session().catch(() => null);
     if (me) { $("acct").textContent = me.name || me.username; $("acct").href = "my"; }
