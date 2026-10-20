@@ -96,7 +96,8 @@ import { OutputPass } from "../../../public/vendor/three-addons-0.169.0/postproc
 import { ShaderPass } from "../../../public/vendor/three-addons-0.169.0/postprocessing/ShaderPass.js";
 
 await Promise.all([document.fonts.load('700 100px "Syncopate"'), document.fonts.load('600 40px Manrope'), document.fonts.load('500 20px "IBM Plex Mono"'), document.fonts.load('400 20px "IBM Plex Mono"')]);
-const Q = new URLSearchParams(location.search), shot = Q.get("shot") || "hero";
+const Q = new URLSearchParams(location.search), shot = Q.get("shot") || "hero", epic = shot === "epic";
+// "epic": the front page's hero image for /next (owner, 2026-10-20: "the crown jewel"): no screens inside, a brighter crystal, no page text
 const W = innerWidth, H = innerHeight;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(+Q.get("pr") || 1); renderer.setSize(W, H);
@@ -244,7 +245,7 @@ function build(parent, mirror) {
   corners.forEach((c, i) => { const s = capH / Hh, a = c.clone().multiplyScalar(s).setY(Hh - capH), b = corners[(i + 1) % 3].clone().multiplyScalar(s).setY(Hh - capH); g.add(rod(a, b, 0.014, gold)); });
   const heart = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), glow(0xe6f4ff, 7)); heart.position.y = Hh - capH * 0.62; g.add(heart);
   const burst = new THREE.Sprite(new THREE.SpriteMaterial({ map: burstTex, color: new THREE.Color(1.3, 1.45, 1.8), blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, fog: false }));
-  burst.position.y = Hh - capH * 0.62; burst.scale.setScalar(mirror ? 2.4 : 3.2); burst.renderOrder = mirror ? 1 : 5; burst.userData.mirrorGlow = mirror; g.add(burst);
+  burst.position.y = Hh - capH * 0.62; burst.scale.setScalar(mirror ? 2.4 : epic ? 3.4 : 3.2); burst.renderOrder = mirror ? 1 : 5; burst.userData.mirrorGlow = mirror; g.add(burst);
   // the laser out of the top, the beams inside, and a tight core
   g.add(rod(apex, apex.clone().setY(60), 0.012, glow(0xd8ecff, 2.6)));
   g.add(rod(new THREE.Vector3(0, 0.4, 0), new THREE.Vector3(0, Hh - capH * 0.62, 0), 0.02, glow(0xffc47a, 2.0)));
@@ -254,7 +255,7 @@ function build(parent, mirror) {
   [[0.62, 0.4, 0.2], [0.5, -0.5, 0.9], [0.4, 1.1, -0.3]].forEach(([r, a, b]) => { const t = new THREE.Mesh(new THREE.TorusGeometry(r, 0.008, 10, 160), gold); t.position.y = 0.4; t.rotation.set(a, b, 0); g.add(t); });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.01, 8, 200), glow(0x7fb6ff, 2.2)); ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; g.add(ring);
   // layered hologram screens on three levels round the beams
-  if (!mirror) {
+  if (!mirror && !epic) {
     rnd = 99; let k = 0;
     // fewer, bigger screens, one layer, so each reads as one thing
     [[1.05, 3, 1.5, 0.9, ["candles", "gauge", "code"]], [2.15, 2, 0.95, 0.66, ["line", "maths"]]].forEach(([y, n, rr, w, kinds]) => {
@@ -281,6 +282,7 @@ function comet(radius, tiltX, tiltZ, start, arc, color, n = 60, size = 0.04) {
 comet(5.6, 0.32, -0.12, 0.6, 1.4, COL.amber);
 comet(6.8, -0.18, 0.22, 2.2, 1.0, COL.blue, 55, 0.036);
 comet(4.9, 0.55, 0.3, 4.6, 1.0, COL.violet, 45, 0.03);
+if (epic) { comet(8.2, 0.12, -0.3, 1.2, 1.6, COL.white, 70, 0.03); comet(3.9, -0.42, 0.18, 3.6, 1.2, COL.amber, 50, 0.026); }
 { rnd = 5; const n = 260, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const y = rand() * 3.6, r = (0.2 + rand() * 0.8) * R * 0.5 * (1 - y / Hh), a = rand() * Math.PI * 2; p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = y; p[i * 3 + 2] = Math.sin(a) * r; }
   const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(p, 3));
   world.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xbcd6ff, size: 0.012, transparent: true, opacity: 0.4, depthWrite: false }))); }
@@ -294,7 +296,7 @@ comet(4.9, 0.55, 0.3, 4.6, 1.0, COL.violet, 45, 0.03);
 scene.add(new THREE.AmbientLight(0x3a4a66, 0.25));
 const key = new THREE.SpotLight(0xeaf3ff, 60, 40, 0.5, 0.6, 1.4); key.position.set(-6, 14, 8); scene.add(key);
 const rim = new THREE.SpotLight(0x8fb4ff, 50, 40, 0.6, 0.7, 1.4); rim.position.set(8, 8, -10); scene.add(rim);
-const capL = new THREE.PointLight(0xcfe6ff, 4, 7, 1.6); capL.position.y = Hh - 0.6; world.add(capL);
+const capL = new THREE.PointLight(0xcfe6ff, epic ? 5 : 4, epic ? 8 : 7, 1.6); capL.position.y = Hh - 0.6; world.add(capL);
 corners.forEach((c, i) => { const l = new THREE.PointLight(cornerCol[i], 1.6, 4, 2); l.position.copy(c).setY(0.5); world.add(l); });
 
 // ---- the Grand Hall: frosted blue glass screens in thin chrome, one big number each, holograms layered behind ----
@@ -383,6 +385,7 @@ if (shot === "profile") {
 }
 // ---- shots ----
 const shots = {
+  epic: innerWidth < innerHeight ? { pos: [0, 2.0, 17.5], look: [0, 1.7, 0], world: [0, 0, 0] } : { pos: [3.0, 1.5, 15.5], look: [1.9, 2.5, 0], world: [4.6, 0, 0] },
   hero: { pos: [3.4, 2.4, 14.5], look: [1.6, 2.5, 0], world: [4.4, 0, 0] },
   close: { pos: [5.0, 1.3, 7.2], look: [0.2, 2.0, 0], world: [0, 0, 0] },
   crystal: { pos: [2.6, 3.1, 6.6], look: [0, 3.7, 0], world: [0, 0, 0] },
