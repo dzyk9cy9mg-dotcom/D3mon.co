@@ -31,7 +31,7 @@
       const wide = W > 900;
       S = wide ? 190 : 120; F = wide ? 1700 : 1100;
       // the tunnel opens where the pyramid stands: right of the words on wide screens, the top half on phones
-      vx = wide ? W * 0.72 : W * 0.5; vy = wide ? H * 0.5 : H * 0.26;
+      ({ x: vx, y: vy } = stageAt(W, H));
       const h = S * 0.866, open = wide ? Math.min(W, H) * 0.42 : W * 0.48; tiles = [];
       for (let r = -2; r * h < H + 2 * h; r++) for (let c = -3; c * S / 2 < W + 2 * S; c++) {
         const up = (r + c) % 2 === 0, x = c * S / 2, y = r * h;
@@ -41,7 +41,7 @@
         const k = Math.min(1, Math.max(0, (Math.hypot(cx - vx, cy - vy) - open) / (open * 1.3)));
         // calm behind the words: the blocks there sit back and stay dark so the text reads
         const calm = wide ? Math.max(0, 1 - Math.hypot((cx - W * 0.22) / (W * 0.26), (cy - H * 0.5) / (H * 0.42))) : 0;
-        tiles.push({ pts: ins, cx, cy, up, calm, base: (40 + 230 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.25 });
+        tiles.push({ pts: ins, cx, cy, up, calm, k, base: (40 + 230 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.25 });
       }
       if (wide) for (const l of LINKS) { // the upward block nearest each spot carries the shortcut
         const [px, py] = [l.at[0] * W, l.at[1] * H];
@@ -79,7 +79,7 @@
           if (nx * (mxm - t.cx) + ny * (mym - t.cy) < 0) { nx = -nx; ny = -ny; } // the side's outward direction
           if (nx * (ox - mxm) + ny * (oy - mym) <= 0) continue;
           const nl = Math.hypot(nx, ny), up = Math.max(0, -ny / nl);
-          const l = (16 + 22 * up + 14 * depth) * (1 - 0.6 * t.calm);
+          const l = (16 + 22 * up + 14 * depth) * (1 - 0.6 * t.calm) * (0.3 + 0.7 * t.k);
           const warm = t.near * 26;
           const grd = g.createLinearGradient(...front[m], ...back[m]);
           grd.addColorStop(0, `rgb(${Math.round(l + warm)},${Math.round(l + warm * 0.75)},${Math.round(l + 4 + warm * 0.35)})`); grd.addColorStop(1, "rgb(3,4,6)");
@@ -88,7 +88,7 @@
         }
         // the face: matte black, a touch lighter at the top, a faint rim, gold where the pointer is near
         const top = Math.min(front[0][1], front[1][1], front[2][1]), bot = Math.max(front[0][1], front[1][1], front[2][1]);
-        const lf = Math.round((28 + 12 * depth) * (1 - 0.55 * t.calm)), fg = g.createLinearGradient(0, top, 0, bot);
+        const lf = Math.round((28 + 12 * depth) * (1 - 0.55 * t.calm) * (0.35 + 0.65 * t.k)), fg = g.createLinearGradient(0, top, 0, bot);
         fg.addColorStop(0, `rgb(${lf + 5},${lf + 6},${lf + 9})`); fg.addColorStop(1, `rgb(${lf - 5},${lf - 5},${lf - 3})`);
         g.fillStyle = fg;
         g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
@@ -136,35 +136,139 @@
     document.addEventListener("visibilitychange", () => { if (!document.hidden && seen && !reduce) requestAnimationFrame(draw); });
   }
 
-  // ---------- the pyramid comes alive: a point of light slowly circles its edges, a pulse rises up the beam from the
-  // tip, the tip breathes, and the whole pyramid shifts a little with the pointer for depth. The lines are laid over
-  // the picture from its own pixels (FACE: tip, left and right corners; BEAM: where the beam leaves the top).
-  const FACE = { wide: [[1157, 322], [903, 742], [1488, 746]], phone: [[390, 466], [2, 1105], [778, 1105]] };
-  function jewel() {
-    const im = document.querySelector(".n-jewel img"), sv = $("glint"), hero = sv.closest(".n-hero");
-    const place = () => {
-      const c = sv.getBoundingClientRect(), b = im.parentNode.getBoundingClientRect(), iw = im.naturalWidth, ih = im.naturalHeight; // the frame, not the picture, which zooms in as it fades
-      if (!iw || !b.width) return;
-      const s = Math.max(b.width / iw, b.height / ih), [px, py] = getComputedStyle(im).objectPosition.split(" ").map(v => parseFloat(v) / 100);
-      const ox = b.left - c.left + (b.width - iw * s) * px, oy = b.top - c.top + (b.height - ih * s) * py;
-      const [T, L, R] = FACE[ih > iw ? "phone" : "wide"].map(([x, y]) => [ox + x * s, oy + y * s]);
-      const loop = `M${T} L${L} L${R} Z`;
-      sv.querySelectorAll(".run").forEach(p => p.setAttribute("d", loop));
-      sv.querySelector(".pulse").setAttribute("d", `M${T} L${T[0]} ${Math.max(0, oy)}`);
-      const ap = sv.querySelector(".apex"); ap.setAttribute("cx", T[0]); ap.setAttribute("cy", T[1]);
-      sv.classList.add("on");
-    };
-    const on = () => { im.classList.add("on"); place(); };
-    im.complete && im.naturalWidth ? on() : im.addEventListener("load", on);
-    addEventListener("resize", place);
+  // Where the pyramid stands in the hero, and how big: right of the words on wide screens, the top half on phones.
+  // The wall's tunnel opens on the same point.
+  const stageAt = (W, H) => W > 900 ? { x: W * 0.72, y: H * 0.52, s: Math.min(H * 0.74, W * 0.42) } : { x: W * 0.5, y: innerHeight * 0.31, s: Math.min(W * 0.86, innerHeight * 0.44) };
+
+  // ---------- the glass pyramid, live: a three-sided pyramid turning slowly, its corners the three kinds (callers
+  // amber at the front, bots blue, chart scripts violet) and its tip gold, the light rising from each corner up its
+  // edge to the tip and on up the beam: three meeting in one place. The main page's Live Trade Cortex emblem turns at
+  // its heart. Drag to spin it (it eases back to its own pace), the pointer tilts it, hovering quickens it and the
+  // emblem, a click sends a pulse up the beam. The far side is drawn behind the emblem, the near side in front.
+  function pyramid() {
+    const back = $("pyrBack"), front = $("pyrFront"), core = $("core"), hero = back.closest(".n-hero");
+    const gb = back.getContext("2d"), gf = front.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
+    const COL = [[255, 181, 71], [77, 163, 255], [185, 140, 255]], TIP = [255, 241, 207];
+    let W, H, st, theta = 0.35, omega = 0, tiltX = 0, tiltY = 0, mx = -1e4, my = -1e4, drag = null, fast = false, pulses = [], seen = true, last = performance.now(), t0 = last;
+    const BASE = (2 * Math.PI) / 40; // one turn in 40 s
+    function size() {
+      W = hero.clientWidth; H = hero.clientHeight;
+      for (const c of [back, front]) { c.width = W * dpr; c.height = H * dpr; c.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0); }
+      st = stageAt(W, H);
+    }
+    // the pyramid in its own space (y down): base corners on a circle, tip above, turned by theta, then tilted toward us
+    function points() {
+      const s = st.s, rb = s * 0.4, yb = s * 0.25, ya = -s * 0.42, P = 0.3 + tiltY, D = s * 2.6;
+      const v = [0, 1, 2].map(k => { const a = theta + tiltX + Math.PI / 2 + k * 2.0944; return [Math.cos(a) * rb, yb, Math.sin(a) * rb]; });
+      v.push([0, ya, 0]);
+      return v.map(([x, y, z]) => {
+        const y2 = y * Math.cos(P) - z * Math.sin(P), z2 = y * Math.sin(P) + z * Math.cos(P), k = D / (D + z2);
+        return { x: st.x + x * k, y: st.y + y2 * k, z: z2, k, X: x, Y: y2 };
+      });
+    }
+    const rgb = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+    const mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
+    function edge(g, A, B, ca, cb, bright) {
+      const gr = g.createLinearGradient(A.x, A.y, B.x, B.y);
+      gr.addColorStop(0, rgb(ca, 0.9 * bright)); gr.addColorStop(1, rgb(cb, 0.9 * bright));
+      g.strokeStyle = gr; g.lineCap = "round";
+      g.globalAlpha = 0.18; g.lineWidth = 9; g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(B.x, B.y); g.stroke();
+      g.globalAlpha = 1; g.lineWidth = bright > 0.8 ? 2 : 1.3; g.stroke();
+    }
+    function orb(g, x, y, r, c, a) {
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, rgb([255, 255, 255], a)); gr.addColorStop(0.25, rgb(c, a * 0.9)); gr.addColorStop(1, rgb(c, 0));
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill();
+    }
+    function draw(now) {
+      const dt = Math.min(0.05, (now - last) / 1000), tt = (now - t0) / 1000; last = now;
+      // the turn: dragging sets it, then it eases back to its own pace (quicker under the pointer)
+      if (!drag && !reduce) { const want = BASE * (fast ? 3 : 1); omega += (want - omega) * Math.min(1, dt * 1.5); theta += omega * dt; }
+      if (!reduce) { // the pointer tilts it a little
+        const tx = mx > -1e3 ? ((mx - st.x) / W) * 0.25 : 0, ty = my > -1e3 ? ((my - st.y) / H) * 0.18 : 0;
+        tiltX += (tx - tiltX) * 0.04; tiltY += (ty - tiltY) * 0.04;
+      }
+      const v = points(), T = v[3], s = st.s, intro = reduce ? 1 : Math.min(1, tt / 1.8), io = 1 - (1 - intro) ** 3;
+      for (const g of [gb, gf]) { g.clearRect(0, 0, W, H); g.globalAlpha = 1; g.globalCompositeOperation = "lighter"; }
+      // the floor: a soft pool of light and a slow dashed ring under the base
+      const fl = st.y + s * 0.25 * Math.cos(0.3 + tiltY);
+      gb.save(); gb.translate(st.x, fl); gb.scale(1, 0.3 + tiltY * 0.6);
+      const pool = gb.createRadialGradient(0, 0, 0, 0, 0, s * 0.62); pool.addColorStop(0, `rgba(77,163,255,${0.16 * io})`); pool.addColorStop(1, "rgba(77,163,255,0)");
+      gb.fillStyle = pool; gb.beginPath(); gb.arc(0, 0, s * 0.62, 0, 6.2832); gb.fill();
+      gb.rotate(theta * 0.5); gb.setLineDash([2, 9]); gb.strokeStyle = `rgba(143,163,178,${0.35 * io})`; gb.lineWidth = 1.2;
+      gb.beginPath(); gb.arc(0, 0, s * 0.53, 0, 6.2832); gb.stroke(); gb.setLineDash([]); gb.restore();
+      // the beam: from the tip up out of the top, with pulses rising
+      const bg = gf.createLinearGradient(0, T.y, 0, 0); bg.addColorStop(0, `rgba(255,248,230,${0.85 * io})`); bg.addColorStop(1, "rgba(255,248,230,0)");
+      gf.strokeStyle = bg; gf.globalAlpha = 0.2; gf.lineWidth = 10; gf.beginPath(); gf.moveTo(T.x, T.y); gf.lineTo(T.x, 0); gf.stroke();
+      gf.globalAlpha = 1; gf.lineWidth = 1.6; gf.stroke();
+      pulses = pulses.filter(p => tt - p.t < 1.6);
+      if (!reduce && (!pulses.length || tt - pulses[pulses.length - 1].t > 3.2) && Math.floor(tt / 3.2) !== Math.floor((tt - dt) / 3.2)) pulses.push({ t: tt, c: TIP });
+      for (const p of pulses) { const u = (tt - p.t) / 1.6, e = 1 - (1 - u) ** 2, y = T.y - e * (T.y + 40); orb(gf, T.x, y, 16 + 10 * (1 - u), p.c, 0.9 * (1 - u)); }
+      // the faces: faint glass, the far ones behind the emblem, the near ones in front, lit from the upper left
+      const C = [(v[0].x + v[1].x + v[2].x + T.x) / 4, (v[0].z + v[1].z + v[2].z + T.z) / 4];
+      const M = [0, 1, 2].reduce((q, n) => [q[0] + v[n].X / 4, q[1] + v[n].Y / 4, q[2] + v[n].z / 4], [T.X / 4, T.Y / 4, T.z / 4]);
+      const L = [-0.45, -0.75, -0.5], Ll = Math.hypot(...L);
+      const faces = [[0, 1, 3], [1, 2, 3], [2, 0, 3], [0, 1, 2]];
+      for (const f of faces) {
+        const [a, b, c] = f.map(n => v[n]);
+        // the face's outward normal in camera space: facing us when it points toward the camera (negative z)
+        const u1 = [b.X - a.X, b.Y - a.Y, b.z - a.z], u2 = [c.X - a.X, c.Y - a.Y, c.z - a.z];
+        let n = [u1[1] * u2[2] - u1[2] * u2[1], u1[2] * u2[0] - u1[0] * u2[2], u1[0] * u2[1] - u1[1] * u2[0]];
+        const fc = [(a.X + b.X + c.X) / 3 - M[0], (a.Y + b.Y + c.Y) / 3 - M[1], (a.z + b.z + c.z) / 3 - M[2]];
+        if (n[0] * fc[0] + n[1] * fc[1] + n[2] * fc[2] < 0) n = n.map(q => -q);
+        const nl = Math.hypot(...n) || 1, near = n[2] / nl < 0 && f[2] === 3; // the base is always seen through the glass
+        const spec = Math.max(0, -(n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) / (nl * Ll)) ** 3; // the sheen as it turns to the light
+        const tint = f[2] === 3 ? mix(COL[f[0]], COL[f[1]], 0.5) : [77, 163, 255]; // each side tinted between its corners
+        const g = near ? gf : gb;
+        const gr = g.createLinearGradient(c.x, c.y, (a.x + b.x) / 2, (a.y + b.y) / 2);
+        gr.addColorStop(0, rgb([255, 250, 238], (near ? 0.08 + 0.42 * spec : 0.04) * io));
+        gr.addColorStop(1, rgb(tint, (near ? 0.12 + 0.16 * spec : 0.07) * io));
+        g.fillStyle = gr; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(c.x, c.y); g.closePath(); g.fill();
+      }
+      // faint lines from each corner in to the heart, as in the emblem
+      const hx = st.x, hy0 = st.y + (s * 0.25 + (-s * 0.42 - s * 0.25) * 0.36) * Math.cos(0.3 + tiltY);
+      for (let k = 0; k < 4; k++) { const A = v[k]; gb.strokeStyle = rgb(k === 3 ? TIP : COL[k], 0.22 * io); gb.lineWidth = 1; gb.beginPath(); gb.moveTo(A.x, A.y); gb.lineTo(hx, hy0); gb.stroke(); }
+      // the edges: base corner to corner, each corner up to the tip; near edges brighter and in front
+      const E = [[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]];
+      for (const [i, j] of E) {
+        const A = v[i], B = v[j], near = (A.z + B.z) / 2 < C[1];
+        edge(near ? gf : gb, A, B, i === 3 ? TIP : COL[i], j === 3 ? TIP : COL[j], (near ? 1 : 0.55) * io);
+      }
+      // the lights: from each corner up its edge to the tip, in turn, and the corners and tip glowing
+      for (let k = 0; k < 3; k++) {
+        const u = ((tt * 0.22) + k / 3) % 1;
+        if (u < 0.85 && !reduce) { const e = u / 0.85, A = v[k], x = A.x + (T.x - A.x) * e, y = A.y + (T.y - A.y) * e; orb((A.z + T.z) / 2 < C[1] ? gf : gb, x, y, s * 0.035, mix(COL[k], TIP, e), 0.95 * io); }
+        const A = v[k]; orb(A.z < C[1] ? gf : gb, A.x, A.y, s * 0.05, COL[k], (0.75 + 0.25 * Math.sin(tt * 2 + k * 2)) * io);
+      }
+      orb(gf, T.x, T.y, s * 0.055, TIP, (0.75 + 0.25 * Math.sin(tt * 1.4)) * io);
+      // the emblem sits at the pyramid's heart
+      const cs = s * 0.4;
+      core.style.width = core.style.height = `${cs}px`; core.style.transform = `translate(${hx - cs / 2}px,${hy0 - cs / 2}px)`;
+      if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
+    }
+    new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) { last = performance.now(); requestAnimationFrame(draw); } }).observe(back);
+    size(); requestAnimationFrame(draw); setTimeout(() => core.classList.add("on"), 50);
+    addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && seen && !reduce) { last = performance.now(); requestAnimationFrame(draw); } });
     if (reduce) return;
-    // depth: the pyramid drifts a few pixels against the pointer, easing there in CSS
-    hero.addEventListener("pointermove", e => {
-      const r = hero.getBoundingClientRect();
-      hero.style.setProperty("--px", `${(((e.clientX - r.left) / r.width) - 0.5) * -18}px`);
-      hero.style.setProperty("--py", `${(((e.clientY - r.top) / r.height) - 0.5) * -12}px`);
+    // the pointer: near the pyramid it quickens; a press on it starts a spin (a drag) or, if it barely moves, a pulse
+    const onIt = (x, y) => Math.hypot(x - st.x, y - st.y) < st.s * 0.48;
+    addEventListener("pointermove", e => {
+      const r = hero.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top;
+      if (drag) { const dx = e.clientX - drag.x; drag.x = e.clientX; const dtm = Math.max(1, e.timeStamp - drag.t); drag.t = e.timeStamp; theta += dx * 0.008; omega = (dx * 0.008) / (dtm / 1000); drag.moved += Math.abs(dx); }
+      const on = !!drag || onIt(mx, my); if (on !== fast) { fast = on; core.classList.toggle("fast", on); }
     }, { passive: true });
-    hero.addEventListener("pointerleave", () => { hero.style.setProperty("--px", "0px"); hero.style.setProperty("--py", "0px"); });
+    hero.addEventListener("pointerdown", e => {
+      const r = hero.getBoundingClientRect();
+      if (e.target.closest("a,button") || !onIt(e.clientX - r.left, e.clientY - r.top)) return;
+      drag = { x: e.clientX, t: e.timeStamp, moved: 0 };
+    });
+    addEventListener("pointerup", () => {
+      if (!drag) return;
+      if (drag.moved < 6) pulses.push({ t: (performance.now() - t0) / 1000, c: COL[Math.floor(Math.random() * 3)] });
+      omega = Math.max(-6, Math.min(6, omega)); drag = null;
+    });
+    document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; if (fast) { fast = false; core.classList.remove("fast"); } });
   }
 
   // ---------- live ----------
@@ -290,7 +394,7 @@
     if (t) { S.kind = t.dataset.kind; loadTour().catch(() => {}); }
   });
 
-  field(); jewel(); motion();
+  field(); pyramid(); motion();
   (async () => {
     const me = await session().catch(() => null);
     if (me) for (const a of [$("acct"), $("acct2")]) { a.textContent = me.name || me.username; a.href = "my"; }

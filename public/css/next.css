@@ -53,25 +53,28 @@ a{color:inherit}
 .n-link2:hover{color:var(--ink);border-color:var(--ink2)}
 .n-ctas{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-top:34px}
 
-/* 1. hero: the tile wall, the glass pyramid glowing over it, then the title */
-.n-hero{position:relative;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
+/* 1. hero: the wall of blocks, the live glass pyramid with the Cortex emblem at its heart, then the title */
+.n-pyr{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen}
+#pyrFront{z-index:0}
+/* the emblem, exactly as on the main page (d3mon.css .gim), placed and sized by js/next.js */
+.n-core{position:absolute;left:0;top:0;width:200px;height:200px;pointer-events:none;perspective:900px;transform-style:preserve-3d;filter:drop-shadow(0 0 18px rgba(77,163,255,.35));opacity:0;transition:opacity 1.6s ease .6s}
+.n-core.on{opacity:1}
+.n-core>svg,.n-core>.gt{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.n-core svg{overflow:visible}.n-core .gt>svg{width:100%;height:100%;display:block}
+.n-core .gt{transform-style:preserve-3d}
+.n-core .ghalo{transform:translateZ(-140px) scale(1.155)}.n-core .gback{transform:translateZ(-120px) scale(1.136)}.n-core .gfront{transform:translateZ(0)}
+.n-core .gs1,.n-core .gs2,.n-core .gs3,.n-core .gs4,.n-core .gtr{transform-box:fill-box;transform-origin:center}
+.n-core .gs3{animation:n-spin 30s linear infinite}.n-core .gs1{animation:n-spin 16s linear infinite reverse}.n-core .gs2{animation:n-spin 10s linear infinite}.n-core .gs4{animation:n-spin 22s linear infinite reverse}.n-core .gtr{animation:n-spin 40s linear infinite}
+.n-core .g1{animation:n-gfx 14s linear infinite}.n-core .g2{animation:n-gfy 11s linear infinite}.n-core .g3{animation:n-gfx 8s linear infinite reverse}
+.n-core .gpl{transform-box:fill-box;transform-origin:center;animation:n-corepulse 2.4s ease-in-out infinite}
+.n-core.fast .gs1{animation-duration:5s}.n-core.fast .gs2{animation-duration:3.5s}.n-core.fast .g2{animation-duration:6s}.n-core.fast .g3{animation-duration:4.5s}
+.n-core.fast{filter:drop-shadow(0 0 30px rgba(77,163,255,.75))}
+@keyframes n-spin{to{transform:rotate(360deg)}}
+@keyframes n-gfx{to{transform:rotateX(360deg)}}@keyframes n-gfy{to{transform:rotateY(360deg)}}
+@keyframes n-corepulse{50%{transform:scale(1.35);opacity:.55}}
+.n-hero{position:relative;touch-action:pan-y;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
 .n-field{position:absolute;inset:0;width:100%;height:100%}
 .n-hero::after{content:"";position:absolute;inset:auto 0 0;height:40%;background:linear-gradient(transparent,var(--bg));pointer-events:none}
-.n-jewel{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen}
-.n-jewel img{width:100%;height:100%;object-fit:cover;object-position:70% 50%;opacity:0;transform:scale(1.04);transition:opacity 2s var(--ease),transform 2.6s var(--ease)}
-.n-jewel img.on{opacity:1;transform:none}
-/* the pyramid alive: light circling its edges, a pulse up the beam, the tip breathing; it drifts with the pointer */
-.n-jewel,.n-glint{transform:translate3d(var(--px,0px),var(--py,0px),0);transition:transform 1.2s var(--ease)}
-.n-glint{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen;opacity:0;transition:transform 1.2s var(--ease),opacity 2s ease 1.2s}
-.n-glint.on{opacity:1}
-.n-glint path{fill:none;stroke-linecap:round;stroke-linejoin:round}
-.n-glint .run{stroke:#FFF6E0;stroke-width:2.6;stroke-dasharray:.07 .93;animation:n-run 11s linear infinite;filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 12px rgba(233,194,122,.9))}
-.n-glint .run.two{stroke-width:1.2;stroke-dasharray:.025 .975;opacity:.6;animation-duration:17s;animation-delay:-6s}
-.n-glint .pulse{stroke:#fff;stroke-width:3;stroke-dasharray:.14 .86;stroke-dashoffset:.14;animation:n-pulse 6s cubic-bezier(.55,0,.35,1) infinite 2s;filter:drop-shadow(0 0 8px rgba(255,255,255,.8))}
-.n-glint .apex{transform-box:fill-box;transform-origin:center;animation:n-breathe 4.5s ease-in-out infinite}
-@keyframes n-run{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-@keyframes n-pulse{0%{stroke-dashoffset:.14;opacity:1}45%{stroke-dashoffset:-.86;opacity:1}46%,100%{stroke-dashoffset:-.86;opacity:0}}
-@keyframes n-breathe{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:.85;transform:scale(1.1)}}
 .n-hero-in{position:relative;z-index:1;max-width:560px}
 .n-sigil{width:68px;height:62px;margin-bottom:26px;overflow:visible;filter:drop-shadow(0 0 14px rgba(255,181,71,.55))}
 .n-sigil path{fill:none;stroke:var(--callers);stroke-width:3;stroke-linejoin:round}
@@ -100,8 +103,6 @@ a{color:inherit}
 @media (max-width:700px){
   .n-hero{padding-top:52svh;padding-bottom:190px}
   .n-hero-in{max-width:none}
-  .n-jewel,.n-glint{inset:0 0 auto;height:58svh;-webkit-mask:linear-gradient(#000 55%,transparent 85%);mask:linear-gradient(#000 55%,transparent 85%)}
-  .n-jewel img{object-position:50% 20%}
   .n-sigil{display:none}
   .n-hero .n-title{font-size:48px}
   .n-lede{font-size:17px}
@@ -214,10 +215,6 @@ a{color:inherit}
   .reveal{opacity:1;transform:none;transition:none}
   .n-dot,.n-calls li{animation:none}
   .n-amber,.n-item,.n-lineup a{transition:none}
-  .n-jewel img{transition:none;opacity:1;transform:none}
   .n-capmark path{transition:none;stroke-dashoffset:0}
-  .n-glint .run,.n-glint .pulse{display:none}
-  .n-glint .apex,.n-sigil circle{animation:none;opacity:.7}
   .n-sigil path{animation:none;stroke-dashoffset:0}
-  .n-jewel,.n-glint{transform:none}
 }
