@@ -12,131 +12,72 @@
   const pct = v => (v == null ? "–" : `${Math.round(v * 100)}%`);
   const KIND = { caller: "Caller", bot: "Bot", script: "Chart script" };
 
-  // ---------- the hero's wall: dark triangle tiles that slowly push in and out (after Rubric's tile wall), rising
-  // toward the pointer. Lit from above: a tile further forward catches more light. The glass pyramid glows on top.
+  // ---------- the hero's wall: a field of small glass pyramids. Each triangle tile is a low three-sided pyramid; the
+  // ones near the pointer rise on a spring and settle back when it leaves, their faces lit from the pointer and their
+  // raised edges catching a fine gold line. A click or tap sends a ripple across the wall. Calm everywhere else, and
+  // quiet behind the words. Reduce motion gets the still, lit wall.
   function field() {
     const cv = $("field"), g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
-    let W, H, S, tiles = [], mx = -1e4, my = -1e4, ease = 0;
+    let W, H, S, tiles = [], mx = -1e4, my = -1e4, ease = 0, seen = true, waves = [];
     function size() {
       W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      S = W > 900 ? 96 : 64; // a tile's side
+      S = W > 900 ? 92 : 62; // a tile's side
       const h = S * 0.866; tiles = [];
       for (let r = -1; r * h < H + h; r++) for (let c = -2; c * S / 2 < W + S; c++) {
         const up = (r + c) % 2 === 0, x = c * S / 2, y = r * h;
-        tiles.push({ up, x, y, cx: x + S / 2, cy: y + (up ? h * 2 / 3 : h / 3), p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.35 });
+        const pts = up ? [[x + S / 2, y], [x + S, y + h], [x, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
+        const cx = (pts[0][0] + pts[1][0] + pts[2][0]) / 3, cy = (pts[0][1] + pts[1][1] + pts[2][1]) / 3;
+        // the wall darkens toward the middle-left, where the words sit, so it never fights them
+        const quiet = Math.min(1, Math.hypot((cx - W * 0.28) / (W * 0.45), (cy - H * 0.5) / (H * 0.6)));
+        tiles.push({ pts, cx, cy, quiet, z: 0, v: 0, p: Math.random() * 6.28, f: 0.2 + Math.random() * 0.3 });
       }
     }
-    function tri(t, inset) {
-      const h = S * 0.866, x = t.x, y = t.y, k = inset;
-      const pts = t.up ? [[x + S / 2, y], [x + S, y + h], [x, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
-      g.beginPath();
-      pts.forEach(([px, py], i) => { const qx = px + (t.cx - px) * k, qy = py + (t.cy - py) * k; g[i ? "lineTo" : "moveTo"](qx, qy); });
-      g.closePath();
-    }
+    const pullR = () => (W > 900 ? 230 : 150);
     function draw(now) {
-      const tt = now / 1000;
+      const tt = now / 1000, R = pullR();
       ease = Math.min(1, ease + 0.02);
+      waves = waves.filter(w => tt - w.t < 2.4);
       g.fillStyle = "#06080c"; g.fillRect(0, 0, W, H);
       for (const t of tiles) {
-        // how far forward the tile sits: a slow swell across the wall, plus the pointer pulling nearby tiles out
-        const swell = reduce ? 0.4 : 0.5 + 0.5 * Math.sin(tt * t.f + t.p + t.cx * 0.004 - t.cy * 0.003);
-        const d = Math.hypot(t.cx - mx, t.cy - my), pull = Math.max(0, 1 - d / 260);
-        const z = (0.25 + 0.55 * swell + 0.6 * pull) * ease;
-        // the wall darkens toward the middle-left, where the text sits, so it never fights the words
-        const quiet = Math.min(1, Math.hypot((t.cx - W * 0.28) / (W * 0.45), (t.cy - H * 0.5) / (H * 0.6)));
-        const lit = Math.round(10 + 22 * z * (0.35 + 0.65 * quiet));
-        // the tile's face, lighter at the top edge (light from above), then a dark seam around it
-        const grd = g.createLinearGradient(0, t.y, 0, t.y + S * 0.866);
-        grd.addColorStop(0, `rgb(${lit + 8},${lit + 10},${lit + 14})`); grd.addColorStop(1, `rgb(${lit - 4},${lit - 3},${lit})`);
-        g.fillStyle = grd; tri(t, 0.06 + 0.05 * (1 - z)); g.fill();
-        g.strokeStyle = `rgba(170,200,240,${0.03 + 0.07 * z * quiet})`; g.lineWidth = 1; g.stroke();
+        // how high the tile wants to be: a faint swell, the pointer lifting the ones near it, and any ripple passing
+        const swell = reduce ? 0.15 : 0.12 + 0.1 * Math.sin(tt * t.f + t.p + t.cx * 0.004 - t.cy * 0.003);
+        const d = Math.hypot(t.cx - mx, t.cy - my), near = Math.max(0, 1 - d / R), lift = near * near * (3 - 2 * near);
+        let ring = 0;
+        for (const w of waves) { const rr = (tt - w.t) * 620, gap = Math.abs(Math.hypot(t.cx - w.x, t.cy - w.y) - rr); ring = Math.max(ring, Math.max(0, 1 - gap / 70) * (1 - (tt - w.t) / 2.4)); }
+        const target = (swell + 1.1 * lift + 0.9 * ring) * ease;
+        if (reduce) t.z = target; else { t.v += (target - t.z) * 0.09; t.v *= 0.78; t.z += t.v; } // a soft spring: it pumps out, then settles
+        const z = Math.max(0, t.z), k = t.quiet;
+        // the apex leans away from the pointer as the tile rises, so it reads as a raised pyramid
+        const lean = Math.min(1, z) * S * 0.08, dx = t.cx - mx, dy = t.cy - my, dl = Math.hypot(dx, dy) || 1;
+        const ax = t.cx + (d < 2 * R ? (dx / dl) * lean : 0), ay = t.cy + (d < 2 * R ? (dy / dl) * lean : 0);
+        const grow = 0.07 - 0.05 * Math.min(1, z); // raised tiles close the seams a little
+        const P = t.pts.map(([px, py]) => [px + (t.cx - px) * grow, py + (t.cy - py) * grow]);
+        for (let m = 0; m < 3; m++) {
+          const a = P[m], b = P[(m + 1) % 3];
+          // the face's light: how much it faces the pointer (from above, a little in front), plus a soft top light
+          const fx = (a[0] + b[0] + ax) / 3, fy = (a[1] + b[1] + ay) / 3, ex = (a[0] + b[0]) / 2 - ax, ey = (a[1] + b[1]) / 2 - ay, el = Math.hypot(ex, ey) || 1;
+          const lx = mx - fx, ly = my - fy, ll = Math.hypot(lx, ly) || 1;
+          const toPtr = Math.max(0, (ex * lx + ey * ly) / (el * ll)) * Math.max(0, 1 - ll / (R * 2.2));
+          const top = Math.max(0, -ey / el) * 0.5 + 0.35;
+          const lit = (8 + 14 * z * top + 46 * z * toPtr) * (0.4 + 0.6 * k);
+          g.fillStyle = `rgb(${Math.round(lit + 6)},${Math.round(lit + 8)},${Math.round(lit + 13)})`;
+          g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(ax, ay); g.closePath(); g.fill();
+        }
+        // the seams, and a fine gold line on the edges of the tiles that have risen
+        g.beginPath(); g.moveTo(P[0][0], P[0][1]); g.lineTo(P[1][0], P[1][1]); g.lineTo(P[2][0], P[2][1]); g.closePath();
+        const gold = Math.max(0, Math.min(1, z - 0.25)) * k;
+        g.strokeStyle = gold > 0.02 ? `rgba(233,194,122,${(0.55 * gold).toFixed(3)})` : `rgba(170,200,240,${(0.03 + 0.05 * k).toFixed(3)})`;
+        g.lineWidth = 1; g.stroke();
       }
       if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
     }
-    let seen = true; // the wall rests while the hero is scrolled away
-    new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) requestAnimationFrame(draw); }).observe(cv);
+    new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) requestAnimationFrame(draw); }).observe(cv); // the wall rests while scrolled away
     size(); requestAnimationFrame(draw);
     addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
     addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }, { passive: true });
+    document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; });
+    cv.closest(".n-hero").addEventListener("pointerdown", e => { if (reduce) return; const r = cv.getBoundingClientRect(); waves.push({ x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now() / 1000 }); });
     document.addEventListener("visibilitychange", () => { if (!document.hidden && seen && !reduce) requestAnimationFrame(draw); });
-  }
-
-  // ---------- the gathering (after Dala): tiny triangles drift in from everywhere and come together on a triangle's
-  // edges, coloured by its corners (callers at the top, bots left, scripts right). The pointer scatters the nearest
-  // ones and they drift back. shape() gives the corners in the canvas's pixels; onNear fires as they arrive.
-  function gather(cv, shape, { cols, n, rest = 0.3, onNear }) {
-    const g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
-    let W, H, A, pts = [], t0 = 0, near = false, mx = -1e4, my = -1e4, run = false;
-    const mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(",");
-    function size() {
-      W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      A = shape();
-      for (const q of pts) home(q);
-    }
-    function home(q) {
-      const a = A[q.side], b = A[(q.side + 1) % 3];
-      q.hx = a[0] + (b[0] - a[0]) * q.f + q.j; q.hy = a[1] + (b[1] - a[1]) * q.f + q.j * 0.6;
-    }
-    pts = Array.from({ length: n }, (_, i) => ({
-      side: i % 3, f: Math.random(), j: (Math.random() - 0.5) * (Math.random() < 0.8 ? 3 : 18),
-      sx: Math.random(), sy: Math.random(), d: Math.random() * 0.8, s: 1 + Math.random() * 2.4, r: Math.random() * 6.3, p: Math.random() * 6.3, ox: 0, oy: 0
-    }));
-    size();
-    for (const q of pts) q.c = mix(cols[q.side], cols[(q.side + 1) % 3], q.f);
-    function draw(now) {
-      const t = (now - t0) / 1000;
-      g.clearRect(0, 0, W, H);
-      for (const q of pts) {
-        const k = reduce ? 1 : Math.min(1, Math.max(0, (t - q.d) / 3)), e = k < 0.5 ? 4 * k ** 3 : 1 - (-2 * k + 2) ** 3 / 2;
-        const sx = q.sx * W, sy = q.sy * H, wob = reduce ? 0 : 1.2 + 6 * (1 - e);
-        let x = sx + (q.hx - sx) * e + Math.sin(t * 0.7 + q.p) * wob, y = sy + (q.hy - sy) * e + Math.cos(t * 0.6 + q.p) * wob;
-        // the pointer pushes nearby ones aside; they ease back once it moves on
-        const dx = x - mx, dy = y - my, dd = Math.hypot(dx, dy), push = reduce ? 0 : Math.max(0, 1 - dd / 110) * 26;
-        q.ox += ((dd ? dx / dd : 0) * push - q.ox) * 0.08; q.oy += ((dd ? dy / dd : 0) * push - q.oy) * 0.08;
-        x += q.ox; y += q.oy;
-        // bright in flight, then settling to a faint shimmer on the edge
-        const settle = Math.min(1, Math.max(0, t - 3.4) / 1.6), a = (0.55 + 0.4 * Math.sin(t * 1.3 + q.p) ** 2) * (1 - settle * (1 - rest));
-        const r = q.r + (reduce ? 0 : t * 0.4);
-        g.fillStyle = `rgba(${q.c},${a.toFixed(3)})`;
-        g.beginPath();
-        for (let m = 0; m < 3; m++) { const an = r + m * 2.094; g[m ? "lineTo" : "moveTo"](x + Math.cos(an) * q.s, y + Math.sin(an) * q.s); }
-        g.fill();
-      }
-      if (!near && (reduce || t > 2)) { near = true; onNear && onNear(); }
-      if (run && !reduce && !document.hidden) requestAnimationFrame(draw);
-    }
-    const go = () => { if (run) return; run = true; requestAnimationFrame(draw); };
-    const io = new IntersectionObserver(([en]) => { if (en.isIntersecting) go(); else run = false; });
-    addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
-    addEventListener("pointermove", e => { const b = cv.getBoundingClientRect(); mx = e.clientX - b.left; my = e.clientY - b.top; }, { passive: true });
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && run && !reduce) requestAnimationFrame(draw); });
-    return { start() { t0 = performance.now(); io.observe(cv); }, size };
-  }
-
-  // The hero: the particles gather on the glass pyramid's front face, found in the picture (its pixels below), then
-  // the pyramid fades in where they meet.
-  const FACE = { wide: [[1157, 322], [903, 742], [1488, 746]], phone: [[390, 466], [2, 1105], [778, 1105]] };
-  function heroDust() {
-    const cv = $("dust"), im = document.querySelector(".n-jewel img");
-    const shape = () => {
-      const c = cv.getBoundingClientRect(), b = im.getBoundingClientRect(), iw = im.naturalWidth || 1600, ih = im.naturalHeight || 1000;
-      const s = Math.max(b.width / iw, b.height / ih), [px, py] = getComputedStyle(im).objectPosition.split(" ").map(v => parseFloat(v) / 100);
-      const ox = b.left - c.left + (b.width - iw * s) * px, oy = b.top - c.top + (b.height - ih * s) * py;
-      return FACE[ih > iw ? "phone" : "wide"].map(([x, y]) => [ox + x * s, oy + y * s]);
-    };
-    const dust = gather(cv, shape, { cols: [[255, 181, 71], [77, 163, 255], [185, 140, 255]], n: innerWidth > 900 ? 900 : 480, rest: 0.22, onNear: () => im.classList.add("on") });
-    let begun = false;
-    const begin = () => { if (begun) return; begun = true; dust.size(); dust.start(); };
-    im.complete && im.naturalWidth ? begin() : (im.addEventListener("load", begin), im.addEventListener("error", begin), setTimeout(begin, 2500));
-  }
-
-  // The capstone: gold particles gather into the capstone's small triangle as the section comes into view.
-  function capDust() {
-    const cv = $("capDust");
-    const shape = () => { const w = cv.clientWidth, h = cv.clientHeight, r = Math.min(w, h * 1.3) * 0.32, cx = w / 2, cy = h * 0.58; return [[cx, cy - r], [cx - r * 0.95, cy + r * 0.62], [cx + r * 0.95, cy + r * 0.62]]; };
-    const dust = gather(cv, shape, { cols: [[255, 241, 207], [233, 194, 122], [156, 115, 51]], n: 260, rest: 0.6 });
-    const io = new IntersectionObserver(([en]) => { if (en.isIntersecting) { io.disconnect(); dust.start(); } }, { rootMargin: "0px 0px -20% 0px" });
-    io.observe(cv);
   }
 
   // ---------- live ----------
@@ -262,7 +203,8 @@
     if (t) { S.kind = t.dataset.kind; loadTour().catch(() => {}); }
   });
 
-  field(); heroDust(); capDust(); motion();
+  field(); motion();
+  { const im = document.querySelector(".n-jewel img"), on = () => im.classList.add("on"); im.complete ? on() : im.addEventListener("load", on); } // the pyramid fades in once loaded
   (async () => {
     const me = await session().catch(() => null);
     if (me) for (const a of [$("acct"), $("acct2")]) { a.textContent = me.name || me.username; a.href = "my"; }

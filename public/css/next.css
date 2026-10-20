@@ -53,10 +53,9 @@ a{color:inherit}
 .n-link2:hover{color:var(--ink);border-color:var(--ink2)}
 .n-ctas{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-top:34px}
 
-/* 1. hero: the tile wall, the glass pyramid, the particles that gather on it, then the title */
+/* 1. hero: the tile wall, the glass pyramid glowing over it, then the title */
 .n-hero{position:relative;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
-.n-field,.n-dust{position:absolute;inset:0;width:100%;height:100%}
-.n-dust{pointer-events:none;mix-blend-mode:screen}
+.n-field{position:absolute;inset:0;width:100%;height:100%}
 .n-hero::after{content:"";position:absolute;inset:auto 0 0;height:40%;background:linear-gradient(transparent,var(--bg));pointer-events:none}
 .n-jewel{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen}
 .n-jewel img{width:100%;height:100%;object-fit:cover;object-position:70% 50%;opacity:0;transform:scale(1.04);transition:opacity 2s var(--ease),transform 2.6s var(--ease)}
@@ -169,10 +168,14 @@ a{color:inherit}
 .n-item .tag{font-style:italic}
 .n-item .go{margin-top:6px;font:600 14px var(--body);color:var(--ink)}
 
-/* 5. capstone: the gold particles gather into the capstone above the title */
+/* 5. capstone: a fine gold triangle draws itself above the title, its capstone filling last */
 .n-cap{background:radial-gradient(60% 80% at 50% 50%,rgba(233,194,122,.10),transparent 70%)}
 .n-cap-in{max-width:720px;margin:0 auto;text-align:center;display:grid;justify-items:center;gap:14px}
-.n-capdust{width:220px;height:150px;margin-bottom:-6px}
+.n-capmark{width:96px;height:84px;margin-bottom:6px;overflow:visible;filter:drop-shadow(0 0 10px rgba(233,194,122,.35))}
+.n-capmark path{fill:none;stroke:url(#capGold);stroke-width:1.5;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.8s var(--ease)}
+.n-capmark .cap{fill:url(#capGold);fill-opacity:0;transition:stroke-dashoffset 1.8s var(--ease),fill-opacity 1.2s ease 1.4s}
+.reveal.in .n-capmark path{stroke-dashoffset:0}
+.reveal.in .n-capmark .cap{fill-opacity:.85}
 .n-cap .n-kicker::before{background:var(--goldfx)}
 .n-cap h2{background:var(--goldfx);-webkit-background-clip:text;background-clip:text}
 .n-cap p{margin:0;color:var(--ink2);font-size:17px}
@@ -193,4 +196,5 @@ a{color:inherit}
   .n-dot,.n-calls li{animation:none}
   .n-amber,.n-item,.n-lineup a{transition:none}
   .n-jewel img{transition:none;opacity:1;transform:none}
+  .n-capmark path{transition:none;stroke-dashoffset:0}
 }
