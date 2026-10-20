@@ -56,6 +56,9 @@ a{color:inherit}
 /* 1. hero: the wall of blocks, the live glass pyramid with the Cortex emblem at its heart, then the title */
 .n-pyr{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen}
 #pyrFront{z-index:0}
+/* the 3D glass pyramid (js/prism3d.js): one screen-blended canvas; the 2D canvas and the emblem step aside */
+.n-pyr3d{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen;opacity:0}
+.n-hero.has3d #pyrBack,.n-hero.has3d .n-core{display:none}
 /* the emblem, exactly as on the main page (d3mon.css .gim), placed and sized by js/next.js */
 .n-core{position:absolute;left:0;top:0;width:200px;height:200px;pointer-events:none;perspective:900px;transform-style:preserve-3d;transform-origin:50% 50%;opacity:0;transition:opacity 1.6s ease .6s}
 .n-core.on{opacity:1}
@@ -73,7 +76,7 @@ a{color:inherit}
 @keyframes n-spin{to{transform:rotate(360deg)}}
 @keyframes n-gfx{to{transform:rotateX(360deg)}}@keyframes n-gfy{to{transform:rotateY(360deg)}}
 @keyframes n-corepulse{50%{transform:scale(1.35);opacity:.55}}
-.n-hero{position:relative;z-index:1;background:#040507;touch-action:pan-y;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
+.n-hero{-webkit-touch-callout:none;position:relative;z-index:1;background:#040507;touch-action:pan-y;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
 .n-field{position:absolute;inset:0;width:100%;height:100%}
 .n-hero::after{content:"";position:absolute;inset:auto 0 0;height:40%;background:linear-gradient(transparent,var(--bg));pointer-events:none}
 .n-hero-in{position:relative;z-index:1;max-width:560px}

@@ -20,9 +20,22 @@
     return box;
   }
 
-  // leaving: draw the triangle where the visitor clicked, then go
+  // a part's own symbol (js/sigils.js), for links into that part (data-sigil="caller|bot|script|capstone"), in the
+  // triangle's place: it draws itself where the visitor clicked, then the next page opens out of the triangle as usual
+  function sigil(k, x, y, r) {
+    document.querySelectorAll(".d3vt-tri").forEach(n => n.remove());
+    const box = document.createElement("div");
+    box.className = "d3vt-tri d3vt-sig"; box.setAttribute("aria-hidden", "true");
+    box.style.transform = `translate(${x}px,${y}px)`;
+    box.innerHTML = `<svg width="1" height="1" viewBox="0 0 1 1"><g transform="scale(${r / 50})">${window.D3Sigils.svg(k)}</g></svg>`;
+    document.documentElement.appendChild(box);
+    return box;
+  }
+
+  // leaving: draw the triangle (or the part's symbol) where the visitor clicked, then go
   document.addEventListener("click", e => {
     const a = e.target.closest && e.target.closest("a[href]");
+    if (a && a.dataset.sigil && window.D3Wall) return; // a part's link: the wall carries it (js/wall.js)
     if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     if ((a.target && a.target !== "_self") || a.hasAttribute("download")) return;
     const url = new URL(a.href, location.href);
@@ -32,7 +45,8 @@
     const b = a.getBoundingClientRect(), kb = e.detail === 0; // a key press has no pointer position: use the link's middle
     const x = kb ? b.left + b.width / 2 : e.clientX, y = kb ? b.top + b.height / 2 : e.clientY;
     try { sessionStorage.setItem(KEY, JSON.stringify({ x: x / innerWidth, y: y / innerHeight, at: Date.now() })); } catch {}
-    for (const path of triangle(x, y, 26).querySelectorAll("path")) {
+    const k = a.dataset.sigil, mark = k && window.D3Sigils && window.D3Sigils.S[k] ? sigil(k, x, y, 34) : triangle(x, y, 26);
+    for (const path of mark.querySelectorAll("path:not(.fill)")) {
       const len = path.getTotalLength();
       path.animate([{ strokeDasharray: len, strokeDashoffset: len }, { strokeDasharray: len, strokeDashoffset: 0 }], { duration: DRAW, easing: EASE, fill: "forwards" });
     }
@@ -42,6 +56,7 @@
   // arriving: centre the opening on the click and let the gold edge ride just inside it
   addEventListener("pagereveal", e => {
     if (!e.viewTransition) return;
+    if (document.documentElement.classList.contains("d3-wall-in")) { e.viewTransition.skipTransition(); return; } // the wall opens this page
     let p = null;
     try { p = JSON.parse(sessionStorage.getItem(KEY)); sessionStorage.removeItem(KEY); } catch {}
     if (!p || Date.now() - p.at > 8000) p = { x: 0.5, y: 0.5 }; // back and forward: open from the middle

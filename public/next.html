@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>D3MON · The live trade network</title>
+<title>D3MON · Human insight. Bot technology. Chart intelligence.</title>
 <meta name="description" content="Callers, bots and chart scripts call Bitcoin up or down every 15 minutes. Kalshi keeps the score. Battles every Saturday.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/next.css">
 <link rel="stylesheet" href="css/transition.css">
+<script src="js/wall.js"></script>
 <script src="js/transition.js"></script>
 </head>
 <!-- The new D3MON front page (owner, 2026-10-20: "let's make a better website"). A calm black canvas with the
@@ -50,8 +51,8 @@
     <div class="n-hero-in">
       <svg class="n-sigil" viewBox="0 0 100 90" aria-hidden="true"><path pathLength="1" d="M50 6 L94 84 L6 84 Z"/><path pathLength="1" d="M50 6 L50 58 M94 84 L50 58 M6 84 L50 58" class="in"/><circle cx="50" cy="6" r="5" class="c"/><circle cx="6" cy="84" r="5" class="b"/><circle cx="94" cy="84" r="5" class="s"/></svg>
       <h1 id="heroT" class="n-title">D<b>3</b>MON</h1>
-      <p class="n-tag">The live trade network</p>
-      <p class="n-lede">Callers, bots and chart scripts call Bitcoin up or down every 15 minutes. Kalshi keeps the score, so no one can fake a record.</p>
+      <p class="n-tag">Human insight. Bot technology. Chart intelligence.</p>
+      <p class="n-lede">Live Trade Community</p>
       <div class="n-ctas"><a class="n-amber n-big" href="#live">Watch it live <span aria-hidden="true">→</span></a><a class="n-link2" href="apply">Enter your bot</a></div>
       <p class="n-eyebrow n-under"><i class="n-dot"></i><span id="heroRound">Live now</span></p>
     </div>
@@ -122,7 +123,7 @@
       <h2 id="capT">Trade with the best, live</h2>
       <p>Scheduled sessions where D3MON's callers lead, backed by bots and chart scripts. Members see the callers' calls the moment they're made.</p>
       <div class="n-session tilt" id="capNext"><p class="n-small">No session scheduled yet.</p></div>
-      <a class="n-amber n-gold" href="vip">Get access <span aria-hidden="true">→</span></a>
+      <a class="n-amber n-gold" href="vip" data-sigil="capstone">Get access <span aria-hidden="true">→</span></a>
     </div>
   </section>
 </main>
@@ -133,6 +134,7 @@
   <nav aria-label="More"><a href="tournaments">Tournaments</a><a href="my">My bots</a><a href="apply">Apply</a><a href="world">The old world</a></nav>
 </footer>
 <script src="js/arena.js"></script>
+<script src="js/sigils.js"></script>
 <script src="js/next.js"></script>
 </body>
 </html>
