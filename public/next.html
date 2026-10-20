@@ -26,13 +26,27 @@
   <div class="n-acts"><a class="n-link" id="acct" href="login">Sign in</a><a class="n-amber n-sm" id="join" href="apply">Join D3MON</a></div>
 </header>
 
+<!-- the original site's Flower of Life, faint behind the plain black parts, lit around the pointer (js/next.js) -->
+<canvas class="n-geo" id="geo" aria-hidden="true"></canvas>
 <main>
   <!-- 1. The opening: one statement, the three kinds, one button. -->
   <section class="n-hero" aria-labelledby="heroT">
     <canvas class="n-field" id="field" aria-hidden="true"></canvas>
-    <picture class="n-jewel" aria-hidden="true"><source media="(max-width:700px)" srcset="img/pyramid-hero-phone.jpg"><img src="img/pyramid-hero.jpg" alt="" fetchpriority="high"></picture>
-    <svg class="n-glint" id="glint" aria-hidden="true"><defs><radialGradient id="apexGlow"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".35" stop-color="#E9C27A" stop-opacity=".35"/><stop offset="1" stop-color="#E9C27A" stop-opacity="0"/></radialGradient></defs>
-      <circle class="apex" r="46" fill="url(#apexGlow)"/><path class="run" pathLength="1"/><path class="run two" pathLength="1"/><path class="pulse" pathLength="1"/></svg>
+    <!-- the glass pyramid, drawn live (js/next.js): its far side behind, the main page's Live Trade Cortex emblem at
+         its heart (the same drawing and movements as .sigil.gim on the main page), its near side in front -->
+    <canvas class="n-pyr" id="pyrBack" aria-hidden="true"></canvas>
+    <div class="n-core gim" id="core" aria-hidden="true">
+      <svg width="0" height="0" style="position:absolute"><defs><linearGradient id="ngsT" x1="0" y1="-70" x2="0" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB547"/><stop offset=".55" stop-color="#4DA3FF"/><stop offset="1" stop-color="#B98CFF"/></linearGradient><radialGradient id="ngsC"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".45"/><stop offset="1" stop-color="#4DA3FF" stop-opacity="0"/></radialGradient></defs></svg>
+      <svg class="ghalo" viewBox="-100 -100 200 200"><circle r="98" fill="url(#ngsC)"/></svg>
+      <svg class="gback" viewBox="-100 -100 200 200"><circle r="74" fill="#05080C" fill-opacity=".55" stroke="#1A2A36"/></svg>
+      <div class="gt g1"><svg class="gs3" viewBox="-100 -100 200 200"><circle r="94" fill="none" stroke="#8FA3B2" stroke-opacity=".45" stroke-width=".9" stroke-dasharray="1 5"/></svg></div>
+      <div class="gt g2"><svg class="gs1" viewBox="-100 -100 200 200"><circle r="84" fill="none" stroke="url(#ngsT)" stroke-width="1.6" stroke-dasharray="36 10 4 10"/></svg></div>
+      <div class="gt g3"><svg class="gs2" viewBox="-100 -100 200 200"><polygon points="0,-66 57.2,-33 57.2,33 0,66 -57.2,33 -57.2,-33" fill="none" stroke="#4DA3FF" stroke-opacity=".55" stroke-width="1"/></svg></div>
+      <svg class="gfront gs4" viewBox="-100 -100 200 200"><circle r="44" fill="none" stroke="#8FA3B2" stroke-opacity=".35" stroke-width=".8" stroke-dasharray="2 4"/></svg>
+      <svg class="gfront gtr" viewBox="-100 -100 200 200"><polygon points="0,-62 53.7,31 -53.7,31" fill="rgba(77,163,255,.06)" stroke="url(#ngsT)" stroke-width="2.2"/><line x1="0" y1="-62" x2="0" y2="0" stroke="#FFB547" stroke-opacity=".35"/><line x1="53.7" y1="31" x2="0" y2="0" stroke="#B98CFF" stroke-opacity=".35"/><line x1="-53.7" y1="31" x2="0" y2="0" stroke="#4DA3FF" stroke-opacity=".35"/><circle cx="0" cy="-62" r="5" fill="#FFB547"/><circle cx="-53.7" cy="31" r="5" fill="#4DA3FF"/><circle cx="53.7" cy="31" r="5" fill="#B98CFF"/></svg>
+      <svg class="gfront" viewBox="-100 -100 200 200"><circle r="20" fill="#05080C" stroke="#4DA3FF" stroke-width="1.4"/><circle class="gpl" r="8" fill="#4DA3FF"/><circle r="4" fill="#DCE7EE"/></svg>
+    </div>
+    <canvas class="n-pyr" id="pyrFront" aria-hidden="true"></canvas>
     <div class="n-hero-in">
       <svg class="n-sigil" viewBox="0 0 100 90" aria-hidden="true"><path pathLength="1" d="M50 6 L94 84 L6 84 Z"/><path pathLength="1" d="M50 6 L50 58 M94 84 L50 58 M6 84 L50 58" class="in"/><circle cx="50" cy="6" r="5" class="c"/><circle cx="6" cy="84" r="5" class="b"/><circle cx="94" cy="84" r="5" class="s"/></svg>
       <h1 id="heroT" class="n-title">D<b>3</b>MON</h1>
@@ -53,19 +67,19 @@
   <section class="n-sec n-live" id="live" aria-labelledby="liveT">
     <header class="n-head reveal"><p class="n-kicker">01 · Live</p><h2 id="liveT">The trading floor</h2><p>This round's calls as they land, and everyone talking about them.</p></header>
     <div class="n-livegrid">
-      <article class="n-card reveal n-clock">
+      <article class="n-card tilt reveal n-clock">
         <p class="n-k">This round</p>
         <p class="n-big-num" id="lClock">–</p>
         <div class="n-bar2"><i id="lBar"></i></div>
         <p class="n-small" id="lRound">–</p>
         <p class="n-small" id="lPrev">–</p>
       </article>
-      <article class="n-card reveal">
+      <article class="n-card tilt reveal">
         <p class="n-k">Calls this round</p>
         <ol class="n-calls" id="lCalls"><li class="n-empty">No calls yet this round.</li></ol>
         <p class="n-note">Bots and scripts show their call at once. Callers stay sealed until the close.</p>
       </article>
-      <article class="n-card reveal n-chat">
+      <article class="n-card tilt reveal n-chat">
         <p class="n-k">The chat <span id="chatHere"></span></p>
         <ol class="n-msgs" id="lChat"><li class="n-empty">Quiet so far. Say hello.</li></ol>
         <a class="n-link2" href="world#hall">Open the chat <span aria-hidden="true">→</span></a>
@@ -107,7 +121,7 @@
       <p class="n-kicker">05 · Capstone</p>
       <h2 id="capT">Trade with the best, live</h2>
       <p>Scheduled sessions where D3MON's callers lead, backed by bots and chart scripts. Members see the callers' calls the moment they're made.</p>
-      <div class="n-session" id="capNext"><p class="n-small">No session scheduled yet.</p></div>
+      <div class="n-session tilt" id="capNext"><p class="n-small">No session scheduled yet.</p></div>
       <a class="n-amber n-gold" href="vip">Get access <span aria-hidden="true">→</span></a>
     </div>
   </section>
