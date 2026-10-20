@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>D3MON · The live trade network</title>
+<meta name="description" content="Callers, bots and chart scripts call Bitcoin up or down every 15 minutes. Kalshi keeps the score. Battles every Saturday.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/next.css">
+</head>
+<!-- The new D3MON front page (owner, 2026-10-20: "let's make a better website"). A calm black canvas with the
+     three colours (Dala), the battle as an arena (Swoosh), and the main parts of the site, each its own section:
+     Live, Battle, Marketplace, Tournaments, Capstone. Thin client over /api/v1 (js/next.js). -->
+<body>
+<a class="n-skip" href="#live">Skip to the live round</a>
+<header class="n-bar" id="bar">
+  <a class="n-mark" href="next" aria-label="D3MON home">D<b>3</b>MON</a>
+  <nav class="n-nav" aria-label="Main">
+    <a href="#live">Live</a><a href="#battle">Battles</a><a href="#market">Marketplace</a><a href="#tour">Tournaments</a><a href="#cap">Capstone</a>
+  </nav>
+  <div class="n-acts"><a class="n-link" id="acct" href="login">Sign in</a><a class="n-btn" id="join" href="apply">Join D3MON</a></div>
+</header>
+
+<main>
+  <!-- 1. The opening: one statement, the three kinds, one button. -->
+  <section class="n-hero" aria-labelledby="heroT">
+    <canvas class="n-field" id="field" aria-hidden="true"></canvas>
+    <div class="n-hero-in">
+      <p class="n-eyebrow"><i class="n-dot"></i><span id="heroRound">Live now</span></p>
+      <h1 id="heroT"><span class="n-l">Callers.</span><span class="n-l n-b">Bots.</span><span class="n-l n-s">Chart scripts.</span><span class="n-l n-sub">One live scoreboard.</span></h1>
+      <p class="n-lede">Every 15 minutes they call Bitcoin up or down. Kalshi keeps the score, so nobody can fake a record. Battles every Saturday night.</p>
+      <div class="n-ctas"><a class="n-btn n-big" href="#live">Watch it live</a><a class="n-ghost n-big" href="apply">Enter your bot</a></div>
+    </div>
+    <dl class="n-strip" aria-label="Right now">
+      <div><dt>Round closes in</dt><dd id="sLeft">–</dd></div>
+      <div><dt>Calls this round</dt><dd id="sCalls">–</dd></div>
+      <div><dt>Kalshi says up</dt><dd id="sUp">–</dd></div>
+      <div><dt>Here now</dt><dd id="sHere">–</dd></div>
+    </dl>
+  </section>
+
+  <!-- 2. Live: the round, the calls as they land, and the chat. The hangout. -->
+  <section class="n-sec n-live" id="live" aria-labelledby="liveT">
+    <header class="n-head reveal"><p class="n-kicker">01 · Live</p><h2 id="liveT">The trading floor</h2><p>This round's calls as they land, and everyone talking about them.</p></header>
+    <div class="n-livegrid">
+      <article class="n-card reveal n-clock">
+        <p class="n-k">This round</p>
+        <p class="n-big-num" id="lClock">–</p>
+        <div class="n-bar2"><i id="lBar"></i></div>
+        <p class="n-small" id="lRound">–</p>
+        <p class="n-small" id="lPrev">–</p>
+      </article>
+      <article class="n-card reveal">
+        <p class="n-k">Calls this round</p>
+        <ol class="n-calls" id="lCalls"><li class="n-empty">No calls yet this round.</li></ol>
+        <p class="n-note">Bots and scripts show their call at once. Callers stay sealed until the close.</p>
+      </article>
+      <article class="n-card reveal n-chat">
+        <p class="n-k">The chat <span id="chatHere"></span></p>
+        <ol class="n-msgs" id="lChat"><li class="n-empty">Quiet so far. Say hello.</li></ol>
+        <a class="n-ghost" href="world#hall">Open the chat</a>
+      </article>
+    </div>
+  </section>
+
+  <!-- 3. Battle: HardSmoke's Saturday event, as an arena. -->
+  <section class="n-sec n-arena" id="battle" aria-labelledby="battleT">
+    <div class="n-arena-in">
+      <header class="n-head reveal"><p class="n-kicker">02 · Battle of the Bots</p><h2 id="battleT"><span id="bTitle">Saturday night</span></h2><p id="bWhen">Every Saturday, 7 pm Pacific. Twelve rounds.</p></header>
+      <div class="n-count reveal" id="bCount" aria-live="off"><div><b id="cD">–</b><span>days</span></div><div><b id="cH">–</b><span>hours</span></div><div><b id="cM">–</b><span>min</span></div><div><b id="cS">–</b><span>sec</span></div></div>
+      <div class="n-lineup reveal" id="bLineup"></div>
+      <div class="n-streams reveal" id="bStreams"></div>
+      <div class="n-ctas reveal"><a class="n-btn n-big" id="bApply" href="apply">Apply to battle</a><a class="n-ghost n-big" href="world#hall">Watch the battle</a></div>
+      <ol class="n-board reveal" id="bBoard" hidden></ol>
+    </div>
+  </section>
+
+  <!-- 4. Marketplace: the shop windows. -->
+  <section class="n-sec" id="market" aria-labelledby="marketT">
+    <header class="n-head reveal"><p class="n-kicker">03 · Marketplace</p><h2 id="marketT">Find an edge you can check</h2><p>Every caller, bot and chart script here has a public record kept by Kalshi. Look before you buy.</p></header>
+    <div class="n-filter reveal" role="group" aria-label="Show"><button type="button" data-k="all" aria-pressed="true">All</button><button type="button" data-k="caller">Callers</button><button type="button" data-k="bot">Bots</button><button type="button" data-k="script">Chart scripts</button></div>
+    <div class="n-shop" id="shop"></div>
+  </section>
+
+  <!-- 5. Tournaments: always on. -->
+  <section class="n-sec" id="tour" aria-labelledby="tourT">
+    <header class="n-head reveal"><p class="n-kicker">04 · Tournaments</p><h2 id="tourT">Always on</h2><p id="tWhen">Hourly, daily, weekly and monthly, scored by Kalshi.</p></header>
+    <div class="n-tabs reveal" role="tablist" id="tTabs"></div>
+    <ol class="n-board reveal" id="tRows"></ol>
+    <p class="n-note reveal">Ranked by correct calls, then accuracy. Not financial advice. D3MON never trades.</p>
+  </section>
+
+  <!-- 6. Capstone: the paid session at the top. -->
+  <section class="n-sec n-cap" id="cap" aria-labelledby="capT">
+    <div class="n-cap-in reveal">
+      <p class="n-kicker">05 · Capstone</p>
+      <h2 id="capT">Trade with the best, live</h2>
+      <p>Scheduled sessions where D3MON's callers lead, backed by bots and chart scripts. Members see the callers' calls the moment they're made.</p>
+      <div class="n-session" id="capNext"><p class="n-small">No session scheduled yet.</p></div>
+      <a class="n-btn n-big" href="vip">Get access</a>
+    </div>
+  </section>
+</main>
+
+<footer class="n-foot">
+  <p class="n-mark">D<b>3</b>MON</p>
+  <p>Paper results, verified by Kalshi. For entertainment. Not financial advice. D3MON never trades.</p>
+  <nav aria-label="More"><a href="tournaments">Tournaments</a><a href="my">My bots</a><a href="apply">Apply</a><a href="world">The old world</a></nav>
+</footer>
+<script src="js/arena.js"></script>
+<script src="js/next.js"></script>
+</body>
+</html>
