@@ -99,8 +99,8 @@
   const stageAt = (W, H) => W > 900 ? { x: W * 0.72, y: H * 0.52, s: Math.min(H * 0.74, W * 0.42) } : { x: W * 0.5, y: innerHeight * 0.31, s: Math.min(W * 0.86, innerHeight * 0.44) };
 
   // ---------- the glass pyramid, live: a three-sided pyramid turning slowly, its corners the three kinds (callers
-  // amber at the front, bots blue, chart scripts violet) and its tip gold, the light rising from each corner up its
-  // edge to the tip and on up the beam: three meeting in one place. The main page's Live Trade Cortex emblem lies flat
+  // amber at the front, bots blue, chart scripts violet) and its tip gold, the light running from each corner in
+  // across the floor, up the middle and out of the tip up the beam: three meeting in one place. The main page's Live Trade Cortex emblem lies flat
   // on its floor. The corners and the tip are the way in (owner, 2026-10-20): pointing at one slows the pyramid so it
   // can be caught and it becomes its living form (no words); a click takes you there (callers, bots or chart scripts in
   // the marketplace, the tip to the Capstone). The glyphs bloom once on arrival so people learn it. Drag to spin it (it
@@ -112,6 +112,7 @@
     const COL = [[255, 181, 71], [77, 163, 255], [185, 140, 255]], TIP = [255, 241, 207];
     const KINDS = ["caller", "bot", "script"];
     let hot = -1, pts = null;
+    const lastU = [0, 0, 0]; // where each light was last frame, to send its pulse as it leaves the capstone
     const bloom = [0, 0, 0, 0], opened = [-9, -9, -9, -9]; // how far each has opened, and when it last began to
     let W, H, st, theta = 0.35, omega = 0, tiltX = 0, tiltY = 0, mx = -1e4, my = -1e4, drag = null, fast = false, pulses = [], seen = true, last = performance.now(), t0 = last;
     const BASE = (2 * Math.PI) / 40; // one turn in 40 s
@@ -214,7 +215,6 @@
       gf.strokeStyle = bg; gf.globalAlpha = 0.2; gf.lineWidth = 10; gf.beginPath(); gf.moveTo(Tc.x, Tc.y); gf.lineTo(Tc.x, 0); gf.stroke();
       gf.globalAlpha = 1; gf.lineWidth = 1.6; gf.stroke();
       pulses = pulses.filter(p => tt - p.t < 1.6);
-      if (!reduce && (!pulses.length || tt - pulses[pulses.length - 1].t > 3.2) && Math.floor(tt / 3.2) !== Math.floor((tt - dt) / 3.2)) pulses.push({ t: tt, c: TIP });
       for (const p of pulses) { const u = (tt - p.t) / 1.6, e = 1 - (1 - u) ** 2, y = Tc.y - e * (Tc.y + 40); orb(gf, Tc.x, y, 16 + 10 * (1 - u), p.c, 0.9 * (1 - u)); }
       // the faces: faint glass, the far ones behind the emblem, the near ones in front, lit from the upper left
       const C = [(v[0].x + v[1].x + v[2].x + T.x) / 4, (v[0].z + v[1].z + v[2].z + T.z) / 4];
@@ -249,15 +249,23 @@
         const A = v[i], B = j === 3 ? cut[i] : v[j], near = (A.z + B.z) / 2 < C[1];
         edge(near ? gf : gb, A, B, i === 3 ? TIP : COL[i], j === 3 ? TIP : COL[j], (near ? 1 : 0.55) * io);
       }
-      // the lights: from each corner up its edge to the tip, in turn, and the corners and tip glowing
+      // the lights, in turn: from each corner inward across the floor to the heart, straight up the middle through
+      // the capstone, then out of the top as a pulse up the beam (three meeting in one place, rising together)
       for (let k = 0; k < 3; k++) {
-        const u = ((tt * 0.22) + k / 3) % 1;
-        if (u < 0.85 && !reduce) { const e = u / 0.85, A = v[k], x = A.x + (Tc.x - A.x) * e, y = A.y + (Tc.y - A.y) * e; orb((A.z + T.z) / 2 < C[1] ? gf : gb, x, y, s * 0.035, mix(COL[k], TIP, e), 0.95 * io); }
-        const A = v[k]; orb(A.z < C[1] ? gf : gb, A.x, A.y, s * 0.05, COL[k], (0.75 + 0.25 * Math.sin(tt * 2 + k * 2)) * io * (1 - 0.85 * bloom[k])); // dims while its form is open
+        const u = ((tt * 0.2) + k / 3) % 1, A = v[k], sm = q => q * q * (3 - 2 * q);
+        if (!reduce && u < 0.8) {
+          let x, y, c, g;
+          if (u < 0.38) { const e = sm(u / 0.38); x = A.x + (hx - A.x) * e; y = A.y + (hy0 - A.y) * e; c = COL[k]; g = A.z * (1 - e) < C[1] ? gf : gb; } // across the floor
+          else { const e = sm((u - 0.38) / 0.42); x = hx + (Tc.x - hx) * e; y = hy0 + (Tc.y - hy0) * e; c = mix(COL[k], TIP, e); g = gf; } // up the middle
+          orb(g, x, y, s * 0.035, c, 0.95 * io);
+        }
+        if (!reduce && lastU[k] < 0.8 && u >= 0.8) pulses.push({ t: tt, c: mix(COL[k], TIP, 0.45) }); // out of the capstone, up the beam
+        lastU[k] = u; orb(A.z < C[1] ? gf : gb, A.x, A.y, s * 0.05, COL[k], (0.75 + 0.25 * Math.sin(tt * 2 + k * 2)) * io * (1 - 0.85 * bloom[k])); // dims while its form is open
       }
       // the crystal capstone: gold glass faces brightest at the tip, fine facets, the seam it sits on glowing as it
       // lifts (light through the gap), and a slow band of light rising through it
-      const cb = bloom[3], gold = [233, 194, 122];
+      const flash = reduce ? 0 : Math.max(...[0, 1, 2].map(k => Math.max(0, 1 - Math.abs(((tt * 0.2 + k / 3) % 1) - 0.8) / 0.05))); // a light passing through
+      const cb = Math.min(1, bloom[3] + 0.7 * flash), gold = [233, 194, 122];
       gf.strokeStyle = rgb(gold, (0.12 + 0.3 * cb) * io); gf.lineWidth = 7; gf.beginPath(); cut.forEach((q, m) => gf[m ? "lineTo" : "moveTo"](q.x, q.y)); gf.closePath(); gf.stroke();
       gf.strokeStyle = rgb(gold, (0.6 + 0.4 * cb) * io); gf.lineWidth = 1.2; gf.stroke();
       for (let m = 0; m < 3; m++) {
