@@ -12,76 +12,97 @@
   const pct = v => (v == null ? "–" : `${Math.round(v * 100)}%`);
   const KIND = { caller: "Caller", bot: "Bot", script: "Chart script" };
 
-  // ---------- the hero's wall (after Rubric's deep tiles, made D3MON's own): big matte-black triangular blocks with
-  // deep sides, seen in perspective, forming a tunnel that opens around the glass pyramid. Blocks further out stand
-  // nearer; each breathes slowly in and out, the ones near the pointer push out toward you on a spring and settle
-  // back, and a click sends a push rippling through the wall. The edges facing the light catch a faint gold.
-  // Reduce motion gets the still tunnel.
+  // ---------- the hero's wall (after Rubric's deep tiles, made D3MON's own; owner, 2026-10-20: "tiles popping in and
+  // out like pistons", "more metallic", no black voids, no random pattern): a grid of deep triangular blocks in
+  // gunmetal, seen in perspective, forming a shallow tunnel that opens around the glass pyramid. The faces have a
+  // brushed sheen lit from the pointer like a lamp, bevelled edges and metal sides; the gaps are dark metal, never
+  // black holes. Every few seconds a piston wave runs out from the pyramid: upward triangles pop out and downward
+  // ones sink in, each with a mechanical snap and settle, and the wave's front catches one of the three colours in
+  // turn (amber, blue, violet). The blocks near the pointer push out together, and a click sends a ripple.
+  // Reduce motion gets the still wall.
   function field() {
     const cv = $("field"), g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
-    let W, H, S, F, vx, vy, tiles = [], mx = -1e4, my = -1e4, sx = 0, sy = 0, seen = true, waves = [], t0 = performance.now();
-    const BACK = -150; // how deep the blocks' sides run (shallow, so the far blocks stay neat)
+    let W, H, S, F, vx, vy, tiles = [], mx = -1e4, my = -1e4, lx = 0, ly = 0, sx = 0, sy = 0, seen = true, waves = [], t0 = performance.now();
+    const BACK = -170, COLS = [[255, 181, 71], [77, 163, 255], [185, 140, 255]];
+    const EVERY = 5.2, SPEED = 900, PISTON = 46; // a piston wave every 5.2 s, travelling 900 px/s, 46 deep
     function size() {
       W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
       const wide = W > 900;
       S = wide ? 190 : 120; F = wide ? 1700 : 1100;
-      // the tunnel opens where the pyramid stands: right of the words on wide screens, the top half on phones
-      ({ x: vx, y: vy } = stageAt(W, H));
+      ({ x: vx, y: vy } = stageAt(W, H)); lx = vx; ly = vy * 0.6;
       const h = S * 0.866, open = wide ? Math.min(W, H) * 0.42 : W * 0.48; tiles = [];
       for (let r = -2; r * h < H + 2 * h; r++) for (let c = -3; c * S / 2 < W + 2 * S; c++) {
         const up = (r + c) % 2 === 0, x = c * S / 2, y = r * h;
         const pts = up ? [[x + S / 2, y], [x + S, y + h], [x, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
         const cx = (pts[0][0] + pts[1][0] + pts[2][0]) / 3, cy = (pts[0][1] + pts[1][1] + pts[2][1]) / 3;
-        const ins = pts.map(([px, py]) => [px + (cx - px) * 0.06, py + (cy - py) * 0.06]); // the seam between blocks
+        const ins = pts.map(([px, py]) => [px + (cx - px) * 0.035, py + (cy - py) * 0.035]); // a fine seam between blocks
         const k = Math.min(1, Math.max(0, (Math.hypot(cx - vx, cy - vy) - open) / (open * 1.3)));
         // calm behind the words: the blocks there sit back and stay dark so the text reads
         const calm = wide ? Math.max(0, 1 - Math.hypot((cx - W * 0.22) / (W * 0.26), (cy - H * 0.5) / (H * 0.42))) : 0;
-        tiles.push({ pts: ins, cx, cy, up, calm, k, base: (30 + 55 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.25 });
+        tiles.push({ pts: ins, cx, cy, up, calm, k, base: (30 + 55 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, d0: Math.hypot(cx - vx, cy - vy) });
       }
     }
+    // one piston stroke, 0..1.1 s: a quick snap out with a small overshoot, a hold, then an easy return
+    const stroke = s => { if (s <= 0 || s >= 1.1) return 0; if (s < 0.16) { const u = s / 0.16 - 1; return 1 + 2.7 * u ** 3 + 1.7 * u * u; } return s < 0.42 ? 1 : 0.5 + 0.5 * Math.cos(Math.PI * (s - 0.42) / 0.68); };
     // a point at depth z, seen from in front of the vanishing point (which drifts a little with the pointer)
     const proj = (x, y, z) => { const s = F / (F - z), ox = vx + sx, oy = vy + sy; return [ox + (x - ox) * s, oy + (y - oy) * s]; };
     function draw(now) {
-      const tt = (now - t0) / 1000, R = W > 900 ? 460 : 260; // a wide, gentle bulge: neighbours move together, so the blocks stay lined up
+      const tt = (now - t0) / 1000, R = W > 900 ? 460 : 260;
       waves = waves.filter(w => tt - w.t < 2.6);
       if (!reduce) { sx += ((mx > -1e3 ? (mx - vx) * -0.02 : 0) - sx) * 0.04; sy += ((my > -1e3 ? (my - vy) * -0.02 : 0) - sy) * 0.04; }
+      // the lamp: follows the pointer softly; without one it rests above the pyramid
+      const tx = mx > -1e3 ? mx : vx, ty = my > -1e3 ? my : vy * 0.6; lx += (tx - lx) * 0.08; ly += (ty - ly) * 0.08;
       const intro = reduce ? 1 : Math.min(1, tt / 2.2), io = 1 - (1 - intro) ** 3; // on arrival the blocks slide forward out of the dark
+      const n = Math.floor((tt - 1.5) / EVERY), since = tt - 1.5 - n * EVERY, wc = COLS[((n % 3) + 3) % 3]; // the current wave
       for (const t of tiles) {
-        const breathe = reduce ? 0 : 6 * Math.sin(tt * 0.45 - (t.cx + t.cy * 0.6) * 0.004); // one slow swell across the wall
         const d = Math.hypot(t.cx - mx, t.cy - my), near = Math.max(0, 1 - d / R), push = near * near * (3 - 2 * near) * 55;
         let ring = 0;
         for (const w of waves) { const rr = (tt - w.t) * 700, gap = Math.abs(Math.hypot(t.cx - w.x, t.cy - w.y) - rr); const q = Math.max(0, 1 - gap / 220); ring = Math.max(ring, q * q * (3 - 2 * q) * (1 - (tt - w.t) / 2.6)); }
-        const target = (t.base + breathe + push + 60 * ring) * io - 200 * (1 - io);
-        if (reduce) t.z = target; else { t.v += (target - t.z) * 0.05; t.v *= 0.7; t.z += t.v; } // a soft, well-damped spring: it eases out and settles without wobbling
+        const target = (t.base + push + 60 * ring) * io - 200 * (1 - io);
+        if (reduce) t.z = target; else { t.v += (target - t.z) * 0.05; t.v *= 0.7; t.z += t.v; } // a soft, well-damped spring
+        // the piston wave: out for upward blocks, in for downward ones, reaching each block as the wave passes it
+        const st = reduce || n < 0 ? 0 : stroke(since - t.d0 / SPEED);
+        t.pz = st * PISTON * (t.up ? 1 : -0.6) * (1 - 0.8 * t.calm);
+        t.glow = st > 0 ? Math.max(0, Math.sin(Math.PI * Math.min(1, (since - t.d0 / SPEED) / 0.5))) * (1 - t.calm) : 0;
         t.near = near;
       }
-      g.fillStyle = "#040507"; g.fillRect(0, 0, W, H);
+      g.fillStyle = "#0b0d11"; g.fillRect(0, 0, W, H); // the gaps are dark metal, not holes
       const ox = vx + sx, oy = vy + sy;
-      for (const t of [...tiles].sort((a, b) => a.z - b.z)) { // far blocks first
-        const front = t.pts.map(([x, y]) => proj(x, y, t.z)), back = t.pts.map(([x, y]) => proj(x, y, BACK));
-        const depth = Math.max(0, Math.min(1, t.z / 300));
-        // the sides: only the ones that face the opening are seen; lit a little from above, warmed by the pointer
+      for (const t of [...tiles].sort((a, b) => (a.z + a.pz) - (b.z + b.pz))) { // far blocks first
+        const z = t.z + t.pz, front = t.pts.map(([x, y]) => proj(x, y, z)), back = t.pts.map(([x, y]) => proj(x, y, BACK));
+        const dim = (1 - 0.55 * t.calm) * (0.72 + 0.28 * t.k), lamp = Math.max(0, 1 - Math.hypot(t.cx - lx, t.cy - ly) / (W > 900 ? 700 : 420));
+        // the sides that face the opening: brushed metal, lit from above, fading darker toward the back (never to black)
         for (let m = 0; m < 3; m++) {
           const a = t.pts[m], b = t.pts[(m + 1) % 3], mxm = (a[0] + b[0]) / 2, mym = (a[1] + b[1]) / 2;
           let nx = b[1] - a[1], ny = a[0] - b[0];
           if (nx * (mxm - t.cx) + ny * (mym - t.cy) < 0) { nx = -nx; ny = -ny; } // the side's outward direction
           if (nx * (ox - mxm) + ny * (oy - mym) <= 0) continue;
-          const nl = Math.hypot(nx, ny), up = Math.max(0, -ny / nl);
-          const l = (16 + 22 * up + 14 * depth) * (1 - 0.6 * t.calm) * (0.7 + 0.3 * t.k);
-          const warm = t.near * 26;
+          const nl = Math.hypot(nx, ny), up = Math.max(0, -ny / nl), l = (26 + 30 * up + 22 * lamp) * dim;
           const grd = g.createLinearGradient(...front[m], ...back[m]);
-          grd.addColorStop(0, `rgb(${Math.round(l + warm)},${Math.round(l + warm * 0.75)},${Math.round(l + 4 + warm * 0.35)})`); grd.addColorStop(1, "rgb(3,4,6)");
-          g.fillStyle = grd;
-          g.beginPath(); g.moveTo(...front[m]); g.lineTo(...front[(m + 1) % 3]); g.lineTo(...back[(m + 1) % 3]); g.lineTo(...back[m]); g.closePath(); g.fill();
+          grd.addColorStop(0, `rgb(${l | 0},${(l + 2) | 0},${(l + 6) | 0})`); grd.addColorStop(1, `rgb(${(l * 0.38) | 0},${(l * 0.4) | 0},${(l * 0.45) | 0})`);
+          g.fillStyle = grd; g.beginPath(); g.moveTo(...front[m]); g.lineTo(...front[(m + 1) % 3]); g.lineTo(...back[(m + 1) % 3]); g.lineTo(...back[m]); g.closePath(); g.fill();
         }
-        // the face: matte black, a touch lighter at the top, a faint rim, gold where the pointer is near
-        const top = Math.min(front[0][1], front[1][1], front[2][1]), bot = Math.max(front[0][1], front[1][1], front[2][1]);
-        const lf = Math.round((28 + 12 * depth) * (1 - 0.55 * t.calm) * (0.7 + 0.3 * t.k)), fg = g.createLinearGradient(0, top, 0, bot);
-        fg.addColorStop(0, `rgb(${lf + 5},${lf + 6},${lf + 9})`); fg.addColorStop(1, `rgb(${lf - 5},${lf - 5},${lf - 3})`);
-        g.fillStyle = fg;
-        g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
-        g.strokeStyle = t.near > 0.05 ? `rgba(233,194,122,${(0.06 + 0.4 * t.near).toFixed(3)})` : `rgba(190,205,230,${((0.06 + 0.08 * depth) * (1 - 0.6 * t.calm)).toFixed(3)})`;
-        g.lineWidth = 1; g.stroke();
+        // the face: gunmetal with a brushed band of light running across it toward the lamp
+        const [fx0, fy0] = front[0], cxp = (front[0][0] + front[1][0] + front[2][0]) / 3, cyp = (front[0][1] + front[1][1] + front[2][1]) / 3;
+        const ang = Math.atan2(ly - cyp, lx - cxp), rr2 = Math.hypot(front[1][0] - fx0, front[1][1] - fy0) * 0.6;
+        const fg = g.createLinearGradient(cxp - Math.cos(ang) * rr2, cyp - Math.sin(ang) * rr2, cxp + Math.cos(ang) * rr2, cyp + Math.sin(ang) * rr2);
+        const base = (24 + 10 * Math.min(1, Math.max(0, z / 200))) * dim, hi = base + (14 + 34 * lamp) * dim;
+        const c = v => `rgb(${v | 0},${(v + 2) | 0},${(v + 6) | 0})`;
+        fg.addColorStop(0, c(base * 0.7)); fg.addColorStop(0.55, c(base)); fg.addColorStop(0.8, c(hi)); fg.addColorStop(1, c(base * 1.05));
+        g.fillStyle = fg; g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
+        // the bevel: the upper edges catch the light, the lower ones fall into shade; gold near the pointer, the
+        // wave's colour as the piston fires
+        for (let m = 0; m < 3; m++) {
+          const A = front[m], B = front[(m + 1) % 3], top = (A[1] + B[1]) / 2 < cyp;
+          g.strokeStyle = top ? `rgba(215,225,240,${((0.1 + 0.18 * lamp) * dim).toFixed(3)})` : `rgba(0,0,0,${(0.35 * dim).toFixed(3)})`;
+          g.lineWidth = 1; g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.stroke();
+        }
+        const glow = Math.max(t.near * 0.45, t.glow * 0.7);
+        if (glow > 0.02) {
+          const col = t.glow * 0.7 > t.near * 0.45 ? wc : [233, 194, 122];
+          g.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${glow.toFixed(3)})`; g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.stroke();
+        }
       }
       if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
     }

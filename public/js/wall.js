@@ -25,13 +25,13 @@
   function size() {
     dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight;
     cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const S = W > 900 ? 170 : 110, h = S * 0.866;
+    const S = W > 900 ? 190 : 120, h = S * 0.866; // the hero wall's own size
     tiles = [];
     for (let r = -1; r * h < H + h; r++) for (let c = -2; c * S / 2 < W + S; c++) {
       const up = (r + c) % 2 === 0, x = c * S / 2, y = r * h;
       const p = up ? [[x + S / 2, y], [x + S, y + h], [x, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
       const cx = (p[0][0] + p[1][0] + p[2][0]) / 3, cy = (p[0][1] + p[1][1] + p[2][1]) / 3;
-      tiles.push({ p: p.map(([px, py]) => [px + (cx - px) * 0.035, py + (cy - py) * 0.035]), cx, cy, seed: Math.random() });
+      tiles.push({ p: p.map(([px, py]) => [px + (cx - px) * 0.035, py + (cy - py) * 0.035]), cx, cy, up, seed: Math.random() });
     }
   }
   const easeOut = u => 1 - (1 - u) ** 3, easeIn = u => u * u * u;
@@ -49,7 +49,7 @@
     const list = [];
     for (const t of tiles) {
       const d = Math.hypot(t.cx - x, t.cy - y) / far;
-      const u = Math.max(0, Math.min(1, (at - (d * T.spread + t.seed * 70)) / T.each)); if (u < 1) done = false;
+      const u = Math.max(0, Math.min(1, (at - (d * T.spread + (t.up ? 0 : 110) + t.seed * 25)) / T.each)); if (u < 1) done = false;
       // z: where the block's face is (0 = in place, covering); a: how solid it is
       const z = dir > 0 ? -1100 * (1 - easeOut(u)) : -1300 * easeIn(u);
       const a = dir > 0 ? Math.min(1, u * 2.2) : 1 - u ** 1.4;
@@ -61,7 +61,7 @@
     }
     // the dark behind the blocks fills in as they land, and drains away as they fly off
     const cover = sum / tiles.length;
-    g.fillStyle = `rgba(4,5,7,${(dir > 0 ? cover ** 1.5 : cover ** 2.5).toFixed(3)})`; g.fillRect(0, 0, W, H);
+    g.fillStyle = `rgba(11,13,17,${(dir > 0 ? cover ** 1.5 : cover ** 2.5).toFixed(3)})`; g.fillRect(0, 0, W, H);
     list.sort((A, B) => A.z - B.z); // far blocks first
     for (const { t, z, a, u, sw } of list) {
       const c = Math.cos(sw), si = Math.sin(sw), rot = ([px, py]) => [x + (px - x) * c - (py - y) * si, y + (px - x) * si + (py - y) * c];
@@ -69,23 +69,30 @@
       const front = P.map(([px, py]) => proj(px, py, z)), back = P.map(([px, py]) => proj(px, py, z - DEEP));
       const moving = Math.sin(Math.PI * u), lit = 0.45 + 0.55 * Math.max(0, Math.min(1, (z + 1100) / 1100));
       g.globalAlpha = a;
-      // the sides that face the click, lit a little from above, falling away to black
+      // the sides that face the click: brushed metal lit from above, darker toward the back (never black)
       for (let m = 0; m < 3; m++) {
         const A = P[m], B = P[(m + 1) % 3], mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
         let nx = B[1] - A[1], ny = A[0] - B[0];
         if (nx * (mx - tcx) + ny * (my - tcy) < 0) { nx = -nx; ny = -ny; }
         if (nx * (x - mx) + ny * (y - my) <= 0) continue;
-        const up = Math.max(0, -ny / Math.hypot(nx, ny)), l = (18 + 20 * up) * lit;
+        const up = Math.max(0, -ny / Math.hypot(nx, ny)), l = (26 + 30 * up) * lit;
         const sg = g.createLinearGradient(...front[m], ...back[m]);
-        sg.addColorStop(0, `rgb(${l | 0},${l | 0},${(l + 4) | 0})`); sg.addColorStop(1, "rgb(3,4,6)");
+        sg.addColorStop(0, `rgb(${l | 0},${(l + 2) | 0},${(l + 6) | 0})`); sg.addColorStop(1, `rgb(${(l * 0.38) | 0},${(l * 0.4) | 0},${(l * 0.45) | 0})`);
         g.fillStyle = sg; g.beginPath(); g.moveTo(...front[m]); g.lineTo(...front[(m + 1) % 3]); g.lineTo(...back[(m + 1) % 3]); g.lineTo(...back[m]); g.closePath(); g.fill();
       }
-      // the face: matte black, a touch lighter at the top; its rim catches the colour while it moves
-      const top = Math.min(front[0][1], front[1][1], front[2][1]), bot = Math.max(front[0][1], front[1][1], front[2][1]);
-      const lf = Math.round(30 * lit), fg = g.createLinearGradient(0, top, 0, bot);
-      fg.addColorStop(0, `rgb(${lf + 5},${lf + 6},${lf + 9})`); fg.addColorStop(1, `rgb(${lf - 6},${lf - 6},${lf - 4})`);
+      // the face: gunmetal with a brushed band of light toward the click (the lamp), as on the hero wall
+      const cxp = (front[0][0] + front[1][0] + front[2][0]) / 3, cyp = (front[0][1] + front[1][1] + front[2][1]) / 3;
+      const ang = Math.atan2(y - cyp, x - cxp), rr = Math.hypot(front[1][0] - front[0][0], front[1][1] - front[0][1]) * 0.6;
+      const lamp = Math.max(0, 1 - Math.hypot(cxp - x, cyp - y) / Math.max(W, H)), base = 26 * lit, hi = base + 14 + 30 * lamp;
+      const mc = v => `rgb(${v | 0},${(v + 2) | 0},${(v + 6) | 0})`;
+      const fg = g.createLinearGradient(cxp - Math.cos(ang) * rr, cyp - Math.sin(ang) * rr, cxp + Math.cos(ang) * rr, cyp + Math.sin(ang) * rr);
+      fg.addColorStop(0, mc(base * 0.7)); fg.addColorStop(0.55, mc(base)); fg.addColorStop(0.8, mc(hi)); fg.addColorStop(1, mc(base * 1.05));
       g.fillStyle = fg; g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
-      g.lineWidth = 1; g.strokeStyle = `rgba(${cr},${cg},${cb},${(0.07 + 0.75 * moving).toFixed(3)})`; g.stroke();
+      for (let m = 0; m < 3; m++) { // the bevel: upper edges catch the light, lower ones fall into shade
+        const A = front[m], B = front[(m + 1) % 3], top = (A[1] + B[1]) / 2 < cyp;
+        g.strokeStyle = top ? "rgba(215,225,240,.16)" : "rgba(0,0,0,.35)"; g.lineWidth = 1; g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.stroke();
+      }
+      if (moving > 0.03) { g.strokeStyle = `rgba(${cr},${cg},${cb},${(0.8 * moving).toFixed(3)})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.stroke(); }
     }
     g.globalAlpha = 1;
     if (sym && window.D3Sigils) { // the symbol draws itself at the heart of the wall; on the way out you pass through it
