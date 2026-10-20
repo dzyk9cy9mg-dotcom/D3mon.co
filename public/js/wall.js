@@ -9,8 +9,8 @@
 (function () {
   "use strict";
   const reduce = !window.matchMedia || matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const KEY = "d3wall", HOLD = 140;
-  const IN = { spread: 430, each: 560 }, OUT = { spread: 560, each: 780 }; // ms: the wave's sweep, and each block's move
+  const KEY = "d3wall", HOLD = 80;
+  const IN = { spread: 420, each: 500 }, OUT = { spread: 560, each: 780 }; // ms: the wave's sweep, and each block's move
   const F = 1400, DEEP = 300; // the viewing distance, and how deep each block runs (as on the hero's wall)
   let cv = null, g = null, W = 0, H = 0, dpr = 1, tiles = [], raf = 0;
 
@@ -54,21 +54,26 @@
       const z = dir > 0 ? -1100 * (1 - easeOut(u)) : -1300 * easeIn(u);
       const a = dir > 0 ? Math.min(1, u * 2.2) : 1 - u ** 1.4;
       sum += dir > 0 ? u : 1 - u;
-      if (a > 0.002) list.push({ t, z, a, u });
+      // the swirl: each block curves round the click as it travels, a little more the farther out it is; it spirals
+      // in as the wall closes and keeps turning the same way as it falls back
+      const sw = (dir > 0 ? 0.5 * (1 - easeOut(u)) : -0.42 * easeIn(u)) * (0.45 + 0.55 * d);
+      if (a > 0.002) list.push({ t, z, a, u, sw });
     }
     // the dark behind the blocks fills in as they land, and drains away as they fly off
     const cover = sum / tiles.length;
     g.fillStyle = `rgba(4,5,7,${(dir > 0 ? cover ** 1.5 : cover ** 2.5).toFixed(3)})`; g.fillRect(0, 0, W, H);
     list.sort((A, B) => A.z - B.z); // far blocks first
-    for (const { t, z, a, u } of list) {
-      const front = t.p.map(([px, py]) => proj(px, py, z)), back = t.p.map(([px, py]) => proj(px, py, z - DEEP));
+    for (const { t, z, a, u, sw } of list) {
+      const c = Math.cos(sw), si = Math.sin(sw), rot = ([px, py]) => [x + (px - x) * c - (py - y) * si, y + (px - x) * si + (py - y) * c];
+      const P = t.p.map(rot), [tcx, tcy] = rot([t.cx, t.cy]);
+      const front = P.map(([px, py]) => proj(px, py, z)), back = P.map(([px, py]) => proj(px, py, z - DEEP));
       const moving = Math.sin(Math.PI * u), lit = 0.45 + 0.55 * Math.max(0, Math.min(1, (z + 1100) / 1100));
       g.globalAlpha = a;
       // the sides that face the click, lit a little from above, falling away to black
       for (let m = 0; m < 3; m++) {
-        const A = t.p[m], B = t.p[(m + 1) % 3], mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
+        const A = P[m], B = P[(m + 1) % 3], mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
         let nx = B[1] - A[1], ny = A[0] - B[0];
-        if (nx * (mx - t.cx) + ny * (my - t.cy) < 0) { nx = -nx; ny = -ny; }
+        if (nx * (mx - tcx) + ny * (my - tcy) < 0) { nx = -nx; ny = -ny; }
         if (nx * (x - mx) + ny * (y - my) <= 0) continue;
         const up = Math.max(0, -ny / Math.hypot(nx, ny)), l = (18 + 20 * up) * lit;
         const sg = g.createLinearGradient(...front[m], ...back[m]);
@@ -85,8 +90,8 @@
     g.globalAlpha = 1;
     if (sym && window.D3Sigils) { // the symbol draws itself at the heart of the wall; on the way out you pass through it
       const s = Math.min(W, H) * 0.16;
-      if (dir > 0) window.D3Sigils.draw(g, sym, x, y, s, { t: Math.min(1, Math.max(0, (at - 180) / 650)), a: 1, lit: 0.7 });
-      else { const k = Math.min(1, at / 520); window.D3Sigils.draw(g, sym, x, y, s * (1 + 5 * easeIn(k)), { t: 1, a: 1 - k, lit: 0.7 }); }
+      if (dir > 0) { const q = Math.min(1, Math.max(0, (at - 180) / 650)); window.D3Sigils.draw(g, sym, x, y, s, { t: q, a: 1, lit: 0.7, spin: 0.35 * (1 - easeOut(q)) }); }
+      else { const k = Math.min(1, at / 520); window.D3Sigils.draw(g, sym, x, y, s * (1 + 5 * easeIn(k)), { t: 1, a: 1 - k, lit: 0.7, spin: -0.3 * easeIn(k) }); }
     }
     return done;
   }
