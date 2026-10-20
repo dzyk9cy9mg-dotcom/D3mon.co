@@ -102,7 +102,7 @@
   // amber at the front, bots blue, chart scripts violet) and its tip gold, the light rising from each corner up its
   // edge to the tip and on up the beam: three meeting in one place. The main page's Live Trade Cortex emblem lies flat
   // on its floor. The corners and the tip are the way in (owner, 2026-10-20): pointing at one slows the pyramid so it
-  // can be caught and it blooms into its glyph (no words); a click takes you there (callers, bots or chart scripts in
+  // can be caught and it becomes its living form (no words); a click takes you there (callers, bots or chart scripts in
   // the marketplace, the tip to the Capstone). The glyphs bloom once on arrival so people learn it. Drag to spin it (it
   // eases back to its own pace), the pointer tilts it, hovering elsewhere quickens it and the emblem, a click
   // elsewhere sends a pulse up the beam. The far side is drawn behind the emblem, the near side in front.
@@ -112,7 +112,7 @@
     const COL = [[255, 181, 71], [77, 163, 255], [185, 140, 255]], TIP = [255, 241, 207];
     const KINDS = ["caller", "bot", "script"];
     let hot = -1, pts = null;
-    const bloom = [0, 0, 0, 0];
+    const bloom = [0, 0, 0, 0], opened = [-9, -9, -9, -9]; // how far each has opened, and when it last began to
     let W, H, st, theta = 0.35, omega = 0, tiltX = 0, tiltY = 0, mx = -1e4, my = -1e4, drag = null, fast = false, pulses = [], seen = true, last = performance.now(), t0 = last;
     const BASE = (2 * Math.PI) / 40; // one turn in 40 s
     function size() {
@@ -144,36 +144,47 @@
       gr.addColorStop(0, rgb([255, 255, 255], a)); gr.addColorStop(0.25, rgb(c, a * 0.9)); gr.addColorStop(1, rgb(c, 0));
       g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill();
     }
-    // the three corner glyphs, drawn in fine glowing lines inside a circle of radius r at (x, y): a soft wide pass under a
-    // fine one, in the node's own colour
-    function glyph(g, k, x, y, r, t, c, a) {
-      const lines = (draw, w) => { g.strokeStyle = rgb(c, 0.22 * a); g.lineWidth = w * 3.5; g.beginPath(); draw(); g.stroke(); g.strokeStyle = rgb(c, 0.95 * a); g.lineWidth = w; g.beginPath(); draw(); g.stroke(); };
-      g.save(); g.translate(x, y); g.lineJoin = g.lineCap = "round";
-      if (k === 0) { // callers: the eye that reads the chart, with the triangle for a pupil; it blinks now and then
-        const open = 1 - Math.max(0, 1 - Math.abs(((t % 5.5) - 5.3) / 0.12)), h = 0.62 * r * open;
-        lines(() => { g.moveTo(-r, 0); g.quadraticCurveTo(0, -h * 1.6, r, 0); g.quadraticCurveTo(0, h * 1.6, -r, 0); }, 1.3);
-        if (open > 0.3) {
-          lines(() => g.arc(0, 0, r * 0.4 * Math.min(1, open * 1.2), 0, 6.2832), 1.1);
-          const pr = r * 0.2, ro = t * 0.6;
-          g.fillStyle = rgb(c, 0.95 * a); g.beginPath();
-          for (let m = 0; m < 3; m++) { const an = ro - Math.PI / 2 + m * 2.0944; g[m ? "lineTo" : "moveTo"](Math.cos(an) * pr, Math.sin(an) * pr); }
-          g.closePath(); g.fill();
+    // the three corner nodes become living forms drawn in fine light, abstract but true to what they stand for:
+    // callers (readers) an iris of fine fibres that slowly dilates around the triangle, someone reading the chart;
+    // bots a gyroscope, tilted rings turning with points riding them at a steady pace, machine precision; chart
+    // scripts a Lissajous figure traced by a point of light and slowly changing shape, maths and signals
+    function form(g, k, x, y, r, t, c, a) {
+      const hi = mix(c, [255, 255, 255], 0.55), glow = (draw, w, al = 1) => {
+        g.strokeStyle = rgb(c, 0.2 * a * al); g.lineWidth = w * 4; g.beginPath(); draw(); g.stroke();
+        g.strokeStyle = rgb(hi, 0.9 * a * al); g.lineWidth = w; g.beginPath(); draw(); g.stroke();
+      };
+      g.save(); g.translate(x, y); g.lineCap = g.lineJoin = "round";
+      if (k === 0) { // the iris
+        const dil = 0.5 + 0.5 * Math.sin(t * 1.1), ri = r * (0.26 + 0.12 * dil), N = 56;
+        for (let i = 0; i < N; i++) {
+          const an = (i / N) * 6.2832 + Math.sin(t * 0.3) * 0.15, wob = 0.5 + 0.5 * Math.sin(i * 2.7 + t * 1.7), ro = r * (0.78 + 0.18 * wob);
+          const tw = 0.18 * Math.sin(i * 1.3); // the fibres curve a little, like a real iris
+          g.strokeStyle = rgb(i % 3 ? c : hi, (0.25 + 0.55 * wob) * a); g.lineWidth = 0.8;
+          g.beginPath(); g.moveTo(Math.cos(an) * ri, Math.sin(an) * ri);
+          g.quadraticCurveTo(Math.cos(an + tw) * (ri + ro) / 2, Math.sin(an + tw) * (ri + ro) / 2, Math.cos(an) * ro, Math.sin(an) * ro); g.stroke();
         }
-      } else if (k === 1) { // bots: a cube turning in space, a machine's heart pulsing inside
-        const q = r * 0.58, ay = t * 0.9, ax = 0.55, V = [];
-        for (const X of [-1, 1]) for (const Y of [-1, 1]) for (const Z of [-1, 1]) {
-          const x1 = X * Math.cos(ay) - Z * Math.sin(ay), z1 = X * Math.sin(ay) + Z * Math.cos(ay), y1 = Y * Math.cos(ax) - z1 * Math.sin(ax);
-          V.push([x1 * q, y1 * q]);
+        glow(() => g.arc(0, 0, r, 0, 6.2832), 0.8, 0.6);
+        glow(() => g.arc(0, 0, ri, 0, 6.2832), 0.9);
+        const pr = ri * 0.62, ro2 = -t * 0.4; // the pupil: the triangle
+        glow(() => { for (let m = 0; m < 3; m++) { const an = ro2 - Math.PI / 2 + m * 2.0944; g[m ? "lineTo" : "moveTo"](Math.cos(an) * pr, Math.sin(an) * pr); } g.closePath(); }, 1.2);
+      } else if (k === 1) { // the gyroscope
+        const rings = [[0.55, 0, 1.1], [1.25, 1.05, -0.8], [-1.0, 2.1, 0.65]];
+        rings.forEach(([tx, tz, sp], m) => {
+          const rot = t * sp, pt = u => { // a point on a unit circle, tilted round x then z, turning
+            let X = Math.cos(u), Y = Math.sin(u) * Math.cos(tx), Z = Math.sin(u) * Math.sin(tx);
+            const cz = Math.cos(tz + rot * 0.25), sz = Math.sin(tz + rot * 0.25); [X, Y] = [X * cz - Y * sz, X * sz + Y * cz];
+            return [X * r * (0.95 - m * 0.06), Y * r * (0.95 - m * 0.06), Z];
+          };
+          glow(() => { for (let i = 0; i <= 64; i++) { const q = pt((i / 64) * 6.2832); g[i ? "lineTo" : "moveTo"](q[0], q[1]); } }, 0.9, 0.75);
+          for (let j = 0; j < 2; j++) { const q = pt(rot + j * Math.PI); g.fillStyle = rgb([255, 255, 255], (q[2] > 0 ? 0.55 : 1) * a); g.beginPath(); g.arc(q[0], q[1], r * 0.065, 0, 6.2832); g.fill(); }
+        });
+        orb(g, 0, 0, r * 0.32, c, 0.7 * a); g.fillStyle = rgb([255, 255, 255], a); g.beginPath(); g.arc(0, 0, r * 0.1, 0, 6.2832); g.fill();
+      } else { // the Lissajous figure
+        const ph = t * 0.45, A = 3, B = 2, P = u => [Math.sin(A * u + ph) * r * 0.92, Math.sin(B * u) * r * 0.92];
+        glow(() => { for (let i = 0; i <= 220; i++) { const q = P((i / 220) * 6.2832); g[i ? "lineTo" : "moveTo"](q[0], q[1]); } }, 0.9, 0.7);
+        for (let j = 0; j < 26; j++) { // the point of light and its fading trail
+          const q = P(t * 1.6 - j * 0.035); g.fillStyle = rgb(j ? hi : [255, 255, 255], (1 - j / 26) * a); g.beginPath(); g.arc(q[0], q[1], r * (j ? 0.05 : 0.085) * (1 - j / 40), 0, 6.2832); g.fill();
         }
-        const E = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
-        lines(() => { for (const [i, j] of E) { g.moveTo(...V[i]); g.lineTo(...V[j]); } }, 1.1);
-        g.fillStyle = rgb([255, 255, 255], (0.6 + 0.4 * Math.sin(t * 3)) * a); g.beginPath(); g.arc(0, 0, r * 0.1, 0, 6.2832); g.fill();
-      } else { // chart scripts: a living signal, a light riding its crest
-        const f = (u) => Math.sin(u * 2.4 + t * 2.6) * 0.42 + Math.sin(u * 5.1 - t * 1.7) * 0.12;
-        g.save(); g.beginPath(); g.arc(0, 0, r, 0, 6.2832); g.clip();
-        lines(() => { for (let i = 0; i <= 40; i++) { const u = -1 + i / 20; g[i ? "lineTo" : "moveTo"](u * r, -f(u * 2) * r); } }, 1.3);
-        g.restore();
-        const u = Math.sin(t * 0.9) * 0.7; g.fillStyle = rgb([255, 255, 255], 0.95 * a); g.beginPath(); g.arc(u * r, -f(u * 2) * r, r * 0.09, 0, 6.2832); g.fill();
       }
       g.restore();
     }
@@ -242,7 +253,7 @@
       for (let k = 0; k < 3; k++) {
         const u = ((tt * 0.22) + k / 3) % 1;
         if (u < 0.85 && !reduce) { const e = u / 0.85, A = v[k], x = A.x + (Tc.x - A.x) * e, y = A.y + (Tc.y - A.y) * e; orb((A.z + T.z) / 2 < C[1] ? gf : gb, x, y, s * 0.035, mix(COL[k], TIP, e), 0.95 * io); }
-        const A = v[k]; orb(A.z < C[1] ? gf : gb, A.x, A.y, s * 0.05, COL[k], (0.75 + 0.25 * Math.sin(tt * 2 + k * 2)) * io);
+        const A = v[k]; orb(A.z < C[1] ? gf : gb, A.x, A.y, s * 0.05, COL[k], (0.75 + 0.25 * Math.sin(tt * 2 + k * 2)) * io * (1 - 0.85 * bloom[k])); // dims while its form is open
       }
       // the crystal capstone: gold glass faces brightest at the tip, fine facets, the seam it sits on glowing as it
       // lifts (light through the gap), and a slow band of light rising through it
@@ -264,21 +275,19 @@
         gf.strokeStyle = rgb([255, 250, 236], 0.55 * Math.sin(u * Math.PI) * io); gf.lineWidth = 1.2; gf.beginPath(); gf.moveTo(P2[0].x, P2[0].y); gf.lineTo(P2[2].x, P2[2].y); gf.stroke();
       }
       orb(gf, Tc.x, Tc.y, s * (0.045 + 0.02 * cb), TIP, (0.7 + 0.3 * Math.sin(tt * 1.4)) * io);
-      // the way in: the node under the pointer blooms into its glyph inside a fine ring (callers an eye, bots a turning
-      // cube, chart scripts a living wave; the capstone lifts instead); on arrival they bloom softly for a few
-      // seconds so people learn they can be opened
+      // the way in: the node under the pointer becomes its living form, grown out of the node as a ring of light
+      // closes in (the capstone lifts instead); on arrival they bloom softly for a few seconds so people learn it
       pts = v.slice(); pts[3] = { x: Tc.x, y: (Tc.y * 2 + cut[0].y + cut[1].y + cut[2].y) / 5 }; // the capstone is caught anywhere on it
       const teach = reduce ? 0 : Math.max(0, Math.min(1, (tt - 1.4) / 0.6, (5.4 - tt) / 0.8));
       for (let k = 0; k < 4; k++) {
         const want = k === hot ? 1 : teach * 0.8;
+        if (want > 0.5 && bloom[k] < 0.15 && tt - opened[k] > 0.8) opened[k] = tt;
         bloom[k] += (want - bloom[k]) * Math.min(1, dt * (want > bloom[k] ? 7 : 4));
         if (k === 3 || bloom[k] < 0.02) continue; // the capstone lifts instead (above)
-        const A = v[k], c = k === 3 ? TIP : COL[k], b = bloom[k], e = 1 + 0.12 * Math.sin(Math.min(1, b) * Math.PI); // a slight overshoot as it opens
-        const r = s * 0.075 * b * e;
-        orb(gf, A.x, A.y, s * 0.1 * b, c, 0.25 * b);
-        gf.save(); gf.globalCompositeOperation = "source-over"; gf.fillStyle = `rgba(4,6,10,${0.94 * b})`; gf.beginPath(); gf.arc(A.x, A.y, r * 1.15, 0, 6.2832); gf.fill(); gf.restore();
-        gf.strokeStyle = rgb(c, 0.75 * b); gf.lineWidth = 1; gf.beginPath(); gf.arc(A.x, A.y, r * 1.15, 0, 6.2832); gf.stroke();
-        glyph(gf, k, A.x, A.y, r * 0.8, tt, c, b);
+        const A = v[k], c = COL[k], b = bloom[k], r = s * 0.09 * b, u = (tt - opened[k]) / 0.7;
+        orb(gf, A.x, A.y, s * 0.11 * b, c, 0.18 * b);
+        if (u < 1) { gf.strokeStyle = rgb(c, 0.9 * (1 - u)); gf.lineWidth = 1.2; gf.beginPath(); gf.arc(A.x, A.y, s * 0.09 * (2.4 - 1.4 * (1 - (1 - u) ** 3)), 0, 6.2832); gf.stroke(); } // a ring of light closes in once as it opens
+        form(gf, k, A.x, A.y, r, tt, c, Math.min(1, b * 1.2));
       }
       // the emblem sits at the pyramid's heart
       // the emblem lies flat on the floor, seen at the pyramid's own tilt, its triangle pointing at the pyramid's
