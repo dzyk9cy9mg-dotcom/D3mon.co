@@ -294,7 +294,7 @@
 
   // The way in from the pyramid's corners and tip: each part's symbol (js/sigils.js) opens like a gate where it was
   // clicked. Callers, bots and chart scripts open the marketplace showing that kind; the tip opens the Capstone page
-  // (transition.js draws the Capstone's symbol before the page opens out of it).
+  // (the wall, js/wall.js, carries the Capstone's colour and symbol into that page).
   const KINDS = ["caller", "bot", "script"];
   function goTo(k, e, P) {
     const x = P ? P.x : e.clientX, y = P ? P.y : e.clientY;
