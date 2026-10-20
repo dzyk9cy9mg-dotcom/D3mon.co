@@ -3,64 +3,81 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>D3MON.CO · Profile</title>
-<meta name="description" content="A D3MON caller, bot or chart script: its verified record from Kalshi, recent calls and battles.">
+<title>Profile · D3MON</title>
+<meta name="description" content="A D3MON caller, bot or chart script: its verified record, its calls and where to get it.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L94 88H6Z' fill='none' stroke='%23FFB547' stroke-width='8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="css/host.css">
 <link rel="stylesheet" href="css/d3mon.css">
 <link rel="stylesheet" href="css/standalone.css">
-<link rel="stylesheet" href="css/world.css">
 <link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/profile.css">
 <link rel="stylesheet" href="css/transition.css">
+<script src="js/wall.js"></script>
 <script src="js/transition.js"></script>
 </head>
-<!-- An entrant's profile in the cinematic style (docs/world/BLUEPRINT.md section 7, docs/world/USERS.md): the
-     shop window owners sell from. Thin client over /api/v1: the entrant, its stats card, its calls. -->
-<body class="w-body w-prof">
-<header class="w-bar" role="banner">
-  <a class="w-logo" href="world"><span>D<b>3</b>MON</span></a>
-  <nav class="w-places" aria-label="Places">
-    <a href="world">World</a><a href="world#hall">Grand Hall</a><a href="tournaments">Tournaments</a><a href="vip">VIP</a><a href="apply">Build a bot</a>
-  </nav>
-  <nav class="w-actions" aria-label="Main">
-    <a class="w-join" id="joinBtn" href="apply">Join D3MON</a>
-    <a class="w-btn" id="acctBtn" href="login">Sign in</a>
-  </nav>
-</header>
-
-<main class="p-main">
-  <section class="p-hero" aria-labelledby="pName">
-    <canvas class="p-emblem" id="emblem" aria-hidden="true"></canvas>
-    <div class="p-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-    <p class="p-hud p-hud-tl" id="hudTL"></p>
-    <div class="p-text">
-      <p class="w-eyebrow" id="eyebrow"><i aria-hidden="true"></i><span>D3MON entrant</span></p>
-      <h1 id="pName">I am <em id="nameEm">…</em></h1>
-      <p class="p-by" id="by"></p>
-      <div class="p-badges" id="badges"></div>
-      <div class="p-stats" id="topStats"></div>
-      <p class="p-ver" id="ver"></p>
-      <div class="p-actions" id="actions"></div>
+<!-- An entrant's profile in the cinematic style (owner, 2026-10-16 and 2026-10-20; docs/world/INSPIRATION.md,
+     "Profiles in the cinematic style"): a full-screen stage that changes as you scroll (a bot assembles from its
+     plates, a caller's hologram forms, a chart script's chart draws itself in light), "I am NAME." with the name in
+     its kind's colour, HUD labels in the corners, the owner's tagline in a glass card; then the record (verified,
+     then self-reported), recent calls, and the shop window. Without ?e=, every entrant to choose from.
+     Thin client over /api/v1 (js/profile.js); only what the owner made public shows. -->
+<body>
+<main class="pf" id="main">
+  <section class="pf-hero" id="hero" aria-labelledby="pfName" hidden>
+    <div class="pf-stage">
+      <canvas class="pf-art" id="art" aria-hidden="true"></canvas>
+      <div class="pf-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <p class="pf-hud pf-tl" id="hudTL"></p>
+      <p class="pf-hud pf-tr" id="hudTR"></p>
+      <div class="pf-text">
+        <p class="pf-kind" id="kind"></p>
+        <h1 id="pfName"><span class="pf-iam">I am</span> <em id="nameEm"></em></h1>
+        <p class="pf-by" id="by"></p>
+        <div class="pf-badges" id="badges"></div>
+      </div>
+      <figure class="pf-quote" id="quote" hidden><blockquote id="tagline"></blockquote><figcaption id="tagBy"></figcaption></figure>
+      <p class="pf-hud pf-bl" id="hudBL"></p>
+      <p class="pf-hud pf-br" id="hudBR"></p>
+      <p class="pf-cue" id="cue" aria-hidden="true">Scroll</p>
     </div>
-    <figure class="p-quote" id="quote" hidden><blockquote id="tagline"></blockquote><figcaption id="tagBy"></figcaption></figure>
-    <p class="p-hud p-hud-br" id="hudBR"></p>
   </section>
 
-  <section class="p-sec arena" aria-labelledby="recT">
-    <h2 id="recT">The record</h2>
-    <p class="w-note">Verified stats come from Kalshi's results; self-reported ones are the owner's own numbers. Only what the owner made public shows here.</p>
-    <div class="stats p-grid" id="allStats"></div>
+  <div class="pf-body" id="body" hidden>
+    <section class="pf-sec" aria-labelledby="recT">
+      <h2 id="recT">The record</h2>
+      <p class="pf-lede">Verified stats are worked out by D3MON from Kalshi's results. Self-reported stats are the owner's own numbers. Only what the owner made public shows here.</p>
+      <h3 class="pf-group" id="verH" hidden>Verified by Kalshi</h3>
+      <div class="pf-stats" id="verified"></div>
+      <h3 class="pf-group" id="selfH" hidden>Self-reported</h3>
+      <div class="pf-stats" id="self"></div>
+      <p class="pf-empty" id="noStats" hidden>The owner hasn't made any stats public yet.</p>
+    </section>
+
+    <section class="pf-sec" aria-labelledby="callsT">
+      <h2 id="callsT">Recent calls</h2>
+      <ol class="pf-calls" id="calls"></ol>
+    </section>
+
+    <section class="pf-sec pf-shop" aria-labelledby="shopT">
+      <h2 id="shopT">Get <span id="shopName"></span></h2>
+      <p class="pf-lede" id="shopLede"></p>
+      <div class="pf-actions" id="actions"></div>
+      <p class="pf-fine">Paper results, verified by Kalshi. For entertainment. Not financial advice. D3MON never trades.</p>
+    </section>
+  </div>
+
+  <section class="pf-pick" id="pick" aria-labelledby="pickT" hidden>
+    <h1 class="s-title" id="pickT">Profiles</h1>
+    <p class="pf-lede">Every caller, bot and chart script on D3MON. Choose one to see its record.</p>
+    <ul class="pf-list" id="list"></ul>
   </section>
-  <section class="p-sec" aria-labelledby="callsT">
-    <h2 id="callsT">Recent calls</h2>
-    <ol class="p-calls" id="calls"></ol>
-  </section>
-  <p class="w-notice">Paper results, verified by Kalshi. For entertainment. Not financial advice. D3MON never trades.</p>
-  <p class="w-msg" id="msg" role="status"></p>
+  <p class="pf-msg" id="msg" role="status"></p>
 </main>
 <script src="js/arena.js"></script>
+<script src="js/sigils.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/sitebar.js"></script>
 </body>

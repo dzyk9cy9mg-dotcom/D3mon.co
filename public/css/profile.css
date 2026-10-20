@@ -1,0 +1,99 @@
+/* An entrant's profile in the cinematic style (js/profile.js), on top of css/site.css. The hero is a tall section
+   whose stage is pinned while you scroll it, so the scroll drives the art; then the record, the calls and the shop
+   window as glass panels. --kc is the entrant's kind colour (amber callers, blue bots, violet chart scripts). */
+.pf{padding:0;max-width:none}
+body{--kc:var(--bots)}
+.pf-hero{position:relative;height:250vh}
+.pf-stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:radial-gradient(ellipse at 70% 50%,rgba(14,19,28,.6),#05070B 70%)}
+.pf-art{position:absolute;inset:0;width:100%;height:100%}
+/* frame brackets in the corners */
+.pf-frame i{position:absolute;width:22px;height:22px;border:solid rgba(170,200,240,.35)}
+.pf-frame i:nth-child(1){top:96px;left:max(20px,env(safe-area-inset-left,0px));border-width:1px 0 0 1px}
+.pf-frame i:nth-child(2){top:96px;right:max(20px,env(safe-area-inset-right,0px));border-width:1px 1px 0 0}
+.pf-frame i:nth-child(3){bottom:20px;left:max(20px,env(safe-area-inset-left,0px));border-width:0 0 1px 1px}
+.pf-frame i:nth-child(4){bottom:20px;right:max(20px,env(safe-area-inset-right,0px));border-width:0 1px 1px 0}
+/* HUD labels */
+.pf-hud{position:absolute;margin:0;font:500 13px/1.6 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.pf-hud b{color:var(--ink-2);font-weight:500}
+.pf-tl{top:126px;left:max(50px,env(safe-area-inset-left,0px))}
+.pf-tr{top:126px;right:max(50px,env(safe-area-inset-right,0px));text-align:right}
+.pf-bl{bottom:48px;left:max(50px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:8px}
+.pf-bl i{width:8px;height:8px;border-radius:50%;background:var(--ink-3)}
+.pf-bl i.on{background:#2EE59D;box-shadow:0 0 0 4px rgba(46,229,157,.15)}
+.pf-br{bottom:48px;right:max(50px,env(safe-area-inset-right,0px));text-align:right}
+/* the words: they rise in as the art forms (--p from js/profile.js) */
+.pf-text{position:absolute;left:max(50px,env(safe-area-inset-left,0px));top:50%;width:min(620px,52vw);transform:translateY(calc(-50% + (1 - var(--p,0)) * 26px));opacity:calc(.55 + var(--p,0) * .9)}
+.pf-kind{display:flex;align-items:center;gap:10px;margin:0 0 14px;font:600 14px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--kc)}
+.pf-kind canvas{width:28px;height:28px}
+.pf-hero h1{margin:0;font:700 clamp(46px,7vw,104px)/.98 var(--display);letter-spacing:.02em;text-transform:none}
+.pf-iam{display:block;font-size:.5em;letter-spacing:.06em;background:var(--s-chrome);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pf-hero h1 em{display:block;font-style:normal;white-space:nowrap;color:var(--kc);text-shadow:0 0 40px color-mix(in srgb,var(--kc) 40%,transparent)}
+.pf-by{margin:18px 0 0;color:var(--ink-2);font:500 17px var(--body)}
+.pf-by b{color:var(--ink);font-weight:600}
+.pf-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pf-badge{padding:6px 12px;border:1px solid rgba(233,194,122,.5);color:#E9C27A;font:600 13px var(--mono)}
+/* the tagline in a small glass card, arriving partway down */
+.pf-quote{position:absolute;right:max(50px,env(safe-area-inset-right,0px));bottom:110px;width:min(360px,40vw);margin:0;padding:18px 20px;background:rgba(14,19,28,.6);border:1px solid var(--s-edge2);clip-path:var(--s-cut);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;transform:translateY(16px);transition:opacity .6s,transform .8s cubic-bezier(.2,.7,.2,1)}
+.pf-quote.on{opacity:1;transform:none}
+.pf-quote blockquote{margin:0;color:var(--ink);font:500 18px/1.5 var(--body)}
+.pf-quote blockquote::before{content:"“"}.pf-quote blockquote::after{content:"”"}
+.pf-quote figcaption{margin-top:10px;color:var(--kc);font:500 13px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.pf-cue{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);margin:0;font:500 12px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);transition:opacity .4s}
+.pf-cue::after{content:"";display:block;width:1px;height:28px;margin:8px auto 0;background:linear-gradient(var(--ink-3),transparent)}
+.pf-cue.off{opacity:0}
+
+/* ---------- below the hero */
+.pf-body{position:relative;max-width:1100px;margin:0 auto;padding:40px max(20px,env(safe-area-inset-right,0px)) 80px max(20px,env(safe-area-inset-left,0px));display:grid;gap:26px}
+.pf-sec{background:var(--s-card);border:1px solid var(--s-edge);clip-path:var(--s-cut);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:28px}
+.pf-sec h2{margin:0 0 10px;font:700 clamp(22px,2.6vw,30px) var(--display);letter-spacing:.03em;text-transform:uppercase;background:var(--s-chrome);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pf-lede{max-width:66ch;margin:0 0 18px;color:var(--ink-2);font:400 16px/1.65 var(--body)}
+.pf-group{margin:22px 0 12px;font:600 13px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.pf-group:first-of-type{margin-top:6px}
+.pf-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.pf-stat{display:grid;gap:6px;align-content:start;padding:16px 18px;background:rgba(5,7,11,.45);border:1px solid var(--s-edge);border-top:2px solid var(--kc)}
+.pf-stat.wide{grid-column:1/-1}
+.pf-sl{font:500 14px var(--body);color:var(--ink-2)}
+.pf-sv{font:700 26px/1.15 var(--body);color:var(--ink);font-variant-numeric:tabular-nums}
+.pf-sv .sv{font:inherit}
+.pf-sd{font:400 13px/1.5 var(--body);color:var(--ink-3)}
+.pf-empty{color:var(--ink-3);font:400 15px var(--body);list-style:none}
+.pf-calls{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pf-calls li:not(.pf-empty){display:grid;grid-template-columns:minmax(150px,auto) 1fr auto;gap:14px;align-items:center;padding:12px 16px;background:rgba(5,7,11,.45);border:1px solid var(--s-edge);font:500 15px var(--body)}
+.pf-calls time{font:500 13px var(--mono);color:var(--ink-3)}
+.pf .up{color:#2EE59D}.pf .dn{color:#FF5A72}
+.pf-k{font:500 13px var(--mono);color:var(--ink-3)}
+.pf-shop{border-top:2px solid var(--kc)}
+.pf-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.pf-actions .btn.ghost{text-decoration:none}
+.pf-disc{color:var(--ink-2);font:500 15px var(--body)}
+.pf-disc b{color:var(--ink)}
+.pf-fine{margin:20px 0 0;color:var(--ink-3);font:400 13px var(--body)}
+
+/* ---------- choosing a profile */
+.pf-pick{max-width:1100px;margin:0 auto;padding:44px max(20px,env(safe-area-inset-right,0px)) 72px max(20px,env(safe-area-inset-left,0px));display:grid;gap:18px}
+.pf-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.pf-list a{display:flex;align-items:center;gap:14px;min-height:76px;padding:12px 16px;background:var(--s-card);border:1px solid var(--s-edge);border-left:2px solid var(--kc);text-decoration:none;color:var(--ink);transition:background .2s}
+.pf-list a:hover{background:rgba(26,34,48,.8)}
+.pf-list canvas{width:40px;height:40px;flex:none}
+.pf-list span{display:grid}
+.pf-list b{font:600 16px var(--body)}
+.pf-list small{font:500 13px var(--body);color:var(--ink-3)}
+.pf-msg{max-width:1100px;margin:0 auto;padding:0 20px;color:#FF8A9C;font:500 15px var(--body)}
+.pf-msg:empty{display:none}
+
+/* ---------- phones: the figure above, the words below */
+@media (max-width:900px){
+  .pf-hero{height:220vh}
+  .pf-text{left:max(20px,env(safe-area-inset-left,0px));right:max(20px,env(safe-area-inset-right,0px));top:auto;bottom:96px;width:auto;transform:translateY(calc((1 - var(--p,0)) * 20px))}
+  .pf-hero h1{font-size:clamp(38px,11vw,60px)}
+  .pf-tl,.pf-tr{top:84px}.pf-tl{left:max(20px,env(safe-area-inset-left,0px))}.pf-tr{right:max(20px,env(safe-area-inset-right,0px))}
+  .pf-bl,.pf-br{display:none}
+  .pf-frame{display:none}
+  .pf-quote{left:max(20px,env(safe-area-inset-left,0px));right:max(20px,env(safe-area-inset-right,0px));bottom:auto;top:50%;width:auto}
+  .pf-cue{bottom:22px}
+  .pf-sec{padding:20px}
+  .pf-calls li:not(.pf-empty){grid-template-columns:1fr auto}
+  .pf-calls time{grid-column:1/-1}
+}
+@media (prefers-reduced-motion:reduce){.pf-quote{transition:none}.pf-text{transform:translateY(-50%);opacity:1}}
+@media (prefers-reduced-motion:reduce) and (max-width:900px){.pf-text{transform:none}}
