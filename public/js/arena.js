@@ -153,7 +153,7 @@
     session().then(me => { if (me && (me.role === "admin" || me.role === "owner")) nav.querySelector(".anav-admin").hidden = false; });
     document.addEventListener("click", e => { const d = nav.querySelector(".anav-admin"); if (d.open && !d.contains(e.target)) d.open = false; });
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", menuBar); else menuBar();
+  // the menu is now js/sitebar.js (one menu on every page); menuBar() is kept for reference only
 
   window.Arena = { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, openRound, mmss, ROUND_MS, statValue, statText, verifTag, wide };
 })();
