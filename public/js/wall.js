@@ -3,7 +3,8 @@
 // places: leaving, its triangles flip in from where you clicked, in a wave, until they close over the screen (the
 // edges at the wave's front catch the colour of where you're going, and that part's symbol draws itself in the
 // middle); arriving, the next page starts behind the closed wall and the triangles flip away in a wave to reveal it.
-// Loaded in <head> on every page that should arrive this way, so the cover is up before the page first paints.
+// The only page transition on the site (it replaced the gold triangle, js/transition.js, on 2026-10-20). Loaded in
+// <head> on every page, after js/sigils.js, so the cover is up before the page first paints.
 // window.D3Wall: close(x, y, colour, symbol, done), open(x, y, colour), leave(url, x, y, colour, symbol).
 // Reduce motion: no wall, pages just change.
 (function () {
@@ -135,7 +136,7 @@
     try { p = JSON.parse(sessionStorage.getItem(KEY)); sessionStorage.removeItem(KEY); } catch {}
     if (p && Date.now() - p.at < 8000) {
       canvas(); paint(0, 0, 1e6, 1, p.col, null);
-      document.documentElement.classList.add("d3-wall-in"); // transition.js skips its own opening for this page
+      document.documentElement.classList.add("d3-wall-in");
       const go = () => setTimeout(() => open(p.x * innerWidth, p.y * innerHeight, p.col, p.sym), 60);
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { if (!cv.isConnected || cv.parentNode !== document.body) document.body.appendChild(cv); go(); }); else go();
     }
@@ -144,14 +145,22 @@
   // back through the page cache: never leave the wall standing
   addEventListener("pageshow", e => { if (e.persisted && cv) { cancelAnimationFrame(raf); cv.remove(); } });
 
-  // links into a part (data-sigil="caller|bot|script|capstone") go through the wall, in that part's colour and symbol
+  // Every link to another D3MON page goes through the wall (owner, 2026-10-20: "the only transition on the whole
+  // site"). A link into a part (data-sigil="caller|bot|script|capstone") brings that part's colour and symbol; the
+  // Capstone and Live pages bring theirs by address; anything else comes in gold. Left alone: other sites, new tabs,
+  // downloads, jumps within the page, files (an address with a dot), the API, and clicks with a modifier key.
+  const BY_PAGE = { vip: "capstone" };
   document.addEventListener("click", e => {
-    const a = e.target.closest && e.target.closest("a[data-sigil][href]");
+    const a = e.target.closest && e.target.closest("a[href]");
     if (reduce || !a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if ((a.target && a.target !== "_self") || a.hasAttribute("download")) return;
     const url = new URL(a.href, location.href);
-    if (url.origin !== location.origin) return;
+    if (url.origin !== location.origin || !/^https?:$/.test(url.protocol)) return;
+    if (url.pathname === location.pathname && url.search === location.search) return; // a jump within this page
+    const page = url.pathname.split("/").pop();
+    if (url.pathname.startsWith("/api/") || page.includes(".")) return;
     e.preventDefault();
-    const b = a.getBoundingClientRect(), kb = e.detail === 0, k = a.dataset.sigil, S = window.D3Sigils && window.D3Sigils.S[k];
+    const b = a.getBoundingClientRect(), kb = e.detail === 0, k = a.dataset.sigil || BY_PAGE[page], S = window.D3Sigils && window.D3Sigils.S[k];
     leave(url.href, kb ? b.left + b.width / 2 : e.clientX, kb ? b.top + b.height / 2 : e.clientY, S ? S.color : "#E9C27A", S ? k : null);
   });
 

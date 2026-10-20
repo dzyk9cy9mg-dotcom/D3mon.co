@@ -58,7 +58,7 @@
     g.restore();
   }
 
-  // the symbol as SVG (for transition.js), r px from the centre to the edge of its box
+  // the symbol as SVG, r px from the centre to the edge of its box
   function svg(k, cls = "") {
     const s = S[k], d = s.paths.join(" ");
     return `<g class="${cls}" style="--c:${s.color}">${s.fill ? `<path class="fill" d="${s.fill}" fill="${s.color}" fill-opacity=".25" stroke="none"/>` : ""}` +
