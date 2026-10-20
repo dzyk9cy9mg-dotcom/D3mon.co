@@ -76,7 +76,7 @@ a{color:inherit}
 @keyframes n-spin{to{transform:rotate(360deg)}}
 @keyframes n-gfx{to{transform:rotateX(360deg)}}@keyframes n-gfy{to{transform:rotateY(360deg)}}
 @keyframes n-corepulse{50%{transform:scale(1.35);opacity:.55}}
-.n-hero{position:relative;z-index:1;background:#040507;touch-action:pan-y;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
+.n-hero{-webkit-touch-callout:none;position:relative;z-index:1;background:#040507;touch-action:pan-y;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
 .n-field{position:absolute;inset:0;width:100%;height:100%}
 .n-hero::after{content:"";position:absolute;inset:auto 0 0;height:40%;background:linear-gradient(transparent,var(--bg));pointer-events:none}
 .n-hero-in{position:relative;z-index:1;max-width:560px}

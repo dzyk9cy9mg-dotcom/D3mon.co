@@ -207,6 +207,14 @@ export function start({ hero, labels, stageAt, onGo }) {
   for (let k = 0; k < 3; k++) for (let n = 0; n < 3; n++) { const s = sprite(COL[k], 0.1, 0.6); turn.add(s); flow.push({ s, k, off: n / 3 + k * 0.137 + Math.random() * 0.05 }); }
   const SYN = 6.4; let synAt = 3.4; // when the next synergy starts
   const big = [0, 1, 2].map(k => { const s = sprite(COL[k], 0.26, 1); s.visible = false; turn.add(s); return s; });
+  // the charge (owner, 2026-10-20: "hold the mouse down and it charges up the centre; let go and it shoots a pulse up
+  // and out"): while held, the heart swells and brightens, the rings spin up, the lights rush in from the corners and
+  // the pyramid trembles; on release a bolt shoots up the beam, hits the Capstone and blasts out of the top, bigger
+  // the longer it was held (full after about 1.6 s)
+  let charging = false, charge = 0, chargeAt = 0, ringT = 0, flowT = 0, shot = null;
+  const bolt = sprite(new THREE.Color(1, 0.97, 0.9), 0.5, 1), boltSky = sprite(TIPC, 0.5, 0); bolt.visible = boltSky.visible = false;
+  turn.add(bolt, boltSky);
+  const fire = p => { shot = { t: clock, p: Math.max(0.25, p) }; };
   const merged = sprite(TIPC, 0.34, 1), flare = sprite(GOLD, 1, 0), sky = sprite(TIPC, 0.3, 0), heartFlash = sprite(new THREE.Color(1, 1, 1), 0.5, 0);
   merged.visible = false; heartFlash.position.set(0, 0.03, 0); turn.add(merged, flare, sky, heartFlash);
   flare.position.copy(capC); let surge = 0, capHot = 0;
@@ -270,16 +278,18 @@ export function start({ hero, labels, stageAt, onGo }) {
     sheen.uniforms.uF.value = ss(1.2, 1.2);
     floor.rotation.z = clock * 0.03; sheen.uniforms.uT.value = clock;
     // the Cortex's rings and heart
-    const sp = fast ? 2.6 : 1, T = Math.PI * 2;
-    rings[0].tumble.rotation.x = (clock / 14) * T * sp; rings[0].spin.rotation.z = (clock / 30) * T;
-    rings[1].tumble.rotation.y = (clock / 11) * T * sp; rings[1].spin.rotation.z = -(clock / 16) * T * sp;
-    rings[2].tumble.rotation.x = -(clock / 8) * T * sp; rings[2].spin.rotation.z = (clock / 10) * T * sp;
+    charge = charging ? Math.min(1, charge + dt / 1.6) : Math.max(0, charge - dt * 3);
+    const sp = (fast ? 2.6 : 1) * (1 + 5 * charge * charge), T = Math.PI * 2; ringT += dt * sp;
+    rings[0].tumble.rotation.x = (ringT / 14) * T; rings[0].spin.rotation.z = (ringT / 30) * T;
+    rings[1].tumble.rotation.y = (ringT / 11) * T; rings[1].spin.rotation.z = -(ringT / 16) * T;
+    rings[2].tumble.rotation.x = -(ringT / 8) * T; rings[2].spin.rotation.z = (ringT / 10) * T;
     const beat = 0.5 + 0.5 * Math.sin((clock / 2.4) * T);
     heart.scale.setScalar(1 + beat * 0.25); heartGlow.material.opacity = 0.55 + beat * 0.4;
     // the gems breathe; the one under the pointer swells
     gems.forEach((G, k) => { const on = k === hot, s = G.base * (on ? 1.9 : 1 + 0.08 * Math.sin(clock * 2 + k * 2)); G.halo.scale.x += (s - G.halo.scale.x) * 0.15; G.halo.scale.y = G.halo.scale.x; G.stone.rotation.y = clock * 0.8 + k; });
     // the light flow
-    for (const f of flow) { const u = (clock * 0.12 + f.off) % 1; along(f.k, u, f.s.position); f.s.material.color.copy(COL[f.k]).lerp(TIPC, Math.max(0, (u - 0.42) / 0.4)); f.s.material.opacity = 0.65 * Math.min(1, u * 12) * (u > 0.8 ? 1 - (u - 0.8) / 0.2 : 1); }
+    flowT += dt * 0.12 * (1 + 4 * charge);
+    for (const f of flow) { const u = (flowT + f.off) % 1; along(f.k, u, f.s.position); f.s.material.color.copy(COL[f.k]).lerp(TIPC, Math.max(0, (u - 0.42) / 0.4)); f.s.material.opacity = 0.65 * Math.min(1, u * 12) * (u > 0.8 ? 1 - (u - 0.8) / 0.2 : 1); }
     // the synergy: 0..1 s the three run in to the heart; 1..1.7 s the merged light rises; at 1.7 s it hits the Capstone
     if (clock >= synAt + SYN) synAt += SYN * Math.ceil((clock - synAt - SYN) / SYN + 1e-9);
     const tau = clock - synAt;
@@ -295,6 +305,25 @@ export function start({ hero, labels, stageAt, onGo }) {
     capHot += ((hot === 3 ? 0.7 : 0) - capHot) * 0.12;
     capMat.uniforms.uGlow.value = Math.max(surge, capHot); capMat.uniforms.uF.value = ss(1.8, 0.6);
     heart.scale.multiplyScalar(1 + surge * 0.4);
+    // the charge, and the shot when it's let go
+    if (charge > 0) {
+      heart.scale.multiplyScalar(1 + 1.2 * charge); heartGlow.scale.setScalar(0.55 * (1 + 1.5 * charge)); heartGlow.material.opacity = Math.min(1, heartGlow.material.opacity + charge);
+      beam.scale.x = beam.scale.z = 1 + 2 * charge; bloom.strength += 0.3 * charge;
+      capMat.uniforms.uGlow.value = Math.max(capMat.uniforms.uGlow.value, 0.35 * charge);
+      const q = 0.012 * charge * charge; rig.position.x = (Math.random() - 0.5) * q; rig.position.z = (Math.random() - 0.5) * q;
+    } else { heartGlow.scale.setScalar(0.55); rig.position.x = rig.position.z = 0; }
+    if (shot) {
+      const e2 = clock - shot.t, P = shot.p, rise = 0.32;
+      bolt.visible = e2 < rise;
+      if (bolt.visible) { const f = e2 / rise; bolt.position.set(0, HEART + (HT - HEART) * f * f, 0); bolt.scale.setScalar(0.4 + 0.5 * P); }
+      if (e2 >= rise && e2 - dt < rise) { surge = Math.max(surge, 0.7 + 0.3 * P); heartFlash.material.opacity = 0; }
+      if (e2 < 0.25) { heartFlash.material.opacity = Math.max(heartFlash.material.opacity, 1 - e2 / 0.25); heartFlash.scale.setScalar(0.6 + 1.6 * P * (e2 / 0.25)); }
+      const out = (e2 - rise) / (0.6 + 0.5 * P); boltSky.visible = out >= 0 && out < 1;
+      if (boltSky.visible) { boltSky.position.set(0, HT + (1 - (1 - out) ** 2) * (1.2 + 2.2 * P), 0); boltSky.material.opacity = 1 - out; boltSky.scale.setScalar((0.35 + 0.5 * P) * (1 - 0.5 * out)); }
+      beamUp.scale.set(1 + 6 * P * Math.max(0, 1 - Math.abs(out - 0.15) * 2), 1 + 0.8 * P * Math.max(0, 1 - out), 1 + 6 * P * Math.max(0, 1 - Math.abs(out - 0.15) * 2));
+      flare.material.opacity = Math.min(1, flare.material.opacity * (1 + P)); flare.scale.multiplyScalar(1 + 0.6 * P);
+      if (out >= 1) { shot = null; bolt.visible = boltSky.visible = false; }
+    }
     // the edges at the back read dimmer, as if seen through the glass
     rig.updateMatrixWorld();
     for (const m of edges) { tmp.copy(m.userData.mid).applyMatrix4(turn.matrixWorld).applyMatrix4(camera.matrixWorldInverse); m.material.opacity = THREE.MathUtils.clamp(0.95 + (tmp.z + camDist) * 0.9, 0.35, 1); }
@@ -345,31 +374,35 @@ export function start({ hero, labels, stageAt, onGo }) {
   };
   const onDown = e => {
     const r = hero.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, k = cornerAt(x, y);
-    if (e.target.closest("a,button") || (k < 0 && !onIt(x, y))) return;
+    if (e.button > 0 || e.target.closest("a,button,input,textarea")) return;
+    if (k < 0 && (onIt(x, y) || !e.target.closest(".n-hero-in"))) { charging = true; chargeAt = clock; }
+    if (k < 0 && !onIt(x, y)) return;
     drag = { x: e.clientX, t: e.timeStamp, moved: 0, k };
   };
   const onUp = e => {
-    if (!drag) return;
+    const held = charging ? clock - chargeAt : 0, power = charge; charging = false;
+    if (!drag) { if (held > 0.25) fire(power); return; }
     if (drag.moved < 6 && drag.k >= 0) { const k = drag.k, r = hero.getBoundingClientRect(), P = sym[k] || scr[k]; drag = null; omega = BASE; onGo(k, e, P ? { x: r.left + P.x, y: r.top + P.y } : { x: e.clientX, y: e.clientY }); return; }
-    if (drag.moved < 6) pulse();
+    if (held > 0.25) fire(power); else if (drag.moved < 6) pulse();
     omega = Math.max(-6, Math.min(6, omega)); drag = null;
   };
   const onLeave = () => { mx = my = -1e4; hot = -1; fast = false; };
+  const onCancel = () => { charging = false; drag = null; }; // a scroll or a lost pointer ends the charge without a shot
   const io2 = new IntersectionObserver(([en]) => { seen = en.isIntersecting; wake(); });
-  addEventListener("pointermove", onMove, { passive: true }); hero.addEventListener("pointerdown", onDown); addEventListener("pointerup", onUp);
+  addEventListener("pointermove", onMove, { passive: true }); hero.addEventListener("pointerdown", onDown); addEventListener("pointerup", onUp); addEventListener("pointercancel", onCancel);
   document.documentElement.addEventListener("pointerleave", onLeave);
   addEventListener("resize", size); document.addEventListener("visibilitychange", wake); io2.observe(hero);
 
   { const m = /[?&]t=([\d.]+)/.exec(location.search); if (m) clock = +m[1]; } // testing: start partway in
   size(); raf = requestAnimationFrame(frame);
-  if (/[?&]fps\b/.test(location.search)) window.__prism = { get clock() { return clock; }, get sym() { return sym; }, corner: k => scr[k], get opacity() { return canvas.style.opacity; }, renderer, scene, camera, composer, rig };
+  if (/[?&]fps\b/.test(location.search)) window.__prism = { get clock() { return clock; }, get charge() { return charge; }, set charge(v) { charge = v; charging = v > 0; }, fire: p => { charging = false; charge = 0; fire(p); }, get sym() { return sym; }, corner: k => scr[k], get opacity() { return canvas.style.opacity; }, renderer, scene, camera, composer, rig };
 
   return {
     // average frame time over the first frames, so next.js can fall back to 2D on slow devices
     fps() { if (frames.length < 60) return null; const s = frames.slice(15); return s.length / s.reduce((a, b) => a + b, 0); },
     stop() {
       running = false; cancelAnimationFrame(raf); io2.disconnect();
-      removeEventListener("pointermove", onMove); hero.removeEventListener("pointerdown", onDown); removeEventListener("pointerup", onUp);
+      removeEventListener("pointermove", onMove); hero.removeEventListener("pointerdown", onDown); removeEventListener("pointerup", onUp); removeEventListener("pointercancel", onCancel);
       document.documentElement.removeEventListener("pointerleave", onLeave); removeEventListener("resize", size);
       lg.clearRect(0, 0, W, H); hero.style.cursor = "";
       scene.traverse(o => { o.geometry?.dispose(); o.material?.map?.dispose(); o.material?.dispose(); });
