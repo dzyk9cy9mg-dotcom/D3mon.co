@@ -21,11 +21,6 @@
     const cv = $("field"), g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
     let W, H, S, F, vx, vy, tiles = [], mx = -1e4, my = -1e4, sx = 0, sy = 0, seen = true, waves = [], t0 = performance.now();
     const BACK = -520; // how deep the blocks' sides run
-    // a few blocks are shortcuts, engraved with where they go (wide screens; phones have the Menu). Each sits at a
-    // spot clear of the words and the pyramid, given as a share of the hero's width and height.
-    const LINKS = [{ at: [0.49, 0.3], label: "Live", href: "#live" }, { at: [0.9, 0.25], label: "Tournaments", href: "tournaments" },
-      { at: [0.49, 0.7], label: "Capstone", href: "vip" }];
-    let hover = null;
     function size() {
       W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
       const wide = W > 900;
@@ -43,13 +38,6 @@
         const calm = wide ? Math.max(0, 1 - Math.hypot((cx - W * 0.22) / (W * 0.26), (cy - H * 0.5) / (H * 0.42))) : 0;
         tiles.push({ pts: ins, cx, cy, up, calm, k, base: (40 + 230 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.25 });
       }
-      if (wide) for (const l of LINKS) { // the upward block nearest each spot carries the shortcut
-        const [px, py] = [l.at[0] * W, l.at[1] * H];
-        const at = x => proj(x.cx, x.cy, x.base + 70); // where it will stand, raised
-        const t = tiles.filter(x => x.up && !x.link && x.calm < 0.05 && at(x)[1] > H * 0.2 && at(x)[1] < H * 0.78 && at(x)[0] < W - S * 0.5)
-          .sort((a, b) => Math.hypot(at(a)[0] - px, at(a)[1] - py) - Math.hypot(at(b)[0] - px, at(b)[1] - py))[0];
-        if (t) t.link = l;
-      }
     }
     // a point at depth z, seen from in front of the vanishing point (which drifts a little with the pointer)
     const proj = (x, y, z) => { const s = F / (F - z), ox = vx + sx, oy = vy + sy; return [ox + (x - ox) * s, oy + (y - oy) * s]; };
@@ -63,7 +51,7 @@
         const d = Math.hypot(t.cx - mx, t.cy - my), near = Math.max(0, 1 - d / R), push = near * near * (3 - 2 * near) * 110;
         let ring = 0;
         for (const w of waves) { const rr = (tt - w.t) * 700, gap = Math.abs(Math.hypot(t.cx - w.x, t.cy - w.y) - rr); ring = Math.max(ring, Math.max(0, 1 - gap / 120) * (1 - (tt - w.t) / 2.6)); }
-        const target = (t.base + breathe + push + 110 * ring + (t.link ? 70 : 0) + (t === hover ? 45 : 0)) * io - 200 * (1 - io);
+        const target = (t.base + breathe + push + 110 * ring) * io - 200 * (1 - io);
         if (reduce) t.z = target; else { t.v += (target - t.z) * 0.06; t.v *= 0.8; t.z += t.v; } // a soft spring: it pumps out, then settles
         t.near = near;
       }
@@ -94,44 +82,14 @@
         g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
         g.strokeStyle = t.near > 0.05 ? `rgba(233,194,122,${(0.06 + 0.4 * t.near).toFixed(3)})` : `rgba(190,205,230,${((0.06 + 0.08 * depth) * (1 - 0.6 * t.calm)).toFixed(3)})`;
         g.lineWidth = 1; g.stroke();
-        t.front = front;
-      }
-      for (const t of tiles) {
-        if (t.link && t.front) { const front = t.front; // the engraving: the place's name, gold with an arrow when the pointer is on it
-          const on = t === hover, c = front.reduce((q, [x, y]) => [q[0] + x / 3, q[1] + y / 3], [0, 0]), sc = F / (F - t.z);
-          g.save(); g.textAlign = "center"; g.textBaseline = "middle";
-          g.font = `500 ${Math.round(11 * sc)}px "IBM Plex Mono", monospace`; g.letterSpacing = `${(2 * sc).toFixed(1)}px`;
-          g.fillStyle = on ? "#F2D49A" : `rgba(205,215,232,${(0.62 * io).toFixed(2)})`;
-          if (on) { g.shadowColor = "rgba(233,194,122,.7)"; g.shadowBlur = 12; }
-          g.fillText(t.link.label.toUpperCase(), c[0], c[1] - 2 * sc);
-          g.font = `400 ${Math.round(13 * sc)}px "IBM Plex Mono", monospace`;
-          g.fillStyle = on ? "#F2D49A" : `rgba(200,212,230,${(0.28 * io).toFixed(2)})`;
-          g.fillText(on ? "→" : "·", c[0], c[1] + 18 * sc);
-          g.restore();
-        }
       }
       if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
     }
     new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) requestAnimationFrame(draw); }).observe(cv); // the wall rests while scrolled away
     size(); requestAnimationFrame(draw);
     addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
-    // which shortcut block, if any, is under a point (its face as drawn last frame)
-    const inside = (P, x, y) => { let sgn = 0; for (let m = 0; m < 3; m++) { const [ax, ay] = P[m], [bx, by] = P[(m + 1) % 3], c = (bx - ax) * (y - ay) - (by - ay) * (x - ax); if (c) { if (sgn && Math.sign(c) !== sgn) return false; sgn = Math.sign(c); } } return true; };
-    const linkAt = (x, y) => tiles.find(t => t.link && t.front && inside(t.front, x, y)) || null;
-    addEventListener("pointermove", e => {
-      const r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top;
-      hover = e.target === cv ? linkAt(mx, my) : null; cv.style.cursor = hover ? "pointer" : "";
-    }, { passive: true });
-    document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; hover = null; });
-    cv.addEventListener("click", e => {
-      const r = cv.getBoundingClientRect(), t = linkAt(e.clientX - r.left, e.clientY - r.top);
-      if (!t) return;
-      if (t.link.href.startsWith("#")) { document.querySelector(t.link.href).scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); return; }
-      // a real link, clicked where the block is, so the page transition opens from the block
-      const a = document.createElement("a"); a.href = t.link.href; a.hidden = true; document.body.appendChild(a);
-      a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, detail: 1 }));
-      a.remove();
-    });
+    addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }, { passive: true });
+    document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; });
     cv.closest(".n-hero").addEventListener("pointerdown", e => { if (reduce) return; const r = cv.getBoundingClientRect(); waves.push({ x: e.clientX - r.left, y: e.clientY - r.top, t: (performance.now() - t0) / 1000 }); });
     document.addEventListener("visibilitychange", () => { if (!document.hidden && seen && !reduce) requestAnimationFrame(draw); });
   }
@@ -143,12 +101,17 @@
   // ---------- the glass pyramid, live: a three-sided pyramid turning slowly, its corners the three kinds (callers
   // amber at the front, bots blue, chart scripts violet) and its tip gold, the light rising from each corner up its
   // edge to the tip and on up the beam: three meeting in one place. The main page's Live Trade Cortex emblem lies flat
-  // on its floor. Drag to spin it (it eases back to its own pace), the pointer tilts it, hovering quickens it and the
-  // emblem, a click sends a pulse up the beam. The far side is drawn behind the emblem, the near side in front.
+  // on its floor. The corners and the tip are the way in (owner, 2026-10-20): pointing at one slows the pyramid so it
+  // can be caught, lights it and names it; a click takes you there (callers, bots or chart scripts in the
+  // marketplace, the tip to the Capstone). The names show once on arrival so people learn it. Drag to spin it (it
+  // eases back to its own pace), the pointer tilts it, hovering elsewhere quickens it and the emblem, a click
+  // elsewhere sends a pulse up the beam. The far side is drawn behind the emblem, the near side in front.
   function pyramid() {
     const back = $("pyrBack"), front = $("pyrFront"), core = $("core"), hero = back.closest(".n-hero");
     const gb = back.getContext("2d"), gf = front.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
     const COL = [[255, 181, 71], [77, 163, 255], [185, 140, 255]], TIP = [255, 241, 207];
+    const NAMES = ["Callers", "Bots", "Chart scripts", "Capstone"], KINDS = ["caller", "bot", "script"];
+    let hot = -1, pts = null;
     let W, H, st, theta = 0.35, omega = 0, tiltX = 0, tiltY = 0, mx = -1e4, my = -1e4, drag = null, fast = false, pulses = [], seen = true, last = performance.now(), t0 = last;
     const BASE = (2 * Math.PI) / 40; // one turn in 40 s
     function size() {
@@ -183,7 +146,7 @@
     function draw(now) {
       const dt = Math.min(0.05, (now - last) / 1000), tt = (now - t0) / 1000; last = now;
       // the turn: dragging sets it, then it eases back to its own pace (quicker under the pointer)
-      if (!drag && !reduce) { const want = BASE * (fast ? 3 : 1); omega += (want - omega) * Math.min(1, dt * 1.5); theta += omega * dt; }
+      if (!drag && !reduce) { const want = hot >= 0 ? BASE * 0.12 : BASE * (fast ? 3 : 1); omega += (want - omega) * Math.min(1, dt * 1.5); theta += omega * dt; }
       if (!reduce) { // the pointer tilts it a little
         const tx = mx > -1e3 ? ((mx - st.x) / W) * 0.25 : 0, ty = my > -1e3 ? ((my - st.y) / H) * 0.18 : 0;
         tiltX += (tx - tiltX) * 0.04; tiltY += (ty - tiltY) * 0.04;
@@ -241,6 +204,26 @@
         const A = v[k]; orb(A.z < C[1] ? gf : gb, A.x, A.y, s * 0.05, COL[k], (0.75 + 0.25 * Math.sin(tt * 2 + k * 2)) * io);
       }
       orb(gf, T.x, T.y, s * 0.055, TIP, (0.75 + 0.25 * Math.sin(tt * 1.4)) * io);
+      // the way in: the corner or tip under the pointer glows with a fine ring and its name; on arrival all four names
+      // show for a few seconds, then fade
+      pts = v;
+      const teach = reduce ? 0 : Math.max(0, Math.min(1, (tt - 1.4) / 0.6, (5.2 - tt) / 0.8));
+      for (let k = 0; k < 4; k++) {
+        const A = v[k], on = k === hot, a = on ? 1 : teach * 0.75;
+        if (!a) continue;
+        const c = k === 3 ? TIP : COL[k];
+        if (on) { orb(gf, A.x, A.y, s * 0.085, c, 0.9); gf.strokeStyle = rgb(c, 0.85); gf.lineWidth = 1; gf.beginPath(); gf.arc(A.x, A.y, s * 0.045, 0, 6.2832); gf.stroke(); }
+        // the name sits outside the pyramid: beside the tip, beyond each corner
+        gf.save(); gf.globalCompositeOperation = "source-over"; gf.globalAlpha = a; gf.textBaseline = "middle";
+        gf.font = '600 11px "IBM Plex Mono", monospace'; gf.letterSpacing = "2px"; gf.fillStyle = rgb(c, 1); gf.shadowColor = "rgba(0,0,0,.8)"; gf.shadowBlur = 8;
+        let ox = k === 3 ? 1 : Math.sign(A.x - st.x) || 1;
+        const wn = gf.measureText(NAMES[k].toUpperCase() + "  →").width;
+        if (ox > 0 && A.x + s * 0.07 + wn > W - 16) ox = -1; // keep it on screen
+        const lx = A.x + ox * s * 0.07, ly = k === 3 ? A.y + s * 0.02 : A.y + s * 0.07;
+        gf.textAlign = ox > 0 ? "left" : "right";
+        gf.fillText(NAMES[k].toUpperCase() + (on ? (ox > 0 ? "  →" : "") : ""), lx, ly);
+        gf.restore();
+      }
       // the emblem sits at the pyramid's heart
       // the emblem lies flat on the floor, seen at the pyramid's own tilt, its triangle pointing at the pyramid's
       // corners and turning with them; sized so its outer ring sits inside the floor's own circle (the base's inner
@@ -257,22 +240,39 @@
     if (reduce) return;
     // the pointer: near the pyramid it quickens; a press on it starts a spin (a drag) or, if it barely moves, a pulse
     const onIt = (x, y) => Math.hypot(x - st.x, y - st.y) < st.s * 0.48;
+    const cornerAt = (x, y) => { // the corner or tip under a point, generous enough to catch while it turns
+      if (!pts) return -1;
+      let best = -1, bd = st.s * 0.085;
+      pts.forEach((A, k) => { const d = Math.hypot(x - A.x, y - A.y); if (d < bd) { bd = d; best = k; } });
+      return best;
+    };
+    // where each one leads: the marketplace showing that kind, or the Capstone page through the page transition
+    function go(k, e) {
+      if (k < 3) { document.querySelector(`[data-k="${KINDS[k]}"]`)?.click(); $("market").scrollIntoView({ behavior: "smooth" }); return; }
+      const a = document.createElement("a"); a.href = "vip"; a.hidden = true; document.body.appendChild(a);
+      a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, detail: 1 }));
+      a.remove();
+    }
     addEventListener("pointermove", e => {
       const r = hero.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top;
       if (drag) { const dx = e.clientX - drag.x; drag.x = e.clientX; const dtm = Math.max(1, e.timeStamp - drag.t); drag.t = e.timeStamp; theta += dx * 0.008; omega = (dx * 0.008) / (dtm / 1000); drag.moved += Math.abs(dx); }
-      const on = !!drag || onIt(mx, my); if (on !== fast) { fast = on; core.classList.toggle("fast", on); }
+      hot = drag || e.pointerType === "touch" ? -1 : cornerAt(mx, my);
+      hero.style.cursor = hot >= 0 ? "pointer" : onIt(mx, my) ? "grab" : "";
+      const on = hot < 0 && (!!drag || onIt(mx, my)); if (on !== fast) { fast = on; core.classList.toggle("fast", on); }
     }, { passive: true });
     hero.addEventListener("pointerdown", e => {
       const r = hero.getBoundingClientRect();
-      if (e.target.closest("a,button") || !onIt(e.clientX - r.left, e.clientY - r.top)) return;
-      drag = { x: e.clientX, t: e.timeStamp, moved: 0 };
+      const x = e.clientX - r.left, y = e.clientY - r.top, k = cornerAt(x, y);
+      if (e.target.closest("a,button") || (k < 0 && !onIt(x, y))) return;
+      drag = { x: e.clientX, t: e.timeStamp, moved: 0, k };
     });
-    addEventListener("pointerup", () => {
+    addEventListener("pointerup", e => {
       if (!drag) return;
+      if (drag.moved < 6 && drag.k >= 0) { const k = drag.k; drag = null; omega = BASE; go(k, e); return; }
       if (drag.moved < 6) pulses.push({ t: (performance.now() - t0) / 1000, c: COL[Math.floor(Math.random() * 3)] });
       omega = Math.max(-6, Math.min(6, omega)); drag = null;
     });
-    document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; if (fast) { fast = false; core.classList.remove("fast"); } });
+    document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; hot = -1; if (fast) { fast = false; core.classList.remove("fast"); } });
   }
 
   // ---------- the sacred geometry: the original site's Flower of Life (circles on a triangular lattice, as in the
