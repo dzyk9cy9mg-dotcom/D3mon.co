@@ -6,7 +6,7 @@
 (function () {
   "use strict";
   const HOME = "next";
-  const MAIN = [[`${HOME}#live`, "Live"], [`${HOME}#battle`, "Battles"], [`${HOME}#market`, "Marketplace"], ["tournaments", "Tournaments"], ["vip", "Capstone"], ["my", "My bots"]];
+  const MAIN = [["live", "Live"], [`${HOME}#battle`, "Battles"], [`${HOME}#market`, "Marketplace"], ["tournaments", "Tournaments"], ["vip", "Capstone"], ["my", "My bots"]];
   const ADMIN = [
     ["Bots and stats", [["applications", "Applications"], ["vip", "VIP access"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Displays and hall video"]]],
     ["Battle show", [["metrics", "Round metrics"], ["board", "Battle board"]]],

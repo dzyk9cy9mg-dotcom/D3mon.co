@@ -134,7 +134,7 @@ describe("pricing calls", () => {
 
   test("a call in the open round is priced live, the moment it arrives", async () => {
     arena().prices.live = true;
-    k.open = [{ ticker: "KXBTC15M-CUR-00", status: "open", open_time: iso(CUR), close_time: iso(CUR + Q), yes_bid_dollars: "0.5800", yes_ask_dollars: "0.6200", no_bid_dollars: "0.3800", no_ask_dollars: "0.4200" }];
+    k.open = [{ ticker: "KXBTC15M-CUR-00", status: "open", open_time: iso(CUR), close_time: iso(CUR + Q), yes_bid_dollars: "0.5800", yes_ask_dollars: "0.6200", no_bid_dollars: "0.3800", no_ask_dollars: "0.4200", floor_strike: 80847.53 }];
     await call(0, CUR, "down");
     const l = await until(() => priceLines().find(x => x.entrantId === bots[0] && x.round === CUR));
     assert.ok(l, "priced");
@@ -147,7 +147,7 @@ describe("pricing calls", () => {
 
   test("GET /market shows the open round's prices, while fresh", async () => {
     const m = (await guest.get("/api/v1/market")).json;
-    assert.deepEqual([m.round, m.price.up, m.price.down], [CUR, 0.62, 0.42], "from the live read just before");
+    assert.deepEqual([m.round, m.price.up, m.price.down, m.price.target], [CUR, 0.62, 0.42, 80847.53], "from the live read just before, with Kalshi's target");
     assert.match(m.notice, /Not financial advice/);
     const at = arena().prices.snapshot.at;
     arena().prices.snapshot.at -= 2 * MIN;

@@ -55,7 +55,8 @@ export function parseQuote(m) {
   const open = typeof m.open_time === "string" ? Date.parse(m.open_time) : NaN;
   if (!Number.isFinite(open) || open % ROUND_MS) return null;
   const b = book(dollars(m, "yes_bid"), dollars(m, "yes_ask"), dollars(m, "no_bid"), dollars(m, "no_ask"), dollars(m, "last_price"));
-  return { round: open, ticker: m.ticker, ...b };
+  const target = Number(m.floor_strike); // the price Bitcoin must end at or above for "yes" (up)
+  return { round: open, ticker: m.ticker, ...b, ...(Number.isFinite(target) && target > 0 ? { target } : {}) };
 }
 
 // One of Kalshi's one-minute candles -> when it ended and the prices at its open and close.
@@ -205,7 +206,7 @@ export class Prices {
   market(now = this.now()) {
     const q = this.snapshot, round = currentRound(now);
     const fresh = q && q.round === round && now - q.at <= SNAPSHOT_MAX_AGE_MS;
-    return { market: MARKET, round, endsAt: round + ROUND_MS, price: fresh ? { up: q.yesAsk, down: q.noAsk, at: q.at } : null, notice: "Kalshi's prices, for information. Not financial advice. D3MON never trades." };
+    return { market: MARKET, round, endsAt: round + ROUND_MS, price: fresh ? { up: q.yesAsk, down: q.noAsk, target: q.target ?? null, at: q.at } : null, notice: "Kalshi's prices, for information. Not financial advice. D3MON never trades." };
   }
 
   status() {
