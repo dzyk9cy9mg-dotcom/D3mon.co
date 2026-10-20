@@ -155,3 +155,13 @@ From web searches only: this environment can't open the sites themselves. The so
 - [3D environment scroll navigation (Awwwards)](https://www.awwwards.com/inspiration/3d-environment-webgl-scroll-navigation)
 - [Bruno Simon portfolio (Pastel)](https://usepastel.com/blog/how-a-design-portfolio-got-the-attention-of-400-000-visitors)
 - [Lenis smooth scroll](https://cdn.jsdelivr.net/npm/lenis@1.3.23/README.md)
+
+## Added 2026-10-20 (the new direction: main parts and transitions)
+
+| File | What the owner liked, and what D3MON takes from it |
+| --- | --- |
+| `10-rubric-hero.webp` | **Rubric** ("the command centre for AI agents"), a screenshot from the owner. A dark charcoal stage with **one glowing outline icon** above a **huge, bold, clean title**, a short line and one sentence; a **3D wall of hexagon tiles** with real depth framing the middle; a **dotted floor** fading out; **one loud button in a single colour** (orange). For D3MON: a glowing outline triangle above the D3MON title, triangle tiles in place of hexagons, amber for the one main button, very little text. |
+| Refero: **Auros** (`styles.refero.design/style/21cfe0c1-…`) | The owner likes it; the site is blocked from Claude's sessions, so only its description is known so far: a near-black teal canvas, glowing "data orbs", a hero sphere of teal and white dots. Ask for screenshots. |
+| Refero: **Dala** (`styles.refero.design/style/e5f5f8cf-…`) | Pure black, no boxes, everything floats; thousands of tiny coloured triangle particles forming one shape; one violet for buttons and an amber accent. Tried as the particle triangle on `/next`; the owner prefers the glass pyramid for the hero. |
+| The glass pyramid (`docs/world/concept-v2/stills/v3-hero.jpg`, `docs/next/pyramid-hero-draft1.jpg`) | **The crown jewel** (owner, 2026-10-20): the front page's hero, made more epic, with no screens inside. The rest of the site doesn't depend on it. |
+
