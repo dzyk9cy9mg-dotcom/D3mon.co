@@ -142,8 +142,8 @@
 
   // ---------- the glass pyramid, live: a three-sided pyramid turning slowly, its corners the three kinds (callers
   // amber at the front, bots blue, chart scripts violet) and its tip gold, the light rising from each corner up its
-  // edge to the tip and on up the beam: three meeting in one place. The main page's Live Trade Cortex emblem turns at
-  // its heart. Drag to spin it (it eases back to its own pace), the pointer tilts it, hovering quickens it and the
+  // edge to the tip and on up the beam: three meeting in one place. The main page's Live Trade Cortex emblem lies flat
+  // on its floor. Drag to spin it (it eases back to its own pace), the pointer tilts it, hovering quickens it and the
   // emblem, a click sends a pulse up the beam. The far side is drawn behind the emblem, the near side in front.
   function pyramid() {
     const back = $("pyrBack"), front = $("pyrFront"), core = $("core"), hero = back.closest(".n-hero");
@@ -158,7 +158,7 @@
     }
     // the pyramid in its own space (y down): base corners on a circle, tip above, turned by theta, then tilted toward us
     function points() {
-      const s = st.s, rb = s * 0.4, yb = s * 0.25, ya = -s * 0.42, P = 0.3 + tiltY, D = s * 2.6;
+      const s = st.s, rb = s * 0.4, yb = s * 0.25, ya = -s * 0.42, P = 0.3 + tiltY, D = s * 2.6; // keep in step with the floor and emblem in draw()
       const v = [0, 1, 2].map(k => { const a = theta + tiltX + Math.PI / 2 + k * 2.0944; return [Math.cos(a) * rb, yb, Math.sin(a) * rb]; });
       v.push([0, ya, 0]);
       return v.map(([x, y, z]) => {
@@ -195,8 +195,7 @@
       gb.save(); gb.translate(st.x, fl); gb.scale(1, 0.3 + tiltY * 0.6);
       const pool = gb.createRadialGradient(0, 0, 0, 0, 0, s * 0.62); pool.addColorStop(0, `rgba(77,163,255,${0.16 * io})`); pool.addColorStop(1, "rgba(77,163,255,0)");
       gb.fillStyle = pool; gb.beginPath(); gb.arc(0, 0, s * 0.62, 0, 6.2832); gb.fill();
-      gb.rotate(theta * 0.5); gb.setLineDash([2, 9]); gb.strokeStyle = `rgba(143,163,178,${0.35 * io})`; gb.lineWidth = 1.2;
-      gb.beginPath(); gb.arc(0, 0, s * 0.53, 0, 6.2832); gb.stroke(); gb.setLineDash([]); gb.restore();
+      gb.restore();
       // the beam: from the tip up out of the top, with pulses rising
       const bg = gf.createLinearGradient(0, T.y, 0, 0); bg.addColorStop(0, `rgba(255,248,230,${0.85 * io})`); bg.addColorStop(1, "rgba(255,248,230,0)");
       gf.strokeStyle = bg; gf.globalAlpha = 0.2; gf.lineWidth = 10; gf.beginPath(); gf.moveTo(T.x, T.y); gf.lineTo(T.x, 0); gf.stroke();
@@ -225,8 +224,9 @@
         gr.addColorStop(1, rgb(tint, (near ? 0.12 + 0.16 * spec : 0.07) * io));
         g.fillStyle = gr; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(c.x, c.y); g.closePath(); g.fill();
       }
-      // faint lines from each corner in to the heart, as in the emblem
-      const hx = st.x, hy0 = st.y + (s * 0.25 + (-s * 0.42 - s * 0.25) * 0.36) * Math.cos(0.3 + tiltY);
+      // the heart is the middle of the floor, where the emblem lies; faint lines run from each corner in to it
+      const P = 0.3 + tiltY, D = s * 2.6, fy = s * 0.25 * Math.cos(P), fz = s * 0.25 * Math.sin(P);
+      const hx = st.x, hy0 = st.y + fy * (D / (D + fz));
       for (let k = 0; k < 4; k++) { const A = v[k]; gb.strokeStyle = rgb(k === 3 ? TIP : COL[k], 0.22 * io); gb.lineWidth = 1; gb.beginPath(); gb.moveTo(A.x, A.y); gb.lineTo(hx, hy0); gb.stroke(); }
       // the edges: base corner to corner, each corner up to the tip; near edges brighter and in front
       const E = [[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]];
@@ -242,8 +242,11 @@
       }
       orb(gf, T.x, T.y, s * 0.055, TIP, (0.75 + 0.25 * Math.sin(tt * 1.4)) * io);
       // the emblem sits at the pyramid's heart
-      const cs = s * 0.4;
-      core.style.width = core.style.height = `${cs}px`; core.style.transform = `translate(${hx - cs / 2}px,${hy0 - cs / 2}px)`;
+      // the emblem lies flat on the floor, seen at the pyramid's own tilt, its triangle's corners on the pyramid's
+      // corners and turning with them; its rings keep turning and tumble up out of the floor
+      const cs = s * 1.1;
+      core.style.width = core.style.height = `${cs}px`;
+      core.style.transform = `translate(${hx - cs / 2}px,${hy0 - cs / 2}px) perspective(${D}px) rotateX(${90 - P * 57.2958}deg) rotateZ(${-(theta + tiltX) * 57.2958}deg)`;
       if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
     }
     new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) { last = performance.now(); requestAnimationFrame(draw); } }).observe(back);

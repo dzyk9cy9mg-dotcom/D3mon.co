@@ -57,18 +57,19 @@ a{color:inherit}
 .n-pyr{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen}
 #pyrFront{z-index:0}
 /* the emblem, exactly as on the main page (d3mon.css .gim), placed and sized by js/next.js */
-.n-core{position:absolute;left:0;top:0;width:200px;height:200px;pointer-events:none;perspective:900px;transform-style:preserve-3d;filter:drop-shadow(0 0 18px rgba(77,163,255,.35));opacity:0;transition:opacity 1.6s ease .6s}
+.n-core{position:absolute;left:0;top:0;width:200px;height:200px;pointer-events:none;perspective:900px;transform-style:preserve-3d;transform-origin:50% 50%;opacity:0;transition:opacity 1.6s ease .6s}
 .n-core.on{opacity:1}
 .n-core>svg,.n-core>.gt{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .n-core svg{overflow:visible}.n-core .gt>svg{width:100%;height:100%;display:block}
 .n-core .gt{transform-style:preserve-3d}
-.n-core .ghalo{transform:translateZ(-140px) scale(1.155)}.n-core .gback{transform:translateZ(-120px) scale(1.136)}.n-core .gfront{transform:translateZ(0)}
+/* lying on the floor: no glow filter or depth offsets, which would flatten the rings or sink them through the floor */
+.n-core .ghalo{transform:scale(1.155)}.n-core .gback{opacity:.6}
 .n-core .gs1,.n-core .gs2,.n-core .gs3,.n-core .gs4,.n-core .gtr{transform-box:fill-box;transform-origin:center}
-.n-core .gs3{animation:n-spin 30s linear infinite}.n-core .gs1{animation:n-spin 16s linear infinite reverse}.n-core .gs2{animation:n-spin 10s linear infinite}.n-core .gs4{animation:n-spin 22s linear infinite reverse}.n-core .gtr{animation:n-spin 40s linear infinite}
+/* the rings keep the main page's movements; the triangle turns with the pyramid instead (its corners on the pyramid's) */
+.n-core .gs3{animation:n-spin 30s linear infinite}.n-core .gs1{animation:n-spin 16s linear infinite reverse}.n-core .gs2{animation:n-spin 10s linear infinite}.n-core .gs4{animation:n-spin 22s linear infinite reverse}
 .n-core .g1{animation:n-gfx 14s linear infinite}.n-core .g2{animation:n-gfy 11s linear infinite}.n-core .g3{animation:n-gfx 8s linear infinite reverse}
 .n-core .gpl{transform-box:fill-box;transform-origin:center;animation:n-corepulse 2.4s ease-in-out infinite}
 .n-core.fast .gs1{animation-duration:5s}.n-core.fast .gs2{animation-duration:3.5s}.n-core.fast .g2{animation-duration:6s}.n-core.fast .g3{animation-duration:4.5s}
-.n-core.fast{filter:drop-shadow(0 0 30px rgba(77,163,255,.75))}
 @keyframes n-spin{to{transform:rotate(360deg)}}
 @keyframes n-gfx{to{transform:rotateX(360deg)}}@keyframes n-gfy{to{transform:rotateY(360deg)}}
 @keyframes n-corepulse{50%{transform:scale(1.35);opacity:.55}}
