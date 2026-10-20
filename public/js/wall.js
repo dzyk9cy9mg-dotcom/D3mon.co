@@ -9,7 +9,9 @@
 (function () {
   "use strict";
   const reduce = !window.matchMedia || matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const KEY = "d3wall", SPREAD = 520, FLIP = 380, HOLD = 120;
+  const KEY = "d3wall", HOLD = 140;
+  const IN = { spread: 430, each: 560 }, OUT = { spread: 560, each: 780 }; // ms: the wave's sweep, and each block's move
+  const F = 1400, DEEP = 300; // the viewing distance, and how deep each block runs (as on the hero's wall)
   let cv = null, g = null, W = 0, H = 0, dpr = 1, tiles = [], raf = 0;
 
   function canvas() {
@@ -19,48 +21,72 @@
     (document.body || document.documentElement).appendChild(cv);
     g = cv.getContext("2d"); size();
   }
-  // a triangular lattice over the screen, like the hero's wall: up and down triangles in rows
+  // the hero's lattice: up and down triangles in rows, with a fine seam between blocks
   function size() {
     dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight;
     cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const S = Math.max(70, Math.min(150, Math.min(W, H) / 6)), h = S * 0.866;
+    const S = W > 900 ? 170 : 110, h = S * 0.866;
     tiles = [];
     for (let r = -1; r * h < H + h; r++) for (let c = -2; c * S / 2 < W + S; c++) {
       const up = (r + c) % 2 === 0, x = c * S / 2, y = r * h;
-      const p = up ? [[x, y + h], [x + S / 2, y], [x + S, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
-      tiles.push({ p, cx: x + S / 2, cy: y + (up ? h * 2 / 3 : h / 3), up, seed: Math.random() });
+      const p = up ? [[x + S / 2, y], [x + S, y + h], [x, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
+      const cx = (p[0][0] + p[1][0] + p[2][0]) / 3, cy = (p[0][1] + p[1][1] + p[2][1]) / 3;
+      tiles.push({ p: p.map(([px, py]) => [px + (cx - px) * 0.035, py + (cy - py) * 0.035]), cx, cy, seed: Math.random() });
     }
   }
-  const ease = u => (u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2);
+  const easeOut = u => 1 - (1 - u) ** 3, easeIn = u => u * u * u;
   const rgb = hex => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
 
-  // paint the wall at progress `at` (ms) from (x, y): dir 1 closes (tiles flip in), -1 opens (tiles flip away)
+  // paint the wall `at` ms in, seen from in front of (x, y). Closing (dir 1): each block rushes forward out of the
+  // dark to its place, in a wave from (x, y), its edge catching the colour as it lands. Opening (dir -1): the blocks
+  // fall back into the dark, nearest the click first, so the page behind opens out from where you clicked.
   function paint(x, y, at, dir, col, sym) {
     g.clearRect(0, 0, W, H);
     const far = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([a, b]) => Math.hypot(a - x, b - y))) || 1;
-    const [cr, cg, cb] = rgb(col);
-    let done = true;
+    const [cr, cg, cb] = rgb(col), T = dir > 0 ? IN : OUT;
+    const proj = (px, py, z) => { const s = F / (F - z); return [x + (px - x) * s, y + (py - y) * s]; };
+    let done = true, sum = 0;
+    const list = [];
     for (const t of tiles) {
-      const d = Math.hypot(t.cx - x, t.cy - y) / far, delay = d * SPREAD + t.seed * 60;
-      let u = Math.max(0, Math.min(1, (at - delay) / FLIP)); if (u < 1) done = false;
-      u = ease(u); const k = dir > 0 ? u : 1 - u; // how far this tile is in place
-      if (k <= 0.001) continue;
-      // each tile turns over on its own axis toward the wave (squashed across it) and settles flat
-      const ang = Math.atan2(t.cy - y, t.cx - x), sq = Math.max(0.02, k), lift = (1 - k) * 18;
-      g.save(); g.translate(t.cx + Math.cos(ang) * lift, t.cy + Math.sin(ang) * lift); g.rotate(ang); g.scale(sq, 1); g.rotate(-ang); g.translate(-t.cx, -t.cy);
-      g.beginPath(); g.moveTo(...t.p[0]); g.lineTo(...t.p[1]); g.lineTo(...t.p[2]); g.closePath();
-      // matte black face, lit a little from the top left, darker as it turns
-      const shade = 0.55 + 0.45 * k, gr = g.createLinearGradient(t.p[0][0], t.p[1][1], t.p[2][0], t.p[0][1]);
-      gr.addColorStop(0, `rgb(${22 * shade | 0},${24 * shade | 0},${29 * shade | 0})`); gr.addColorStop(1, `rgb(${9 * shade | 0},${10 * shade | 0},${13 * shade | 0})`);
-      g.fillStyle = gr; g.fill(); g.strokeStyle = gr; g.lineWidth = 1.6; g.stroke(); // no hairline gaps once closed
-      // the wave's front catches the colour; settled tiles keep a faint edge
-      const front = Math.sin(Math.PI * Math.min(1, k)) ** 2;
-      g.lineWidth = 1; g.strokeStyle = `rgba(${cr},${cg},${cb},${0.06 + 0.7 * front})`; g.stroke();
-      g.restore();
+      const d = Math.hypot(t.cx - x, t.cy - y) / far;
+      const u = Math.max(0, Math.min(1, (at - (d * T.spread + t.seed * 70)) / T.each)); if (u < 1) done = false;
+      // z: where the block's face is (0 = in place, covering); a: how solid it is
+      const z = dir > 0 ? -1100 * (1 - easeOut(u)) : -1300 * easeIn(u);
+      const a = dir > 0 ? Math.min(1, u * 2.2) : 1 - u ** 1.4;
+      sum += dir > 0 ? u : 1 - u;
+      if (a > 0.002) list.push({ t, z, a, u });
     }
-    if (sym && window.D3Sigils) { // the symbol draws itself in the middle while the wall closes, and fades as it opens
-      const s = Math.min(W, H) * 0.16, t = dir > 0 ? Math.min(1, at / 700) : 1, a = dir > 0 ? 1 : Math.max(0, 1 - at / 450);
-      window.D3Sigils.draw(g, sym, W / 2, H / 2, s * (dir > 0 ? 1 : 1 + at / 600), { t, a, lit: 0.6 });
+    // the dark behind the blocks fills in as they land, and drains away as they fly off
+    const cover = sum / tiles.length;
+    g.fillStyle = `rgba(4,5,7,${(dir > 0 ? cover ** 1.5 : cover ** 2.5).toFixed(3)})`; g.fillRect(0, 0, W, H);
+    list.sort((A, B) => A.z - B.z); // far blocks first
+    for (const { t, z, a, u } of list) {
+      const front = t.p.map(([px, py]) => proj(px, py, z)), back = t.p.map(([px, py]) => proj(px, py, z - DEEP));
+      const moving = Math.sin(Math.PI * u), lit = 0.45 + 0.55 * Math.max(0, Math.min(1, (z + 1100) / 1100));
+      g.globalAlpha = a;
+      // the sides that face the click, lit a little from above, falling away to black
+      for (let m = 0; m < 3; m++) {
+        const A = t.p[m], B = t.p[(m + 1) % 3], mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
+        let nx = B[1] - A[1], ny = A[0] - B[0];
+        if (nx * (mx - t.cx) + ny * (my - t.cy) < 0) { nx = -nx; ny = -ny; }
+        if (nx * (x - mx) + ny * (y - my) <= 0) continue;
+        const up = Math.max(0, -ny / Math.hypot(nx, ny)), l = (18 + 20 * up) * lit;
+        const sg = g.createLinearGradient(...front[m], ...back[m]);
+        sg.addColorStop(0, `rgb(${l | 0},${l | 0},${(l + 4) | 0})`); sg.addColorStop(1, "rgb(3,4,6)");
+        g.fillStyle = sg; g.beginPath(); g.moveTo(...front[m]); g.lineTo(...front[(m + 1) % 3]); g.lineTo(...back[(m + 1) % 3]); g.lineTo(...back[m]); g.closePath(); g.fill();
+      }
+      // the face: matte black, a touch lighter at the top; its rim catches the colour while it moves
+      const top = Math.min(front[0][1], front[1][1], front[2][1]), bot = Math.max(front[0][1], front[1][1], front[2][1]);
+      const lf = Math.round(30 * lit), fg = g.createLinearGradient(0, top, 0, bot);
+      fg.addColorStop(0, `rgb(${lf + 5},${lf + 6},${lf + 9})`); fg.addColorStop(1, `rgb(${lf - 6},${lf - 6},${lf - 4})`);
+      g.fillStyle = fg; g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
+      g.lineWidth = 1; g.strokeStyle = `rgba(${cr},${cg},${cb},${(0.07 + 0.75 * moving).toFixed(3)})`; g.stroke();
+    }
+    g.globalAlpha = 1;
+    if (sym && window.D3Sigils) { // the symbol draws itself at the heart of the wall; on the way out you pass through it
+      const s = Math.min(W, H) * 0.16;
+      if (dir > 0) window.D3Sigils.draw(g, sym, x, y, s, { t: Math.min(1, Math.max(0, (at - 180) / 650)), a: 1, lit: 0.7 });
+      else { const k = Math.min(1, at / 520); window.D3Sigils.draw(g, sym, x, y, s * (1 + 5 * easeIn(k)), { t: 1, a: 1 - k, lit: 0.7 }); }
     }
     return done;
   }

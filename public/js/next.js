@@ -20,7 +20,7 @@
   function field() {
     const cv = $("field"), g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
     let W, H, S, F, vx, vy, tiles = [], mx = -1e4, my = -1e4, sx = 0, sy = 0, seen = true, waves = [], t0 = performance.now();
-    const BACK = -520; // how deep the blocks' sides run
+    const BACK = -150; // how deep the blocks' sides run (shallow, so the far blocks stay neat)
     function size() {
       W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
       const wide = W > 900;
@@ -36,23 +36,23 @@
         const k = Math.min(1, Math.max(0, (Math.hypot(cx - vx, cy - vy) - open) / (open * 1.3)));
         // calm behind the words: the blocks there sit back and stay dark so the text reads
         const calm = wide ? Math.max(0, 1 - Math.hypot((cx - W * 0.22) / (W * 0.26), (cy - H * 0.5) / (H * 0.42))) : 0;
-        tiles.push({ pts: ins, cx, cy, up, calm, k, base: (40 + 230 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.25 });
+        tiles.push({ pts: ins, cx, cy, up, calm, k, base: (30 + 55 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.25 });
       }
     }
     // a point at depth z, seen from in front of the vanishing point (which drifts a little with the pointer)
     const proj = (x, y, z) => { const s = F / (F - z), ox = vx + sx, oy = vy + sy; return [ox + (x - ox) * s, oy + (y - oy) * s]; };
     function draw(now) {
-      const tt = (now - t0) / 1000, R = W > 900 ? 300 : 180;
+      const tt = (now - t0) / 1000, R = W > 900 ? 460 : 260; // a wide, gentle bulge: neighbours move together, so the blocks stay lined up
       waves = waves.filter(w => tt - w.t < 2.6);
-      if (!reduce) { sx += ((mx > -1e3 ? (mx - vx) * -0.04 : 0) - sx) * 0.05; sy += ((my > -1e3 ? (my - vy) * -0.04 : 0) - sy) * 0.05; }
+      if (!reduce) { sx += ((mx > -1e3 ? (mx - vx) * -0.02 : 0) - sx) * 0.04; sy += ((my > -1e3 ? (my - vy) * -0.02 : 0) - sy) * 0.04; }
       const intro = reduce ? 1 : Math.min(1, tt / 2.2), io = 1 - (1 - intro) ** 3; // on arrival the blocks slide forward out of the dark
       for (const t of tiles) {
-        const breathe = reduce ? 0 : 18 * Math.sin(tt * t.f + t.p);
-        const d = Math.hypot(t.cx - mx, t.cy - my), near = Math.max(0, 1 - d / R), push = near * near * (3 - 2 * near) * 110;
+        const breathe = reduce ? 0 : 6 * Math.sin(tt * 0.45 - (t.cx + t.cy * 0.6) * 0.004); // one slow swell across the wall
+        const d = Math.hypot(t.cx - mx, t.cy - my), near = Math.max(0, 1 - d / R), push = near * near * (3 - 2 * near) * 55;
         let ring = 0;
-        for (const w of waves) { const rr = (tt - w.t) * 700, gap = Math.abs(Math.hypot(t.cx - w.x, t.cy - w.y) - rr); ring = Math.max(ring, Math.max(0, 1 - gap / 120) * (1 - (tt - w.t) / 2.6)); }
-        const target = (t.base + breathe + push + 110 * ring) * io - 200 * (1 - io);
-        if (reduce) t.z = target; else { t.v += (target - t.z) * 0.06; t.v *= 0.8; t.z += t.v; } // a soft spring: it pumps out, then settles
+        for (const w of waves) { const rr = (tt - w.t) * 700, gap = Math.abs(Math.hypot(t.cx - w.x, t.cy - w.y) - rr); const q = Math.max(0, 1 - gap / 220); ring = Math.max(ring, q * q * (3 - 2 * q) * (1 - (tt - w.t) / 2.6)); }
+        const target = (t.base + breathe + push + 60 * ring) * io - 200 * (1 - io);
+        if (reduce) t.z = target; else { t.v += (target - t.z) * 0.05; t.v *= 0.7; t.z += t.v; } // a soft, well-damped spring: it eases out and settles without wobbling
         t.near = near;
       }
       g.fillStyle = "#040507"; g.fillRect(0, 0, W, H);
