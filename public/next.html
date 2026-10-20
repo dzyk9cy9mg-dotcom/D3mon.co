@@ -17,10 +17,11 @@
 <a class="n-skip" href="#live">Skip to the live round</a>
 <header class="n-bar" id="bar">
   <a class="n-mark" href="next" aria-label="D3MON home">D<b>3</b>MON</a>
-  <nav class="n-nav" aria-label="Main">
-    <a href="#live">Live</a><a href="#battle">Battles</a><a href="#market">Marketplace</a><a href="#tour">Tournaments</a><a href="#cap">Capstone</a>
+  <button type="button" class="n-menu" id="menu" aria-expanded="false" aria-controls="nav">Menu</button>
+  <nav class="n-nav" id="nav" aria-label="Main">
+    <a href="#live">Live</a><a href="#battle">Battles</a><a href="#market">Marketplace</a><a href="#tour">Tournaments</a><a href="#cap">Capstone</a><a class="n-phone" id="acct2" href="login">Sign in</a>
   </nav>
-  <div class="n-acts"><a class="n-link" id="acct" href="login">Sign in</a><a class="n-btn" id="join" href="apply">Join D3MON</a></div>
+  <div class="n-acts"><a class="n-link" id="acct" href="login">Sign in</a><a class="n-amber n-sm" id="join" href="apply">Join D3MON</a></div>
 </header>
 
 <main>
@@ -28,6 +29,7 @@
   <section class="n-hero" aria-labelledby="heroT">
     <canvas class="n-field" id="field" aria-hidden="true"></canvas>
     <picture class="n-jewel" aria-hidden="true"><source media="(max-width:700px)" srcset="img/pyramid-hero-phone.jpg"><img src="img/pyramid-hero.jpg" alt="" fetchpriority="high"></picture>
+    <canvas class="n-dust" id="dust" aria-hidden="true"></canvas>
     <div class="n-hero-in">
       <svg class="n-sigil" viewBox="0 0 100 90" aria-hidden="true"><path d="M50 6 L94 84 L6 84 Z"/><path d="M50 6 L50 58 M94 84 L50 58 M6 84 L50 58" class="in"/><circle cx="50" cy="6" r="5" class="c"/><circle cx="6" cy="84" r="5" class="b"/><circle cx="94" cy="84" r="5" class="s"/></svg>
       <h1 id="heroT" class="n-title">D<b>3</b>MON</h1>
@@ -63,7 +65,7 @@
       <article class="n-card reveal n-chat">
         <p class="n-k">The chat <span id="chatHere"></span></p>
         <ol class="n-msgs" id="lChat"><li class="n-empty">Quiet so far. Say hello.</li></ol>
-        <a class="n-ghost" href="world#hall">Open the chat</a>
+        <a class="n-link2" href="world#hall">Open the chat <span aria-hidden="true">→</span></a>
       </article>
     </div>
   </section>
@@ -72,10 +74,10 @@
   <section class="n-sec n-arena" id="battle" aria-labelledby="battleT">
     <div class="n-arena-in">
       <header class="n-head reveal"><p class="n-kicker">02 · Battle of the Bots</p><h2 id="battleT"><span id="bTitle">Saturday night</span></h2><p id="bWhen">Every Saturday, 7 pm Pacific. Twelve rounds.</p></header>
-      <div class="n-count reveal" id="bCount" aria-live="off"><div><b id="cD">–</b><span>days</span></div><div><b id="cH">–</b><span>hours</span></div><div><b id="cM">–</b><span>min</span></div><div><b id="cS">–</b><span>sec</span></div></div>
+      <div class="n-count reveal" id="bCount" aria-live="off" hidden><div><b id="cD">–</b><span>days</span></div><div><b id="cH">–</b><span>hours</span></div><div><b id="cM">–</b><span>min</span></div><div><b id="cS">–</b><span>sec</span></div></div>
       <div class="n-lineup reveal" id="bLineup"></div>
       <div class="n-streams reveal" id="bStreams"></div>
-      <div class="n-ctas reveal"><a class="n-btn n-big" id="bApply" href="apply">Apply to battle</a><a class="n-ghost n-big" href="world#hall">Watch the battle</a></div>
+      <div class="n-ctas reveal"><a class="n-amber" id="bApply" href="apply">Apply to battle <span aria-hidden="true">→</span></a><a class="n-link2" id="bWatch" href="world#hall">Watch the battle</a></div>
       <ol class="n-board reveal" id="bBoard" hidden></ol>
     </div>
   </section>
@@ -98,17 +100,18 @@
   <!-- 6. Capstone: the paid session at the top. -->
   <section class="n-sec n-cap" id="cap" aria-labelledby="capT">
     <div class="n-cap-in reveal">
+      <canvas class="n-capdust" id="capDust" aria-hidden="true"></canvas>
       <p class="n-kicker">05 · Capstone</p>
       <h2 id="capT">Trade with the best, live</h2>
       <p>Scheduled sessions where D3MON's callers lead, backed by bots and chart scripts. Members see the callers' calls the moment they're made.</p>
       <div class="n-session" id="capNext"><p class="n-small">No session scheduled yet.</p></div>
-      <a class="n-btn n-big" href="vip">Get access</a>
+      <a class="n-amber n-gold" href="vip">Get access <span aria-hidden="true">→</span></a>
     </div>
   </section>
 </main>
 
 <footer class="n-foot">
-  <p class="n-mark">D<b>3</b>MON</p>
+  <p class="n-mark n-chrome">D<b>3</b>MON</p>
   <p>Paper results, verified by Kalshi. For entertainment. Not financial advice. D3MON never trades.</p>
   <nav aria-label="More"><a href="tournaments">Tournaments</a><a href="my">My bots</a><a href="apply">Apply</a><a href="world">The old world</a></nav>
 </footer>

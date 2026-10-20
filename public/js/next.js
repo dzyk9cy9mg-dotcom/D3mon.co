@@ -51,12 +51,92 @@
         g.fillStyle = grd; tri(t, 0.06 + 0.05 * (1 - z)); g.fill();
         g.strokeStyle = `rgba(170,200,240,${0.03 + 0.07 * z * quiet})`; g.lineWidth = 1; g.stroke();
       }
-      if (!reduce && !document.hidden) requestAnimationFrame(draw);
+      if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
     }
+    let seen = true; // the wall rests while the hero is scrolled away
+    new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) requestAnimationFrame(draw); }).observe(cv);
     size(); requestAnimationFrame(draw);
     addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
     addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }, { passive: true });
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && !reduce) requestAnimationFrame(draw); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && seen && !reduce) requestAnimationFrame(draw); });
+  }
+
+  // ---------- the gathering (after Dala): tiny triangles drift in from everywhere and come together on a triangle's
+  // edges, coloured by its corners (callers at the top, bots left, scripts right). The pointer scatters the nearest
+  // ones and they drift back. shape() gives the corners in the canvas's pixels; onNear fires as they arrive.
+  function gather(cv, shape, { cols, n, rest = 0.3, onNear }) {
+    const g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
+    let W, H, A, pts = [], t0 = 0, near = false, mx = -1e4, my = -1e4, run = false;
+    const mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(",");
+    function size() {
+      W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      A = shape();
+      for (const q of pts) home(q);
+    }
+    function home(q) {
+      const a = A[q.side], b = A[(q.side + 1) % 3];
+      q.hx = a[0] + (b[0] - a[0]) * q.f + q.j; q.hy = a[1] + (b[1] - a[1]) * q.f + q.j * 0.6;
+    }
+    pts = Array.from({ length: n }, (_, i) => ({
+      side: i % 3, f: Math.random(), j: (Math.random() - 0.5) * (Math.random() < 0.8 ? 3 : 18),
+      sx: Math.random(), sy: Math.random(), d: Math.random() * 0.8, s: 1 + Math.random() * 2.4, r: Math.random() * 6.3, p: Math.random() * 6.3, ox: 0, oy: 0
+    }));
+    size();
+    for (const q of pts) q.c = mix(cols[q.side], cols[(q.side + 1) % 3], q.f);
+    function draw(now) {
+      const t = (now - t0) / 1000;
+      g.clearRect(0, 0, W, H);
+      for (const q of pts) {
+        const k = reduce ? 1 : Math.min(1, Math.max(0, (t - q.d) / 3)), e = k < 0.5 ? 4 * k ** 3 : 1 - (-2 * k + 2) ** 3 / 2;
+        const sx = q.sx * W, sy = q.sy * H, wob = reduce ? 0 : 1.2 + 6 * (1 - e);
+        let x = sx + (q.hx - sx) * e + Math.sin(t * 0.7 + q.p) * wob, y = sy + (q.hy - sy) * e + Math.cos(t * 0.6 + q.p) * wob;
+        // the pointer pushes nearby ones aside; they ease back once it moves on
+        const dx = x - mx, dy = y - my, dd = Math.hypot(dx, dy), push = reduce ? 0 : Math.max(0, 1 - dd / 110) * 26;
+        q.ox += ((dd ? dx / dd : 0) * push - q.ox) * 0.08; q.oy += ((dd ? dy / dd : 0) * push - q.oy) * 0.08;
+        x += q.ox; y += q.oy;
+        // bright in flight, then settling to a faint shimmer on the edge
+        const settle = Math.min(1, Math.max(0, t - 3.4) / 1.6), a = (0.55 + 0.4 * Math.sin(t * 1.3 + q.p) ** 2) * (1 - settle * (1 - rest));
+        const r = q.r + (reduce ? 0 : t * 0.4);
+        g.fillStyle = `rgba(${q.c},${a.toFixed(3)})`;
+        g.beginPath();
+        for (let m = 0; m < 3; m++) { const an = r + m * 2.094; g[m ? "lineTo" : "moveTo"](x + Math.cos(an) * q.s, y + Math.sin(an) * q.s); }
+        g.fill();
+      }
+      if (!near && (reduce || t > 2)) { near = true; onNear && onNear(); }
+      if (run && !reduce && !document.hidden) requestAnimationFrame(draw);
+    }
+    const go = () => { if (run) return; run = true; requestAnimationFrame(draw); };
+    const io = new IntersectionObserver(([en]) => { if (en.isIntersecting) go(); else run = false; });
+    addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
+    addEventListener("pointermove", e => { const b = cv.getBoundingClientRect(); mx = e.clientX - b.left; my = e.clientY - b.top; }, { passive: true });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && run && !reduce) requestAnimationFrame(draw); });
+    return { start() { t0 = performance.now(); io.observe(cv); }, size };
+  }
+
+  // The hero: the particles gather on the glass pyramid's front face, found in the picture (its pixels below), then
+  // the pyramid fades in where they meet.
+  const FACE = { wide: [[1157, 322], [903, 742], [1488, 746]], phone: [[390, 466], [2, 1105], [778, 1105]] };
+  function heroDust() {
+    const cv = $("dust"), im = document.querySelector(".n-jewel img");
+    const shape = () => {
+      const c = cv.getBoundingClientRect(), b = im.getBoundingClientRect(), iw = im.naturalWidth || 1600, ih = im.naturalHeight || 1000;
+      const s = Math.max(b.width / iw, b.height / ih), [px, py] = getComputedStyle(im).objectPosition.split(" ").map(v => parseFloat(v) / 100);
+      const ox = b.left - c.left + (b.width - iw * s) * px, oy = b.top - c.top + (b.height - ih * s) * py;
+      return FACE[ih > iw ? "phone" : "wide"].map(([x, y]) => [ox + x * s, oy + y * s]);
+    };
+    const dust = gather(cv, shape, { cols: [[255, 181, 71], [77, 163, 255], [185, 140, 255]], n: innerWidth > 900 ? 900 : 480, rest: 0.22, onNear: () => im.classList.add("on") });
+    let begun = false;
+    const begin = () => { if (begun) return; begun = true; dust.size(); dust.start(); };
+    im.complete && im.naturalWidth ? begin() : (im.addEventListener("load", begin), im.addEventListener("error", begin), setTimeout(begin, 2500));
+  }
+
+  // The capstone: gold particles gather into the capstone's small triangle as the section comes into view.
+  function capDust() {
+    const cv = $("capDust");
+    const shape = () => { const w = cv.clientWidth, h = cv.clientHeight, r = Math.min(w, h * 1.3) * 0.32, cx = w / 2, cy = h * 0.58; return [[cx, cy - r], [cx - r * 0.95, cy + r * 0.62], [cx + r * 0.95, cy + r * 0.62]]; };
+    const dust = gather(cv, shape, { cols: [[255, 241, 207], [233, 194, 122], [156, 115, 51]], n: 260, rest: 0.6 });
+    const io = new IntersectionObserver(([en]) => { if (en.isIntersecting) { io.disconnect(); dust.start(); } }, { rootMargin: "0px 0px -20% 0px" });
+    io.observe(cv);
   }
 
   // ---------- live ----------
@@ -108,7 +188,12 @@
     const now = serverNow(), live = battles.filter(b => b.status !== "draft");
     const b = live.find(x => x.startsAt <= now && now < x.endsAt) || live.filter(x => x.startsAt > now).sort((a, c) => a.startsAt - c.startsAt)[0] || null;
     S.battle = b;
-    if (!b) return;
+    if (!b) { // no battle announced: say so, and point at joining instead of an empty countdown
+      $("bWhen").textContent = "HardSmoke's next battle is announced here, with its lineup and a countdown.";
+      $("bCount").hidden = true; $("bWatch").hidden = true;
+      $("bApply").firstChild.textContent = "Join D3MON "; $("bApply").href = "apply";
+      return;
+    }
     const on = b.startsAt <= now;
     $("bTitle").textContent = b.title;
     $("bWhen").textContent = `${new Date(b.startsAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", hour: "numeric", minute: "2-digit" })} PT · ${b.rounds} rounds${on ? " · live now" : ""}`;
@@ -127,7 +212,7 @@
   // ---------- the marketplace ----------
   function renderShop() {
     const list = S.entrants.filter(e => S.filter === "all" || e.kind === S.filter);
-    $("shop").innerHTML = list.length ? list.map(e => `<a class="n-item k-${esc(e.kind)}" href="profile?e=${encodeURIComponent(e.slug)}">
+    $("shop").innerHTML = list.length ? list.map(e => `<a class="n-item k-${esc(e.kind)}" href="profile?e=${encodeURIComponent(e.slug)}"><i class="glow" aria-hidden="true"></i>
         <small>${esc(KIND[e.kind] || e.kind)}${(e.badges || []).length ? " · battle winner" : ""}</small><h3>${esc(e.name)}</h3>
         <p>by ${esc(e.creatorName)}</p>${e.tagline ? `<p class="tag">“${esc(e.tagline)}”</p>` : ""}
         <span class="go">${e.shopUrl ? `Get ${esc(e.name)} →` : "See the record →"}</span></a>`).join("")
@@ -163,6 +248,11 @@
     const links = [...document.querySelectorAll(".n-nav a")];
     const spy = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === `#${e.target.id}`)); }), { rootMargin: "-45% 0px -50% 0px" });
     document.querySelectorAll("main section[id]").forEach(s => spy.observe(s));
+    // on phones the nav folds into a Menu button that drops it down as a glass sheet
+    const menu = $("menu"), open = on => { menu.setAttribute("aria-expanded", String(on)); bar.classList.toggle("open", on); };
+    menu.addEventListener("click", () => open(menu.getAttribute("aria-expanded") !== "true"));
+    links.forEach(a => a.addEventListener("click", () => open(false)));
+    addEventListener("keydown", e => { if (e.key === "Escape") open(false); });
   }
 
   document.addEventListener("click", e => {
@@ -172,11 +262,10 @@
     if (t) { S.kind = t.dataset.kind; loadTour().catch(() => {}); }
   });
 
-  field(); motion();
-  { const im = document.querySelector(".n-jewel img"); const on = () => im.classList.add("on"); im.complete ? on() : im.addEventListener("load", on); } // the pyramid fades in once loaded
+  field(); heroDust(); capDust(); motion();
   (async () => {
     const me = await session().catch(() => null);
-    if (me) { $("acct").textContent = me.name || me.username; $("acct").href = "my"; }
+    if (me) for (const a of [$("acct"), $("acct2")]) { a.textContent = me.name || me.username; a.href = "my"; }
     await syncClock().catch(() => {});
     tick(); setInterval(tick, 1000);
     const safe = f => f().catch(() => {});
