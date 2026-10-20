@@ -26,6 +26,8 @@
   <div class="n-acts"><a class="n-link" id="acct" href="login">Sign in</a><a class="n-amber n-sm" id="join" href="apply">Join D3MON</a></div>
 </header>
 
+<!-- the original site's Flower of Life, faint behind the plain black parts, lit around the pointer (js/next.js) -->
+<canvas class="n-geo" id="geo" aria-hidden="true"></canvas>
 <main>
   <!-- 1. The opening: one statement, the three kinds, one button. -->
   <section class="n-hero" aria-labelledby="heroT">
@@ -65,19 +67,19 @@
   <section class="n-sec n-live" id="live" aria-labelledby="liveT">
     <header class="n-head reveal"><p class="n-kicker">01 · Live</p><h2 id="liveT">The trading floor</h2><p>This round's calls as they land, and everyone talking about them.</p></header>
     <div class="n-livegrid">
-      <article class="n-card reveal n-clock">
+      <article class="n-card tilt reveal n-clock">
         <p class="n-k">This round</p>
         <p class="n-big-num" id="lClock">–</p>
         <div class="n-bar2"><i id="lBar"></i></div>
         <p class="n-small" id="lRound">–</p>
         <p class="n-small" id="lPrev">–</p>
       </article>
-      <article class="n-card reveal">
+      <article class="n-card tilt reveal">
         <p class="n-k">Calls this round</p>
         <ol class="n-calls" id="lCalls"><li class="n-empty">No calls yet this round.</li></ol>
         <p class="n-note">Bots and scripts show their call at once. Callers stay sealed until the close.</p>
       </article>
-      <article class="n-card reveal n-chat">
+      <article class="n-card tilt reveal n-chat">
         <p class="n-k">The chat <span id="chatHere"></span></p>
         <ol class="n-msgs" id="lChat"><li class="n-empty">Quiet so far. Say hello.</li></ol>
         <a class="n-link2" href="world#hall">Open the chat <span aria-hidden="true">→</span></a>
@@ -119,7 +121,7 @@
       <p class="n-kicker">05 · Capstone</p>
       <h2 id="capT">Trade with the best, live</h2>
       <p>Scheduled sessions where D3MON's callers lead, backed by bots and chart scripts. Members see the callers' calls the moment they're made.</p>
-      <div class="n-session" id="capNext"><p class="n-small">No session scheduled yet.</p></div>
+      <div class="n-session tilt" id="capNext"><p class="n-small">No session scheduled yet.</p></div>
       <a class="n-amber n-gold" href="vip">Get access <span aria-hidden="true">→</span></a>
     </div>
   </section>

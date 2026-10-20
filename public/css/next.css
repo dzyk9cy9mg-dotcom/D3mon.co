@@ -73,7 +73,7 @@ a{color:inherit}
 @keyframes n-spin{to{transform:rotate(360deg)}}
 @keyframes n-gfx{to{transform:rotateX(360deg)}}@keyframes n-gfy{to{transform:rotateY(360deg)}}
 @keyframes n-corepulse{50%{transform:scale(1.35);opacity:.55}}
-.n-hero{position:relative;touch-action:pan-y;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
+.n-hero{position:relative;z-index:1;background:#040507;touch-action:pan-y;min-height:100svh;display:grid;align-content:center;padding:120px var(--gut) 150px;overflow:hidden}
 .n-field{position:absolute;inset:0;width:100%;height:100%}
 .n-hero::after{content:"";position:absolute;inset:auto 0 0;height:40%;background:linear-gradient(transparent,var(--bg));pointer-events:none}
 .n-hero-in{position:relative;z-index:1;max-width:560px}
@@ -111,7 +111,7 @@ a{color:inherit}
 }
 
 /* sections: a mono kicker with the little triangle, a chrome Syncopate title, one line under it */
-.n-sec{padding:120px var(--gut)}
+.n-sec{position:relative;z-index:1;padding:120px var(--gut)}
 .n-head{max-width:680px;margin-bottom:44px}
 .n-kicker{display:flex;align-items:center;gap:10px;margin:0 0 16px;font:500 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
 .n-kicker::before{content:"";width:12px;height:11px;background:linear-gradient(135deg,var(--callers),var(--bots) 60%,var(--scripts));clip-path:polygon(50% 0,100% 100%,0 100%)}
@@ -203,7 +203,7 @@ a{color:inherit}
 .n-session{margin:14px 0;padding:18px 26px;border:1px solid rgba(233,194,122,.35);background:rgba(233,194,122,.05);clip-path:var(--cut)}
 .n-session b{display:block;font:700 17px var(--display);letter-spacing:.02em;text-transform:uppercase}
 
-.n-foot{padding:60px var(--gut);border-top:1px solid var(--edge);display:grid;gap:10px;color:var(--ink3);font-size:13px}
+.n-foot{position:relative;z-index:1;padding:60px var(--gut);border-top:1px solid var(--edge);display:grid;gap:10px;color:var(--ink3);font-size:13px}
 .n-foot nav{display:flex;gap:18px;flex-wrap:wrap}
 .n-foot a{color:var(--ink2);text-decoration:none}
 .n-foot a:hover{color:var(--ink)}
@@ -219,3 +219,23 @@ a{color:inherit}
   .n-capmark path{transition:none;stroke-dashoffset:0}
   .n-sigil path{animation:none;stroke-dashoffset:0}
 }
+
+/* the sacred geometry: the original site's Flower of Life on a fixed canvas behind the sections, faint everywhere,
+   lit in the three colours around the pointer (or drifting by itself on touch screens); a click sends a ring of light */
+.n-geo{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* hints of 3D: cards lean toward the pointer with a soft glare, the amber buttons are drawn to it, titles catch a
+   chrome shine as they arrive, and the little triangles turn over */
+.tilt{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(var(--ty,0px));transition:transform .5s var(--ease),border-color .35s;will-change:transform}
+.tilt.on{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .12s linear,border-color .35s}
+.tilt.on{background-image:radial-gradient(280px circle at var(--gx,50%) var(--gy,50%),rgba(255,248,230,.075),transparent 65%)}
+.n-item.tilt:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-4px)}
+.n-amber{translate:var(--mgx,0px) var(--mgy,0px);transition:transform .25s var(--ease),filter .25s,translate .45s var(--ease)}
+.n-head h2,.n-cap h2{background-size:220% 100%;background-position:100% 0}
+.reveal.in h2,.n-cap-in.in h2{animation:n-shine 2.4s var(--ease) .25s both}
+@keyframes n-shine{from{background-position:100% 0}to{background-position:0 0}}
+.n-head h2{background-image:linear-gradient(100deg,#7A889B 0%,#C9D6E4 30%,#fff 45%,#C9D6E4 60%,#7A889B 100%)}
+.n-cap h2{background-image:linear-gradient(100deg,#9C7333 0%,#E9C27A 30%,#FFF1CF 45%,#E9C27A 60%,#9C7333 100%)}
+.reveal.in .n-kicker::before,.reveal.in.n-kicker::before{animation:n-flip 1.4s var(--ease) .1s both}
+@keyframes n-flip{from{transform:perspective(60px) rotateY(-180deg)}to{transform:perspective(60px) rotateY(0)}}
+@media (prefers-reduced-motion:reduce){.tilt{transform:none!important;transition:none}.tilt.on{background-image:none}.n-amber{translate:none}.reveal.in h2,.reveal.in .n-kicker::before{animation:none}}

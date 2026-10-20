@@ -242,9 +242,10 @@
       }
       orb(gf, T.x, T.y, s * 0.055, TIP, (0.75 + 0.25 * Math.sin(tt * 1.4)) * io);
       // the emblem sits at the pyramid's heart
-      // the emblem lies flat on the floor, seen at the pyramid's own tilt, its triangle's corners on the pyramid's
-      // corners and turning with them; its rings keep turning and tumble up out of the floor
-      const cs = s * 1.1;
+      // the emblem lies flat on the floor, seen at the pyramid's own tilt, its triangle pointing at the pyramid's
+      // corners and turning with them; sized so its outer ring sits inside the floor's own circle (the base's inner
+      // circle is half its corner radius, 0.2 s; the outer ring is 0.47 of the emblem), its rings tumbling within the glass
+      const cs = s * 0.42;
       core.style.width = core.style.height = `${cs}px`;
       core.style.transform = `translate(${hx - cs / 2}px,${hy0 - cs / 2}px) perspective(${D}px) rotateX(${90 - P * 57.2958}deg) rotateZ(${-(theta + tiltX) * 57.2958}deg)`;
       if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
@@ -272,6 +273,97 @@
       omega = Math.max(-6, Math.min(6, omega)); drag = null;
     });
     document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; if (fast) { fast = false; core.classList.remove("fast"); } });
+  }
+
+  // ---------- the sacred geometry: the original site's Flower of Life (circles on a triangular lattice, as in the
+  // main page's background) on a fixed canvas behind the sections. Faint everywhere; around the pointer it lights up
+  // in the three colours (amber on the left, blue in the middle, violet on the right), as if lit by a lamp; on touch
+  // screens the light drifts by itself. A click sends a ring of light out through it. It drifts a little with the
+  // scroll. Reduce motion keeps it faint and still.
+  function geometry() {
+    const cv = $("geo"), g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1), R = 46, hero = document.querySelector(".n-hero");
+    const COLS = [[255, 181, 71], [77, 163, 255], [185, 140, 255]];
+    let W, H, faint, lit, spot, sg, ring, rg, mx = -1, my = -1, lastMove = -1e9, ex = 0, ey = 0, rings = [], t0 = performance.now();
+    function tile(stroke, dot) { // one repeat of the lattice: circles of radius R centred a distance R apart
+      const tw = R, th = R * Math.sqrt(3), c = document.createElement("canvas");
+      c.width = Math.round(tw * dpr); c.height = Math.round(th * dpr);
+      const x = c.getContext("2d"); x.scale(c.width / tw, c.height / th); x.strokeStyle = stroke; x.lineWidth = 1; x.fillStyle = dot;
+      for (let i = -3; i <= 4; i++) for (let j = -4; j <= 5; j++) {
+        const cx = i * tw + (Math.abs(j) % 2 ? tw / 2 : 0), cy = (j * th) / 2;
+        x.beginPath(); x.arc(cx, cy, R, 0, 6.2832); x.stroke();
+        x.beginPath(); x.arc(cx, cy, 1.2, 0, 6.2832); x.fill();
+      }
+      const p = g.createPattern(c, "repeat"); p.setTransform(new DOMMatrix().scale(tw / c.width, th / c.height)); return p;
+    }
+    function size() {
+      W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      faint = tile("rgba(77,163,255,.075)", "rgba(143,163,178,.22)"); lit = tile("rgba(255,255,255,.55)", "rgba(255,255,255,.9)");
+      spot = document.createElement("canvas"); spot.width = spot.height = Math.round(640 * dpr); sg = spot.getContext("2d"); sg.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ring = document.createElement("canvas"); ring.width = W * dpr; ring.height = H * dpr; rg = ring.getContext("2d"); rg.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    // the lit lattice, shifted so it lines up with the faint one, coloured and faded by a mask
+    function litInto(x, ctx, ox, oy, w, h, mask) {
+      ctx.globalCompositeOperation = "source-over"; ctx.clearRect(0, 0, w, h);
+      ctx.save(); ctx.translate(-ox, -oy); ctx.fillStyle = lit; ctx.fillRect(ox, oy, w, h); ctx.restore();
+      ctx.globalCompositeOperation = "source-in"; ctx.fillStyle = mask; ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "source-over";
+    }
+    function tint(x) { const f = Math.max(0, Math.min(1, x / W)) * 2, i = Math.min(1, Math.floor(f)), k = f - i; return COLS[i].map((v, n) => Math.round(v + (COLS[i + 1][n] - v) * k)); }
+    function draw(now) {
+      const tt = (now - t0) / 1000, par = -scrollY * 0.12;
+      // nothing to draw while the hero still fills the screen
+      if (hero.getBoundingClientRect().bottom < H + 40) {
+        g.clearRect(0, 0, W, H);
+        g.save(); g.translate(0, par % (R * Math.sqrt(3))); g.fillStyle = faint; g.fillRect(0, -R * 2, W, H + R * 4); g.restore();
+        if (!reduce) {
+          // the lamp follows the pointer; after a few quiet seconds (or on touch screens) it drifts on its own
+          const idle = now - lastMove > 4000, tx = idle ? W * (0.5 + 0.38 * Math.sin(tt * 0.11)) : mx, ty = idle ? H * (0.5 + 0.32 * Math.sin(tt * 0.083 + 1)) : my;
+          ex += (tx - ex) * 0.08; ey += (ty - ey) * 0.08;
+          const SR = 320, c = tint(ex), m = sg.createRadialGradient(SR, SR, 0, SR, SR, SR);
+          m.addColorStop(0, `rgba(${c},.62)`); m.addColorStop(0.45, `rgba(${c},.22)`); m.addColorStop(1, `rgba(${c},0)`);
+          litInto(null, sg, ex - SR, ey - SR - (par % (R * Math.sqrt(3))), 2 * SR, 2 * SR, m);
+          g.drawImage(spot, ex - SR, ey - SR, 2 * SR, 2 * SR);
+          rings = rings.filter(r => tt - r.t < 2.4);
+          for (const r of rings) { // a ring of light running out through the lattice from a click
+            const u = (tt - r.t) / 2.4, rad = 40 + u * Math.hypot(W, H) * 0.7, c2 = tint(r.x), mm = rg.createRadialGradient(r.x, r.y, Math.max(0, rad - 70), r.x, r.y, rad + 50);
+            mm.addColorStop(0, `rgba(${c2},0)`); mm.addColorStop(0.55, `rgba(${c2},${(0.7 * (1 - u)).toFixed(3)})`); mm.addColorStop(1, `rgba(${c2},0)`);
+            litInto(null, rg, 0, -(par % (R * Math.sqrt(3))), W, H, mm);
+            g.drawImage(ring, 0, 0, W, H);
+          }
+        }
+      }
+      if (!reduce) requestAnimationFrame(draw);
+    }
+    size(); requestAnimationFrame(draw);
+    addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
+    if (reduce) { addEventListener("scroll", () => requestAnimationFrame(draw), { passive: true }); return; }
+    addEventListener("pointermove", e => { if (e.pointerType === "touch") return; mx = e.clientX; my = e.clientY; if (now() - lastMove > 4000) { ex = mx; ey = my; } lastMove = now(); }, { passive: true });
+    addEventListener("pointerdown", e => { if (e.target.closest(".n-hero")) return; rings.push({ x: e.clientX, y: e.clientY, t: (performance.now() - t0) / 1000 }); });
+    function now() { return performance.now(); }
+  }
+
+  // ---------- hints of 3D: cards lean toward the pointer with a soft glare, and the amber buttons are drawn to it.
+  // Pointer devices only; reduce motion keeps everything still.
+  function touches() {
+    if (reduce || !matchMedia("(hover: hover)").matches) return;
+    let cur = null;
+    const drop = () => { if (!cur) return; cur.classList.remove("on"); cur.style.removeProperty("--rx"); cur.style.removeProperty("--ry"); cur = null; };
+    addEventListener("pointermove", e => {
+      const t = e.target.closest && e.target.closest(".tilt");
+      if (cur !== t) drop();
+      if (t) {
+        const b = t.getBoundingClientRect(), x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
+        t.style.setProperty("--ry", `${((x - 0.5) * 7).toFixed(2)}deg`); t.style.setProperty("--rx", `${((0.5 - y) * 5).toFixed(2)}deg`);
+        t.style.setProperty("--gx", `${(x * 100).toFixed(1)}%`); t.style.setProperty("--gy", `${(y * 100).toFixed(1)}%`);
+        t.classList.add("on"); cur = t;
+      }
+      for (const a of document.querySelectorAll(".n-amber")) {
+        const b = a.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2, reach = Math.max(b.width, b.height) * 1.2, d = Math.hypot(e.clientX - cx, e.clientY - cy);
+        if (d < reach) { const k = (1 - d / reach) * 0.3; a.style.setProperty("--mgx", `${((e.clientX - cx) * k).toFixed(1)}px`); a.style.setProperty("--mgy", `${((e.clientY - cy) * k).toFixed(1)}px`); }
+        else if (a.style.getPropertyValue("--mgx")) { a.style.removeProperty("--mgx"); a.style.removeProperty("--mgy"); }
+      }
+    }, { passive: true });
+    document.documentElement.addEventListener("pointerleave", drop);
   }
 
   // ---------- live ----------
@@ -347,7 +439,7 @@
   // ---------- the marketplace ----------
   function renderShop() {
     const list = S.entrants.filter(e => S.filter === "all" || e.kind === S.filter);
-    $("shop").innerHTML = list.length ? list.map(e => `<a class="n-item k-${esc(e.kind)}" href="profile?e=${encodeURIComponent(e.slug)}"><i class="glow" aria-hidden="true"></i>
+    $("shop").innerHTML = list.length ? list.map(e => `<a class="n-item tilt k-${esc(e.kind)}" href="profile?e=${encodeURIComponent(e.slug)}"><i class="glow" aria-hidden="true"></i>
         <small>${esc(KIND[e.kind] || e.kind)}${(e.badges || []).length ? " · battle winner" : ""}</small><h3>${esc(e.name)}</h3>
         <p>by ${esc(e.creatorName)}</p>${e.tagline ? `<p class="tag">“${esc(e.tagline)}”</p>` : ""}
         <span class="go">${e.shopUrl ? `Get ${esc(e.name)} →` : "See the record →"}</span></a>`).join("")
@@ -397,7 +489,7 @@
     if (t) { S.kind = t.dataset.kind; loadTour().catch(() => {}); }
   });
 
-  field(); pyramid(); motion();
+  field(); pyramid(); geometry(); touches(); motion();
   (async () => {
     const me = await session().catch(() => null);
     if (me) for (const a of [$("acct"), $("acct2")]) { a.textContent = me.name || me.username; a.href = "my"; }
