@@ -59,7 +59,7 @@
       if (!reduce) { sx += ((mx > -1e3 ? (mx - vx) * -0.04 : 0) - sx) * 0.05; sy += ((my > -1e3 ? (my - vy) * -0.04 : 0) - sy) * 0.05; }
       const intro = reduce ? 1 : Math.min(1, tt / 2.2), io = 1 - (1 - intro) ** 3; // on arrival the blocks slide forward out of the dark
       for (const t of tiles) {
-        const breathe = reduce ? 0 : 18 * Math.sin(tt * t.f + t.p);
+        const breathe = reduce ? 0 : 8 * Math.sin(tt * t.f + t.p);
         const d = Math.hypot(t.cx - mx, t.cy - my), near = Math.max(0, 1 - d / R), push = near * near * (3 - 2 * near) * 110;
         let ring = 0;
         for (const w of waves) { const rr = (tt - w.t) * 700, gap = Math.abs(Math.hypot(t.cx - w.x, t.cy - w.y) - rr); ring = Math.max(ring, Math.max(0, 1 - gap / 120) * (1 - (tt - w.t) / 2.6)); }
@@ -79,8 +79,8 @@
           if (nx * (mxm - t.cx) + ny * (mym - t.cy) < 0) { nx = -nx; ny = -ny; } // the side's outward direction
           if (nx * (ox - mxm) + ny * (oy - mym) <= 0) continue;
           const nl = Math.hypot(nx, ny), up = Math.max(0, -ny / nl);
-          const l = (16 + 22 * up + 14 * depth) * (1 - 0.6 * t.calm) * (0.3 + 0.7 * t.k);
-          const warm = t.near * 26;
+          const l = (9 + 13 * up + 8 * depth) * (1 - 0.6 * t.calm) * (0.3 + 0.7 * t.k);
+          const warm = t.near * 18;
           const grd = g.createLinearGradient(...front[m], ...back[m]);
           grd.addColorStop(0, `rgb(${Math.round(l + warm)},${Math.round(l + warm * 0.75)},${Math.round(l + 4 + warm * 0.35)})`); grd.addColorStop(1, "rgb(3,4,6)");
           g.fillStyle = grd;
@@ -88,11 +88,11 @@
         }
         // the face: matte black, a touch lighter at the top, a faint rim, gold where the pointer is near
         const top = Math.min(front[0][1], front[1][1], front[2][1]), bot = Math.max(front[0][1], front[1][1], front[2][1]);
-        const lf = Math.round((28 + 12 * depth) * (1 - 0.55 * t.calm) * (0.35 + 0.65 * t.k)), fg = g.createLinearGradient(0, top, 0, bot);
-        fg.addColorStop(0, `rgb(${lf + 5},${lf + 6},${lf + 9})`); fg.addColorStop(1, `rgb(${lf - 5},${lf - 5},${lf - 3})`);
+        const lf = Math.round((15 + 7 * depth) * (1 - 0.55 * t.calm) * (0.35 + 0.65 * t.k)), fg = g.createLinearGradient(0, top, 0, bot);
+        fg.addColorStop(0, `rgb(${lf + 3},${lf + 4},${lf + 6})`); fg.addColorStop(1, `rgb(${Math.max(0, lf - 4)},${Math.max(0, lf - 4)},${Math.max(0, lf - 2)})`);
         g.fillStyle = fg;
         g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
-        g.strokeStyle = t.near > 0.05 ? `rgba(233,194,122,${(0.06 + 0.4 * t.near).toFixed(3)})` : `rgba(190,205,230,${((0.06 + 0.08 * depth) * (1 - 0.6 * t.calm)).toFixed(3)})`;
+        g.strokeStyle = t.near > 0.05 ? `rgba(233,194,122,${(0.06 + 0.4 * t.near).toFixed(3)})` : `rgba(190,205,230,${((0.025 + 0.035 * depth) * (1 - 0.6 * t.calm)).toFixed(3)})`;
         g.lineWidth = 1; g.stroke();
         t.front = front;
       }
