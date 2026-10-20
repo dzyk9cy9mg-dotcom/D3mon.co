@@ -106,7 +106,7 @@
   // marketplace, the tip to the Capstone). The names show once on arrival so people learn it. Drag to spin it (it
   // eases back to its own pace), the pointer tilts it, hovering elsewhere quickens it and the emblem, a click
   // elsewhere sends a pulse up the beam. The far side is drawn behind the emblem, the near side in front.
-  function pyramid() {
+  function pyramid2d() {
     const back = $("pyrBack"), front = $("pyrFront"), core = $("core"), hero = back.closest(".n-hero");
     const gb = back.getContext("2d"), gf = front.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
     const COL = [[255, 181, 71], [77, 163, 255], [185, 140, 255]], TIP = [255, 241, 207];
@@ -273,6 +273,29 @@
       omega = Math.max(-6, Math.min(6, omega)); drag = null;
     });
     document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; hot = -1; if (fast) { fast = false; core.classList.remove("fast"); } });
+  }
+
+  // The glass pyramid: real 3D glass (js/prism3d.js, three.js) where WebGL works and motion is allowed; the 2D
+  // pyramid above otherwise, or if the 3D one can't start or runs slower than about 30 fps (remembered for the visit).
+  function pyramid() {
+    const hero = $("pyrBack").closest(".n-hero"), KINDS = ["caller", "bot", "script"];
+    const gl = (() => { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2")); } catch { return false; } })();
+    let slow = false; try { slow = sessionStorage.getItem("n.slow") === "1"; } catch {}
+    if (reduce || !gl || slow || /[?&]flat\b/.test(location.search)) return pyramid2d();
+    function go(k, e) {
+      if (k < 3) { document.querySelector(`[data-k="${KINDS[k]}"]`)?.click(); $("market").scrollIntoView({ behavior: "smooth" }); return; }
+      const a = document.createElement("a"); a.href = "vip"; a.hidden = true; document.body.appendChild(a);
+      a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, detail: 1 }));
+      a.remove();
+    }
+    import("./prism3d.js").then(m => {
+      const p = m.start({ hero, labels: $("pyrFront"), stageAt, onGo: go });
+      hero.classList.add("has3d");
+      const check = setInterval(() => {
+        const f = p.fps(); if (f == null) return; clearInterval(check);
+        if (f < 30 && !/[?&]fps\b/.test(location.search)) { try { sessionStorage.setItem("n.slow", "1"); } catch {} p.stop(); hero.classList.remove("has3d"); pyramid2d(); }
+      }, 500);
+    }).catch(err => { console.warn("3D pyramid unavailable, using 2D", err); pyramid2d(); });
   }
 
   // ---------- the sacred geometry: the original site's Flower of Life (circles on a triangular lattice, as in the
