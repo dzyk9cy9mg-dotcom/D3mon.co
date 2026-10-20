@@ -16,7 +16,8 @@ import { OutputPass } from "../vendor/three-addons-0.169.0/postprocessing/Output
 
 const COL = [0xffb547, 0x4da3ff, 0xb98cff].map(c => new THREE.Color(c)); // callers, bots, chart scripts
 const GOLD = new THREE.Color(0xffe2a8), TIPC = new THREE.Color(0xfff1cf);
-const R = 1, HT = 1.72; // base corner radius and height, in world units
+const R = 1, HT = 1.72;
+let sheen = null; // base corner radius and height, in world units
 const SEAM = 0.8; // the Capstone's gold seam, as a share of the height
 const BASE = (2 * Math.PI) / 40; // one turn in 40 s
 
@@ -44,15 +45,15 @@ function floorTex() {
 }
 
 // a glowing line between two points: a thin tube whose colour runs from one end's to the other's (k > 1 blooms)
-function tube(A, B, ca, cb, r, k = 1, fadeB = false) {
+function tube(A, B, ca, cb, r, k = 1, fadeB = false, over = false) {
   const d = new THREE.Vector3().subVectors(B, A), len = d.length();
   const geo = new THREE.CylinderGeometry(r, r, len, 8, 12, true), pos = geo.attributes.position, col = [];
   for (let i = 0; i < pos.count; i++) {
-    const f = pos.getY(i) / len + 0.5, c = ca.clone().lerp(cb, f).multiplyScalar(k * (fadeB ? (1 - f) ** 1.6 : 1));
+    const f = Math.min(1, Math.max(0, pos.getY(i) / len + 0.5)), c = ca.clone().lerp(cb, f).multiplyScalar(k * (fadeB ? (1 - f) ** 1.6 : 1));
     col.push(c.r, c.g, c.b);
   }
   geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, transparent: over, depthWrite: !over }));
   m.position.copy(A).addScaledVector(d, 0.5);
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
   return m;
@@ -67,7 +68,7 @@ export function start({ hero, labels, stageAt, onGo }) {
   const phone = matchMedia("(pointer: coarse)").matches;
   const dpr = Math.min(phone ? 1.5 : 1.75, devicePixelRatio || 1);
   renderer.setPixelRatio(dpr);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1;
   renderer.setClearColor(0x000000, 1); // black reads as see-through: the canvas is screen-blended over the wall
 
   const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
@@ -92,34 +93,49 @@ export function start({ hero, labels, stageAt, onGo }) {
   {
     const faces = [[0, 1, 3], [1, 2, 3], [2, 0, 3], [0, 2, 1]], pos = [], col = [];
     for (const f of faces) {
-      const tint = f[2] === 3 ? COL[f[0]].clone().lerp(COL[f[1]], 0.5).lerp(new THREE.Color(1, 1, 1), 0.72) : new THREE.Color(0.85, 0.9, 1);
+      const tint = f[2] === 3 ? COL[f[0]].clone().lerp(COL[f[1]], 0.5).lerp(new THREE.Color(1, 1, 1), 0.4) : new THREE.Color(0.85, 0.9, 1);
       for (const n of f) { pos.push(V[n].x, V[n].y, V[n].z); col.push(tint.r, tint.g, tint.b); }
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
     geo.computeVertexNormals();
     const glass = new THREE.MeshPhysicalMaterial({
-      vertexColors: true, metalness: 0, roughness: 0.04, transmission: 1, thickness: 0.9, ior: 1.5, dispersion: 4,
-      specularIntensity: 1, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.05, attenuationColor: new THREE.Color(0.75, 0.82, 1), attenuationDistance: 3,
+      vertexColors: true, metalness: 0, roughness: 0.03, transmission: 1, thickness: 0.35, ior: 1.3, dispersion: 0.6, depthWrite: false,
+      specularIntensity: 1, envMapIntensity: 1.3, clearcoat: 1, clearcoatRoughness: 0.05, attenuationColor: new THREE.Color(0.75, 0.82, 1), attenuationDistance: 3,
       polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
     });
     turn.add(new THREE.Mesh(geo, glass));
+    // the sheen: each face glows faintly in its tint, more as it turns edge-on to us, and a soft band of light
+    // sweeps up the glass every few seconds; brighter toward the base, back faces fainter
+    sheen = new THREE.ShaderMaterial({
+      uniforms: { uT: { value: 0 } }, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false,
+      vertexShader: `varying vec3 vC; varying vec3 vN; varying vec3 vV; varying float vY;
+        void main(){ vC = color; vec4 w = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); vY = position.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: `uniform float uT; varying vec3 vC; varying vec3 vN; varying vec3 vV; varying float vY;
+        void main(){ float d = dot(normalize(vN), vV); float front = gl_FrontFacing ? 1.0 : 0.45;
+          float fres = pow(1.0 - abs(d), 2.0); float lift = mix(1.0, 0.45, clamp(vY / ${HT.toFixed(2)}, 0.0, 1.0));
+          float band = exp(-pow((vY - mod(uT * 0.42, 3.4) + 0.6) * 5.0, 2.0));
+          vec3 c = vC * (0.016 + 0.13 * fres) * lift + mix(vC, vec3(1.0), 0.35) * band * 0.06;
+          gl_FragColor = vec4(c * front, 1.0); }`,
+    });
+    turn.add(new THREE.Mesh(geo, sheen));
   }
   // the edges: base corner to corner, each corner up to the tip
-  const EDGE = 0.0085;
-  for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) turn.add(tube(V[i], V[j], COL[i], COL[j], EDGE, 1.9));
-  for (let k = 0; k < 3; k++) turn.add(tube(V[k], tip, COL[k], TIPC, EDGE, 1.9));
+  const EDGE = 0.0075, edges = [];
+  const edge = (A, B, ca, cb, r, k) => { const m = tube(A, B, ca, cb, r, k, false, true); m.userData.mid = A.clone().add(B).multiplyScalar(0.5); edges.push(m); turn.add(m); };
+  for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) edge(V[i], V[j], COL[i], COL[j], EDGE, 1.25);
+  for (let k = 0; k < 3; k++) edge(V[k], tip, COL[k], TIPC, EDGE, 1.25);
   // the Capstone's seam: a fine gold triangle round the glass near the tip
   const seam = V.slice(0, 3).map(c => c.clone().lerp(tip, SEAM));
-  for (let k = 0; k < 3; k++) turn.add(tube(seam[k], seam[(k + 1) % 3], GOLD, GOLD, EDGE * 0.6, 1.5));
+  for (let k = 0; k < 3; k++) edge(seam[k], seam[(k + 1) % 3], GOLD, GOLD, EDGE * 0.6, 1.1);
 
   // the gems at the corners and the tip, each with a soft glow
   const sprite = (c, s, o = 1) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, toneMapped: false })); m.scale.setScalar(s); return m; };
   const gems = V.map((p, k) => {
     const c = k === 3 ? TIPC : COL[k];
     const g = new THREE.Group(); g.position.copy(p);
-    const stone = new THREE.Mesh(new THREE.OctahedronGeometry(k === 3 ? 0.05 : 0.042), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(2.4), toneMapped: false }));
-    const halo = sprite(c, k === 3 ? 0.42 : 0.36, 0.55);
+    const stone = new THREE.Mesh(new THREE.OctahedronGeometry(k === 3 ? 0.05 : 0.042), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.5), toneMapped: false }));
+    const halo = sprite(c, k === 3 ? 0.34 : 0.3, 0.5);
     g.add(stone, halo); turn.add(g);
     return { g, stone, halo, base: halo.scale.x };
   });
@@ -149,12 +165,12 @@ export function start({ hero, labels, stageAt, onGo }) {
   heart.position.y = HEART; cortex.add(heart);
   const heartGlow = sprite(COL[1], 0.55, 0.9); heartGlow.position.y = HEART; cortex.add(heartGlow);
   // the beam: from the heart up through the tip, then fading out above it
-  rig.add(tube(new THREE.Vector3(0, HEART, 0), tip, new THREE.Color(0xbfe0ff), TIPC, 0.0055, 2.2));
-  const beamUp = tube(tip, new THREE.Vector3(0, HT + 1.25, 0), TIPC, TIPC, 0.005, 2.2, true);
+  rig.add(tube(new THREE.Vector3(0, HEART, 0), tip, new THREE.Color(0xbfe0ff), TIPC, 0.005, 1.5));
+  const beamUp = tube(tip, new THREE.Vector3(0, HT + 0.5, 0), TIPC, TIPC, 0.0045, 1.3, true);
   beamUp.material.transparent = true; beamUp.material.blending = THREE.AdditiveBlending; beamUp.material.depthWrite = false;
   rig.add(beamUp);
   // the floor
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), new THREE.MeshBasicMaterial({ map: floorTex(), toneMapped: false }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.7), new THREE.MeshBasicMaterial({ map: floorTex(), toneMapped: false }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.006; rig.add(floor);
 
   // lights that climb each edge to the tip in turn, and pulses up the beam
@@ -165,11 +181,11 @@ export function start({ hero, labels, stageAt, onGo }) {
   // ---------- post: a gentle bloom so the gems, edges and beam glow without blowing out
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.62, 0.55, 0.92);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.5, 0.8);
   composer.addPass(bloom); composer.addPass(new OutputPass());
 
   // ---------- placing it: the pyramid's middle sits where the 2D one did (stageAt), about the same size
-  let W = 1, H = 1, st = { x: 0, y: 0, s: 1 };
+  let W = 1, H = 1, st = { x: 0, y: 0, s: 1 }, camDist = 10;
   const LOOK = new THREE.Vector3(0, HT * 0.42, 0), ELEV = 0.3;
   function size() {
     W = hero.clientWidth; H = hero.clientHeight; st = stageAt(W, H);
@@ -177,7 +193,7 @@ export function start({ hero, labels, stageAt, onGo }) {
     bloom.resolution.set(Math.round(W / 2), Math.round(H / 2));
     const px = (st.s * 0.78) / (HT + 0.5); // pixels per world unit: the pyramid about 0.78 s tall with its floor
     const dist = H / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * px);
-    camera.position.set(0, LOOK.y + Math.sin(ELEV) * dist, Math.cos(ELEV) * dist); camera.lookAt(LOOK);
+    camera.position.set(0, LOOK.y + Math.sin(ELEV) * dist, Math.cos(ELEV) * dist); camera.lookAt(LOOK); camDist = dist;
     camera.aspect = W / H;
     camera.setViewOffset(W, H, W / 2 - st.x, H / 2 - st.y, W, H);
     camera.updateProjectionMatrix();
@@ -207,7 +223,7 @@ export function start({ hero, labels, stageAt, onGo }) {
     const io = Math.min(1, clock / 2.2), e = 1 - (1 - io) ** 3;
     turn.rotation.y = -(theta + tiltX) + (1 - e) * 1.2;
     rig.rotation.x = tiltY * 0.9; rig.position.y = -(1 - e) * 0.25;
-    floor.rotation.z = clock * 0.03;
+    floor.rotation.z = clock * 0.03; sheen.uniforms.uT.value = clock;
     // the Cortex's rings and heart
     const sp = fast ? 2.6 : 1, T = Math.PI * 2;
     rings[0].tumble.rotation.x = (clock / 14) * T * sp; rings[0].spin.rotation.z = (clock / 30) * T;
@@ -224,8 +240,11 @@ export function start({ hero, labels, stageAt, onGo }) {
     for (let i = pulses.length - 1; i >= 0; i--) {
       const p = pulses[i], u = (clock - p.t) / 1.6;
       if (u >= 1) { rig.remove(p.s); p.s.material.dispose(); pulses.splice(i, 1); continue; }
-      p.s.position.set(0, HT + (1 - (1 - u) ** 2) * 1.2, 0); p.s.material.opacity = 0.9 * (1 - u); p.s.scale.setScalar(0.4 * (1 - u * 0.4));
+      p.s.position.set(0, HT + (1 - (1 - u) ** 2) * 0.5, 0); p.s.material.opacity = 0.9 * (1 - u); p.s.scale.setScalar(0.4 * (1 - u * 0.4));
     }
+    // the edges at the back read dimmer, as if seen through the glass
+    rig.updateMatrixWorld();
+    for (const m of edges) { tmp.copy(m.userData.mid).applyMatrix4(turn.matrixWorld).applyMatrix4(camera.matrixWorldInverse); m.material.opacity = THREE.MathUtils.clamp(0.95 + (tmp.z + camDist) * 0.9, 0.35, 1); }
     canvas.style.opacity = String(e);
     composer.render(dt);
 
@@ -242,9 +261,12 @@ export function start({ hero, labels, stageAt, onGo }) {
       lg.font = '600 11px "IBM Plex Mono", monospace'; lg.letterSpacing = "2px"; lg.fillStyle = css; lg.shadowColor = "rgba(0,0,0,.85)"; lg.shadowBlur = 8;
       let ox = k === 3 ? 1 : Math.sign(A.x - st.x) || 1;
       const label = NAMES[k].toUpperCase() + (on ? "  →" : ""), wn = lg.measureText(label).width;
-      if (ox > 0 && A.x + st.s * 0.07 + wn > W - 16) ox = -1;
-      lg.textAlign = ox > 0 ? "left" : "right";
-      lg.fillText(ox > 0 ? label : NAMES[k].toUpperCase(), A.x + ox * st.s * 0.07, k === 3 ? A.y : A.y + st.s * 0.06);
+      if (ox > 0 && A.x + st.s * 0.07 + wn > W - 16) { // no room beside it: centre it under the corner, kept on screen
+        lg.textAlign = "center"; lg.fillText(label, Math.min(W - 16 - wn / 2, Math.max(16 + wn / 2, A.x)), A.y + st.s * 0.11);
+      } else {
+        lg.textAlign = ox > 0 ? "left" : "right";
+        lg.fillText(ox > 0 ? label : NAMES[k].toUpperCase(), A.x + ox * st.s * 0.07, k === 3 ? A.y : A.y + st.s * 0.06);
+      }
       lg.restore();
     }
     if (running && seen && !document.hidden) raf = requestAnimationFrame(frame);
@@ -276,7 +298,9 @@ export function start({ hero, labels, stageAt, onGo }) {
   document.documentElement.addEventListener("pointerleave", onLeave);
   addEventListener("resize", size); document.addEventListener("visibilitychange", wake); io2.observe(hero);
 
+  { const m = /[?&]t=([\d.]+)/.exec(location.search); if (m) clock = +m[1]; } // testing: start partway in
   size(); raf = requestAnimationFrame(frame);
+  if (/[?&]fps\b/.test(location.search)) window.__prism = { get clock() { return clock; }, get opacity() { return canvas.style.opacity; }, renderer, scene, camera, composer, rig };
 
   return {
     // average frame time over the first frames, so next.js can fall back to 2D on slow devices
