@@ -12,131 +12,159 @@
   const pct = v => (v == null ? "–" : `${Math.round(v * 100)}%`);
   const KIND = { caller: "Caller", bot: "Bot", script: "Chart script" };
 
-  // ---------- the hero's wall: dark triangle tiles that slowly push in and out (after Rubric's tile wall), rising
-  // toward the pointer. Lit from above: a tile further forward catches more light. The glass pyramid glows on top.
+  // ---------- the hero's wall (after Rubric's deep tiles, made D3MON's own): big matte-black triangular blocks with
+  // deep sides, seen in perspective, forming a tunnel that opens around the glass pyramid. Blocks further out stand
+  // nearer; each breathes slowly in and out, the ones near the pointer push out toward you on a spring and settle
+  // back, and a click sends a push rippling through the wall. The edges facing the light catch a faint gold.
+  // Reduce motion gets the still tunnel.
   function field() {
     const cv = $("field"), g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
-    let W, H, S, tiles = [], mx = -1e4, my = -1e4, ease = 0;
+    let W, H, S, F, vx, vy, tiles = [], mx = -1e4, my = -1e4, sx = 0, sy = 0, seen = true, waves = [], t0 = performance.now();
+    const BACK = -520; // how deep the blocks' sides run
+    // a few blocks are shortcuts, engraved with where they go (wide screens; phones have the Menu). Each sits at a
+    // spot clear of the words and the pyramid, given as a share of the hero's width and height.
+    const LINKS = [{ at: [0.49, 0.3], label: "Live", href: "#live" }, { at: [0.9, 0.25], label: "Tournaments", href: "tournaments" },
+      { at: [0.49, 0.7], label: "Capstone", href: "vip" }];
+    let hover = null;
     function size() {
       W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      S = W > 900 ? 96 : 64; // a tile's side
-      const h = S * 0.866; tiles = [];
-      for (let r = -1; r * h < H + h; r++) for (let c = -2; c * S / 2 < W + S; c++) {
+      const wide = W > 900;
+      S = wide ? 190 : 120; F = wide ? 1700 : 1100;
+      // the tunnel opens where the pyramid stands: right of the words on wide screens, the top half on phones
+      vx = wide ? W * 0.72 : W * 0.5; vy = wide ? H * 0.5 : H * 0.26;
+      const h = S * 0.866, open = wide ? Math.min(W, H) * 0.42 : W * 0.48; tiles = [];
+      for (let r = -2; r * h < H + 2 * h; r++) for (let c = -3; c * S / 2 < W + 2 * S; c++) {
         const up = (r + c) % 2 === 0, x = c * S / 2, y = r * h;
-        tiles.push({ up, x, y, cx: x + S / 2, cy: y + (up ? h * 2 / 3 : h / 3), p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.35 });
+        const pts = up ? [[x + S / 2, y], [x + S, y + h], [x, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
+        const cx = (pts[0][0] + pts[1][0] + pts[2][0]) / 3, cy = (pts[0][1] + pts[1][1] + pts[2][1]) / 3;
+        const ins = pts.map(([px, py]) => [px + (cx - px) * 0.06, py + (cy - py) * 0.06]); // the seam between blocks
+        const k = Math.min(1, Math.max(0, (Math.hypot(cx - vx, cy - vy) - open) / (open * 1.3)));
+        // calm behind the words: the blocks there sit back and stay dark so the text reads
+        const calm = wide ? Math.max(0, 1 - Math.hypot((cx - W * 0.22) / (W * 0.26), (cy - H * 0.5) / (H * 0.42))) : 0;
+        tiles.push({ pts: ins, cx, cy, up, calm, base: (40 + 230 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, p: Math.random() * 6.28, f: 0.25 + Math.random() * 0.25 });
+      }
+      if (wide) for (const l of LINKS) { // the upward block nearest each spot carries the shortcut
+        const [px, py] = [l.at[0] * W, l.at[1] * H];
+        const at = x => proj(x.cx, x.cy, x.base + 70); // where it will stand, raised
+        const t = tiles.filter(x => x.up && !x.link && x.calm < 0.05 && at(x)[1] > H * 0.2 && at(x)[1] < H * 0.78 && at(x)[0] < W - S * 0.5)
+          .sort((a, b) => Math.hypot(at(a)[0] - px, at(a)[1] - py) - Math.hypot(at(b)[0] - px, at(b)[1] - py))[0];
+        if (t) t.link = l;
       }
     }
-    function tri(t, inset) {
-      const h = S * 0.866, x = t.x, y = t.y, k = inset;
-      const pts = t.up ? [[x + S / 2, y], [x + S, y + h], [x, y + h]] : [[x, y], [x + S, y], [x + S / 2, y + h]];
-      g.beginPath();
-      pts.forEach(([px, py], i) => { const qx = px + (t.cx - px) * k, qy = py + (t.cy - py) * k; g[i ? "lineTo" : "moveTo"](qx, qy); });
-      g.closePath();
-    }
+    // a point at depth z, seen from in front of the vanishing point (which drifts a little with the pointer)
+    const proj = (x, y, z) => { const s = F / (F - z), ox = vx + sx, oy = vy + sy; return [ox + (x - ox) * s, oy + (y - oy) * s]; };
     function draw(now) {
-      const tt = now / 1000;
-      ease = Math.min(1, ease + 0.02);
-      g.fillStyle = "#06080c"; g.fillRect(0, 0, W, H);
+      const tt = (now - t0) / 1000, R = W > 900 ? 300 : 180;
+      waves = waves.filter(w => tt - w.t < 2.6);
+      if (!reduce) { sx += ((mx > -1e3 ? (mx - vx) * -0.04 : 0) - sx) * 0.05; sy += ((my > -1e3 ? (my - vy) * -0.04 : 0) - sy) * 0.05; }
+      const intro = reduce ? 1 : Math.min(1, tt / 2.2), io = 1 - (1 - intro) ** 3; // on arrival the blocks slide forward out of the dark
       for (const t of tiles) {
-        // how far forward the tile sits: a slow swell across the wall, plus the pointer pulling nearby tiles out
-        const swell = reduce ? 0.4 : 0.5 + 0.5 * Math.sin(tt * t.f + t.p + t.cx * 0.004 - t.cy * 0.003);
-        const d = Math.hypot(t.cx - mx, t.cy - my), pull = Math.max(0, 1 - d / 260);
-        const z = (0.25 + 0.55 * swell + 0.6 * pull) * ease;
-        // the wall darkens toward the middle-left, where the text sits, so it never fights the words
-        const quiet = Math.min(1, Math.hypot((t.cx - W * 0.28) / (W * 0.45), (t.cy - H * 0.5) / (H * 0.6)));
-        const lit = Math.round(10 + 22 * z * (0.35 + 0.65 * quiet));
-        // the tile's face, lighter at the top edge (light from above), then a dark seam around it
-        const grd = g.createLinearGradient(0, t.y, 0, t.y + S * 0.866);
-        grd.addColorStop(0, `rgb(${lit + 8},${lit + 10},${lit + 14})`); grd.addColorStop(1, `rgb(${lit - 4},${lit - 3},${lit})`);
-        g.fillStyle = grd; tri(t, 0.06 + 0.05 * (1 - z)); g.fill();
-        g.strokeStyle = `rgba(170,200,240,${0.03 + 0.07 * z * quiet})`; g.lineWidth = 1; g.stroke();
+        const breathe = reduce ? 0 : 18 * Math.sin(tt * t.f + t.p);
+        const d = Math.hypot(t.cx - mx, t.cy - my), near = Math.max(0, 1 - d / R), push = near * near * (3 - 2 * near) * 110;
+        let ring = 0;
+        for (const w of waves) { const rr = (tt - w.t) * 700, gap = Math.abs(Math.hypot(t.cx - w.x, t.cy - w.y) - rr); ring = Math.max(ring, Math.max(0, 1 - gap / 120) * (1 - (tt - w.t) / 2.6)); }
+        const target = (t.base + breathe + push + 110 * ring + (t.link ? 70 : 0) + (t === hover ? 45 : 0)) * io - 200 * (1 - io);
+        if (reduce) t.z = target; else { t.v += (target - t.z) * 0.06; t.v *= 0.8; t.z += t.v; } // a soft spring: it pumps out, then settles
+        t.near = near;
+      }
+      g.fillStyle = "#040507"; g.fillRect(0, 0, W, H);
+      const ox = vx + sx, oy = vy + sy;
+      for (const t of [...tiles].sort((a, b) => a.z - b.z)) { // far blocks first
+        const front = t.pts.map(([x, y]) => proj(x, y, t.z)), back = t.pts.map(([x, y]) => proj(x, y, BACK));
+        const depth = Math.max(0, Math.min(1, t.z / 300));
+        // the sides: only the ones that face the opening are seen; lit a little from above, warmed by the pointer
+        for (let m = 0; m < 3; m++) {
+          const a = t.pts[m], b = t.pts[(m + 1) % 3], mxm = (a[0] + b[0]) / 2, mym = (a[1] + b[1]) / 2;
+          let nx = b[1] - a[1], ny = a[0] - b[0];
+          if (nx * (mxm - t.cx) + ny * (mym - t.cy) < 0) { nx = -nx; ny = -ny; } // the side's outward direction
+          if (nx * (ox - mxm) + ny * (oy - mym) <= 0) continue;
+          const nl = Math.hypot(nx, ny), up = Math.max(0, -ny / nl);
+          const l = (16 + 22 * up + 14 * depth) * (1 - 0.6 * t.calm);
+          const warm = t.near * 26;
+          const grd = g.createLinearGradient(...front[m], ...back[m]);
+          grd.addColorStop(0, `rgb(${Math.round(l + warm)},${Math.round(l + warm * 0.75)},${Math.round(l + 4 + warm * 0.35)})`); grd.addColorStop(1, "rgb(3,4,6)");
+          g.fillStyle = grd;
+          g.beginPath(); g.moveTo(...front[m]); g.lineTo(...front[(m + 1) % 3]); g.lineTo(...back[(m + 1) % 3]); g.lineTo(...back[m]); g.closePath(); g.fill();
+        }
+        // the face: matte black, a touch lighter at the top, a faint rim, gold where the pointer is near
+        const top = Math.min(front[0][1], front[1][1], front[2][1]), bot = Math.max(front[0][1], front[1][1], front[2][1]);
+        const lf = Math.round((28 + 12 * depth) * (1 - 0.55 * t.calm)), fg = g.createLinearGradient(0, top, 0, bot);
+        fg.addColorStop(0, `rgb(${lf + 5},${lf + 6},${lf + 9})`); fg.addColorStop(1, `rgb(${lf - 5},${lf - 5},${lf - 3})`);
+        g.fillStyle = fg;
+        g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
+        g.strokeStyle = t.near > 0.05 ? `rgba(233,194,122,${(0.06 + 0.4 * t.near).toFixed(3)})` : `rgba(190,205,230,${((0.06 + 0.08 * depth) * (1 - 0.6 * t.calm)).toFixed(3)})`;
+        g.lineWidth = 1; g.stroke();
+        t.front = front;
+      }
+      for (const t of tiles) {
+        if (t.link && t.front) { const front = t.front; // the engraving: the place's name, gold with an arrow when the pointer is on it
+          const on = t === hover, c = front.reduce((q, [x, y]) => [q[0] + x / 3, q[1] + y / 3], [0, 0]), sc = F / (F - t.z);
+          g.save(); g.textAlign = "center"; g.textBaseline = "middle";
+          g.font = `500 ${Math.round(11 * sc)}px "IBM Plex Mono", monospace`; g.letterSpacing = `${(2 * sc).toFixed(1)}px`;
+          g.fillStyle = on ? "#F2D49A" : `rgba(205,215,232,${(0.62 * io).toFixed(2)})`;
+          if (on) { g.shadowColor = "rgba(233,194,122,.7)"; g.shadowBlur = 12; }
+          g.fillText(t.link.label.toUpperCase(), c[0], c[1] - 2 * sc);
+          g.font = `400 ${Math.round(13 * sc)}px "IBM Plex Mono", monospace`;
+          g.fillStyle = on ? "#F2D49A" : `rgba(200,212,230,${(0.28 * io).toFixed(2)})`;
+          g.fillText(on ? "→" : "·", c[0], c[1] + 18 * sc);
+          g.restore();
+        }
       }
       if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
     }
-    let seen = true; // the wall rests while the hero is scrolled away
-    new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) requestAnimationFrame(draw); }).observe(cv);
+    new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) requestAnimationFrame(draw); }).observe(cv); // the wall rests while scrolled away
     size(); requestAnimationFrame(draw);
     addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
-    addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }, { passive: true });
+    // which shortcut block, if any, is under a point (its face as drawn last frame)
+    const inside = (P, x, y) => { let sgn = 0; for (let m = 0; m < 3; m++) { const [ax, ay] = P[m], [bx, by] = P[(m + 1) % 3], c = (bx - ax) * (y - ay) - (by - ay) * (x - ax); if (c) { if (sgn && Math.sign(c) !== sgn) return false; sgn = Math.sign(c); } } return true; };
+    const linkAt = (x, y) => tiles.find(t => t.link && t.front && inside(t.front, x, y)) || null;
+    addEventListener("pointermove", e => {
+      const r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top;
+      hover = e.target === cv ? linkAt(mx, my) : null; cv.style.cursor = hover ? "pointer" : "";
+    }, { passive: true });
+    document.documentElement.addEventListener("pointerleave", () => { mx = my = -1e4; hover = null; });
+    cv.addEventListener("click", e => {
+      const r = cv.getBoundingClientRect(), t = linkAt(e.clientX - r.left, e.clientY - r.top);
+      if (!t) return;
+      if (t.link.href.startsWith("#")) { document.querySelector(t.link.href).scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); return; }
+      // a real link, clicked where the block is, so the page transition opens from the block
+      const a = document.createElement("a"); a.href = t.link.href; a.hidden = true; document.body.appendChild(a);
+      a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, detail: 1 }));
+      a.remove();
+    });
+    cv.closest(".n-hero").addEventListener("pointerdown", e => { if (reduce) return; const r = cv.getBoundingClientRect(); waves.push({ x: e.clientX - r.left, y: e.clientY - r.top, t: (performance.now() - t0) / 1000 }); });
     document.addEventListener("visibilitychange", () => { if (!document.hidden && seen && !reduce) requestAnimationFrame(draw); });
   }
 
-  // ---------- the gathering (after Dala): tiny triangles drift in from everywhere and come together on a triangle's
-  // edges, coloured by its corners (callers at the top, bots left, scripts right). The pointer scatters the nearest
-  // ones and they drift back. shape() gives the corners in the canvas's pixels; onNear fires as they arrive.
-  function gather(cv, shape, { cols, n, rest = 0.3, onNear }) {
-    const g = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
-    let W, H, A, pts = [], t0 = 0, near = false, mx = -1e4, my = -1e4, run = false;
-    const mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(",");
-    function size() {
-      W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      A = shape();
-      for (const q of pts) home(q);
-    }
-    function home(q) {
-      const a = A[q.side], b = A[(q.side + 1) % 3];
-      q.hx = a[0] + (b[0] - a[0]) * q.f + q.j; q.hy = a[1] + (b[1] - a[1]) * q.f + q.j * 0.6;
-    }
-    pts = Array.from({ length: n }, (_, i) => ({
-      side: i % 3, f: Math.random(), j: (Math.random() - 0.5) * (Math.random() < 0.8 ? 3 : 18),
-      sx: Math.random(), sy: Math.random(), d: Math.random() * 0.8, s: 1 + Math.random() * 2.4, r: Math.random() * 6.3, p: Math.random() * 6.3, ox: 0, oy: 0
-    }));
-    size();
-    for (const q of pts) q.c = mix(cols[q.side], cols[(q.side + 1) % 3], q.f);
-    function draw(now) {
-      const t = (now - t0) / 1000;
-      g.clearRect(0, 0, W, H);
-      for (const q of pts) {
-        const k = reduce ? 1 : Math.min(1, Math.max(0, (t - q.d) / 3)), e = k < 0.5 ? 4 * k ** 3 : 1 - (-2 * k + 2) ** 3 / 2;
-        const sx = q.sx * W, sy = q.sy * H, wob = reduce ? 0 : 1.2 + 6 * (1 - e);
-        let x = sx + (q.hx - sx) * e + Math.sin(t * 0.7 + q.p) * wob, y = sy + (q.hy - sy) * e + Math.cos(t * 0.6 + q.p) * wob;
-        // the pointer pushes nearby ones aside; they ease back once it moves on
-        const dx = x - mx, dy = y - my, dd = Math.hypot(dx, dy), push = reduce ? 0 : Math.max(0, 1 - dd / 110) * 26;
-        q.ox += ((dd ? dx / dd : 0) * push - q.ox) * 0.08; q.oy += ((dd ? dy / dd : 0) * push - q.oy) * 0.08;
-        x += q.ox; y += q.oy;
-        // bright in flight, then settling to a faint shimmer on the edge
-        const settle = Math.min(1, Math.max(0, t - 3.4) / 1.6), a = (0.55 + 0.4 * Math.sin(t * 1.3 + q.p) ** 2) * (1 - settle * (1 - rest));
-        const r = q.r + (reduce ? 0 : t * 0.4);
-        g.fillStyle = `rgba(${q.c},${a.toFixed(3)})`;
-        g.beginPath();
-        for (let m = 0; m < 3; m++) { const an = r + m * 2.094; g[m ? "lineTo" : "moveTo"](x + Math.cos(an) * q.s, y + Math.sin(an) * q.s); }
-        g.fill();
-      }
-      if (!near && (reduce || t > 2)) { near = true; onNear && onNear(); }
-      if (run && !reduce && !document.hidden) requestAnimationFrame(draw);
-    }
-    const go = () => { if (run) return; run = true; requestAnimationFrame(draw); };
-    const io = new IntersectionObserver(([en]) => { if (en.isIntersecting) go(); else run = false; });
-    addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(draw); });
-    addEventListener("pointermove", e => { const b = cv.getBoundingClientRect(); mx = e.clientX - b.left; my = e.clientY - b.top; }, { passive: true });
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && run && !reduce) requestAnimationFrame(draw); });
-    return { start() { t0 = performance.now(); io.observe(cv); }, size };
-  }
-
-  // The hero: the particles gather on the glass pyramid's front face, found in the picture (its pixels below), then
-  // the pyramid fades in where they meet.
+  // ---------- the pyramid comes alive: a point of light slowly circles its edges, a pulse rises up the beam from the
+  // tip, the tip breathes, and the whole pyramid shifts a little with the pointer for depth. The lines are laid over
+  // the picture from its own pixels (FACE: tip, left and right corners; BEAM: where the beam leaves the top).
   const FACE = { wide: [[1157, 322], [903, 742], [1488, 746]], phone: [[390, 466], [2, 1105], [778, 1105]] };
-  function heroDust() {
-    const cv = $("dust"), im = document.querySelector(".n-jewel img");
-    const shape = () => {
-      const c = cv.getBoundingClientRect(), b = im.getBoundingClientRect(), iw = im.naturalWidth || 1600, ih = im.naturalHeight || 1000;
+  function jewel() {
+    const im = document.querySelector(".n-jewel img"), sv = $("glint"), hero = sv.closest(".n-hero");
+    const place = () => {
+      const c = sv.getBoundingClientRect(), b = im.parentNode.getBoundingClientRect(), iw = im.naturalWidth, ih = im.naturalHeight; // the frame, not the picture, which zooms in as it fades
+      if (!iw || !b.width) return;
       const s = Math.max(b.width / iw, b.height / ih), [px, py] = getComputedStyle(im).objectPosition.split(" ").map(v => parseFloat(v) / 100);
       const ox = b.left - c.left + (b.width - iw * s) * px, oy = b.top - c.top + (b.height - ih * s) * py;
-      return FACE[ih > iw ? "phone" : "wide"].map(([x, y]) => [ox + x * s, oy + y * s]);
+      const [T, L, R] = FACE[ih > iw ? "phone" : "wide"].map(([x, y]) => [ox + x * s, oy + y * s]);
+      const loop = `M${T} L${L} L${R} Z`;
+      sv.querySelectorAll(".run").forEach(p => p.setAttribute("d", loop));
+      sv.querySelector(".pulse").setAttribute("d", `M${T} L${T[0]} ${Math.max(0, oy)}`);
+      const ap = sv.querySelector(".apex"); ap.setAttribute("cx", T[0]); ap.setAttribute("cy", T[1]);
+      sv.classList.add("on");
     };
-    const dust = gather(cv, shape, { cols: [[255, 181, 71], [77, 163, 255], [185, 140, 255]], n: innerWidth > 900 ? 900 : 480, rest: 0.22, onNear: () => im.classList.add("on") });
-    let begun = false;
-    const begin = () => { if (begun) return; begun = true; dust.size(); dust.start(); };
-    im.complete && im.naturalWidth ? begin() : (im.addEventListener("load", begin), im.addEventListener("error", begin), setTimeout(begin, 2500));
-  }
-
-  // The capstone: gold particles gather into the capstone's small triangle as the section comes into view.
-  function capDust() {
-    const cv = $("capDust");
-    const shape = () => { const w = cv.clientWidth, h = cv.clientHeight, r = Math.min(w, h * 1.3) * 0.32, cx = w / 2, cy = h * 0.58; return [[cx, cy - r], [cx - r * 0.95, cy + r * 0.62], [cx + r * 0.95, cy + r * 0.62]]; };
-    const dust = gather(cv, shape, { cols: [[255, 241, 207], [233, 194, 122], [156, 115, 51]], n: 260, rest: 0.6 });
-    const io = new IntersectionObserver(([en]) => { if (en.isIntersecting) { io.disconnect(); dust.start(); } }, { rootMargin: "0px 0px -20% 0px" });
-    io.observe(cv);
+    const on = () => { im.classList.add("on"); place(); };
+    im.complete && im.naturalWidth ? on() : im.addEventListener("load", on);
+    addEventListener("resize", place);
+    if (reduce) return;
+    // depth: the pyramid drifts a few pixels against the pointer, easing there in CSS
+    hero.addEventListener("pointermove", e => {
+      const r = hero.getBoundingClientRect();
+      hero.style.setProperty("--px", `${(((e.clientX - r.left) / r.width) - 0.5) * -18}px`);
+      hero.style.setProperty("--py", `${(((e.clientY - r.top) / r.height) - 0.5) * -12}px`);
+    }, { passive: true });
+    hero.addEventListener("pointerleave", () => { hero.style.setProperty("--px", "0px"); hero.style.setProperty("--py", "0px"); });
   }
 
   // ---------- live ----------
@@ -262,7 +290,7 @@
     if (t) { S.kind = t.dataset.kind; loadTour().catch(() => {}); }
   });
 
-  field(); heroDust(); capDust(); motion();
+  field(); jewel(); motion();
   (async () => {
     const me = await session().catch(() => null);
     if (me) for (const a of [$("acct"), $("acct2")]) { a.textContent = me.name || me.username; a.href = "my"; }
