@@ -94,23 +94,41 @@
   const INTRO = { SETTLE: 12.45, END: 13.05, FIX: [813 / 802, 486 / 471, (549 - (813 / 802) * 536) * 1920 / 1912, 147 - (486 / 471) * 143] };
   let film = null;
   const seen = () => { try { return localStorage.getItem("d3b.intro") === "1"; } catch { return false; } };
+  // The intro starts loading as soon as the gate is up, so it plays through without stopping. On an unknown or slow
+  // connection the 720p copy is used (owner, 2026-10-21: the 1080p one froze while it loaded).
+  let pre = null;
+  const introSrc = () => { const c = navigator.connection, fast = !!c && c.downlink >= 10 && !c.saveData; return `media/${!small() && fast ? "intro" : "intro-720"}.mp4`; };
+  function loadIntro() {
+    if (pre) return pre;
+    const v = document.createElement("video");
+    v.className = "bt-intro"; v.playsInline = true; v.preload = "auto"; v.poster = "media/intro.jpg"; v.src = introSrc();
+    v.style.visibility = "hidden";
+    (phone.matches ? $("film") : $("stage")).append(v);
+    v.load();
+    return (pre = v);
+  }
+  function dropIntro() { if (!pre) return; pre.removeAttribute("src"); pre.load(); pre.remove(); pre = null; }
+  // enough is loaded to play to the end without stopping
+  const buffered = v => { const b = v.buffered, d = v.duration || 13; return b.length ? Math.min(1, b.end(b.length - 1) / d) : 0; };
+  const ready = v => v.readyState >= 4 || buffered(v) >= 0.97;
+  const loading = (on, pct) => { $("introLoad").hidden = !on; if (on) $("introPct").textContent = pct == null ? "" : `${Math.round(pct * 100)}%`; };
   function gate() {
     if (reduce || (seen() && !qs.has("intro"))) return;
     document.body.classList.add("bt-gated"); bg.pause();
     $("gate").hidden = false; $("enterBtn").focus();
+    loadIntro();
   }
   function playIntro() {
     if (film) return;
     try { localStorage.setItem("d3b.intro", "1"); } catch {}
     $("gate").hidden = true;
-    const flat = phone.matches, v = document.createElement("video");
-    v.className = "bt-intro"; v.playsInline = true; v.preload = "auto"; v.poster = "media/intro.jpg";
-    v.src = `media/${small() ? "intro-720" : "intro"}.mp4`;
+    const flat = phone.matches, v = loadIntro(); pre = null;
     if (flat) { $("film").hidden = false; $("film").append(v); } else $("stage").append(v);
+    v.style.visibility = "";
     document.body.classList.add("bt-gated", "bt-filming"); bg.pause();
     if (!$("wall").hidden) closeWall();
     $("skipIntro").hidden = false; $("skipIntro").focus();
-    film = { v, handed: false };
+    film = { v, handed: false, started: false };
     const step = () => {
       if (!film || film.v !== v) return;
       const t = v.currentTime;
@@ -120,7 +138,25 @@
     };
     v.addEventListener("ended", () => { if (film && !film.handed) handoff(false); });
     v.addEventListener("error", () => { if (film && !film.handed) handoff(true); });
-    v.play().then(() => requestAnimationFrame(step)).catch(() => handoff(true));
+    // if it still has to stop to load, say so rather than look frozen
+    v.addEventListener("waiting", () => { if (film && film.v === v && !film.handed) loading(true, null); });
+    v.addEventListener("playing", () => loading(false));
+    const go = () => {
+      if (!film || film.v !== v || film.started) return;
+      film.started = true; loading(false);
+      v.currentTime = 0;
+      v.play().then(() => requestAnimationFrame(step)).catch(() => handoff(true));
+    };
+    if (ready(v)) return go();
+    // not loaded yet: start and pause inside this click (so the sound is allowed later), then wait for the rest
+    v.muted = true; v.play().then(() => { v.pause(); v.muted = false; }).catch(() => { v.muted = false; });
+    loading(true, buffered(v));
+    const wait = setInterval(() => {
+      if (!film || film.v !== v || film.started) return clearInterval(wait);
+      loading(true, buffered(v));
+      if (ready(v)) { clearInterval(wait); go(); }
+    }, 200);
+    setTimeout(() => { clearInterval(wait); go(); }, 15000); // a very slow connection: play what there is
   }
   // the hand-off: quick when skipped, otherwise timed to the intro's last second
   function handoff(quick) {
@@ -136,14 +172,14 @@
     v.style.opacity = "0";
     if (flat) $("film").classList.add("out");
     document.body.classList.add("bt-arrive");
-    $("skipIntro").hidden = true;
+    $("skipIntro").hidden = true; loading(false);
     setTimeout(() => {
       v.pause(); v.removeAttribute("src"); v.load(); v.remove(); film = null;
       $("film").hidden = true; $("film").classList.remove("out");
       document.body.classList.remove("bt-arrive");
     }, ms + 1400);
   }
-  function skipGate() { try { localStorage.setItem("d3b.intro", "1"); } catch {} $("gate").hidden = true; document.body.classList.remove("bt-gated"); document.body.classList.add("bt-arrive"); video(); setTimeout(() => document.body.classList.remove("bt-arrive"), 1600); $("wallBtn").focus(); }
+  function skipGate() { try { localStorage.setItem("d3b.intro", "1"); } catch {} dropIntro(); $("gate").hidden = true; document.body.classList.remove("bt-gated"); document.body.classList.add("bt-arrive"); video(); setTimeout(() => document.body.classList.remove("bt-arrive"), 1600); $("wallBtn").focus(); }
   $("enterBtn").addEventListener("click", playIntro);
   $("skipGate").addEventListener("click", skipGate);
   $("skipIntro").addEventListener("click", () => handoff(true));
