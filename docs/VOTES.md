@@ -18,7 +18,8 @@ Every action is an append-only ledger line with the server's time. Nothing is ev
 | --- | --- |
 | `vote` `{ uid, round, session, dir, price }` | an entry (first or re-entry) |
 | `vote_exit` `{ uid, round, session, vote, price }` | a cash out |
-| `vote_change` `{ uid, round, session, from, to }` | a switch Up ↔ Down, only where the session allows changes. Logged as an exit and a new entry at the prices of that moment, so it costs what it would on Kalshi |
+| `vote_exit` with `switch: true`, then `vote` with `switched: true` | a switch Up ↔ Down, only where the session allows changes: a cash out and a new entry at that moment's prices, written together, so it costs what it would on Kalshi |
+| `vote_session`, `vote_badge`, `vote_privacy` | admins' session settings, admin-given badges, a member's public/private choice (the latest counts) |
 
 ## Sessions and admin controls
 
@@ -58,6 +59,10 @@ Admins set, per session:
 - `GET /votes/me`, `GET /members/:name/votes`: records (respecting privacy)
 - `PUT /votes/settings { public }`: the member's own privacy switch
 - Admin: `PUT /votes/sessions/:session` (locked/changeable, categories on/off), `POST /votes/badges`, `DELETE /votes/badges/:name`
+
+## Status (2026-10-20)
+
+**Built in one go at the owner's request ("let's make large leaps")**, all on branch `claude/member-votes`: the engine and API (`server/arena/votes.js`, tested in `test/votes.test.js`), and on the Live page the vote panel (Up, Down, Cash out, Switch where allowed), the floor's split, the latest votes, badge pop-ups, the member's record with the public switch, and admin controls for the live floor (switching, categories, badges). The odds are now two laser beams colliding (teal Above, rose Below, a white-gold burst). **Not built yet:** vote panels inside a battle page or the Capstone room (the API takes `session: "battle:<id>"` / `"capstone:<id>"` already); guest callers are set through the API only (`PUT /votes/sessions/capstone:<id> { guests }`); records on the profile page.
 
 ## Build steps (one at a time, each tested before the next)
 
