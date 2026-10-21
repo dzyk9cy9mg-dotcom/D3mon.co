@@ -341,6 +341,17 @@ export class Registry {
     return this.entrantView(next, ctx);
   }
 
+  // A deleted member's callers, bots and scripts come off the site: marked "removed", their profile cleared.
+  // Their calls stay in the ledger (other entrants' records and battles depend on them).
+  removeOwner(uid) {
+    const out = [];
+    for (const e of this.#all(ENTRANTS, [["ownerId", "==", uid]])) {
+      const next = { ...e, status: "removed", profile: {}, altAccount: "", notes: "", updatedAt: Date.now() };
+      this.#save(ENTRANTS, next, null); out.push(e.id); this.#entrantChanged(next);
+    }
+    return out;
+  }
+
   // ---------- internals ----------
   // Only one battle feeds the main page, and never a draft: turning it on for one turns it off for the rest.
   #mainPage(b, uid) {

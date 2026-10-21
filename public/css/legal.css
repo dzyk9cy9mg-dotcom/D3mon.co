@@ -1,0 +1,13 @@
+/* Privacy and Terms: one readable column in the site's style */
+.lg{max-width:760px;margin:0 auto;padding:40px max(20px,env(safe-area-inset-right,0px)) 80px max(20px,env(safe-area-inset-left,0px));color:var(--ink-2);font:400 17px/1.7 var(--body)}
+.lg h2{margin:40px 0 10px;font:700 15px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+.lg h3{margin:22px 0 4px;font:600 17px var(--body);color:var(--ink)}
+.lg p,.lg ul{margin:0 0 14px}
+.lg ul{padding-left:20px}
+.lg li{margin:6px 0}
+.lg b{color:var(--ink);font-weight:600}
+.lg a{color:var(--ink);text-underline-offset:3px}
+.lg-date{font:500 13px var(--mono);color:var(--ink-3);letter-spacing:.06em}
+.lg-lead{font-size:19px;color:var(--ink)}
+.lg-also{margin-top:36px;padding-top:18px;border-top:1px solid var(--s-edge)}
+.lg .s-title{margin-bottom:10px}

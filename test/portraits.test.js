@@ -72,4 +72,19 @@ describe("profile pictures", () => {
     const r = (await guest.get("/api/v1/votes/entrant/valhalla")).json;
     assert.equal(r.record.calls, 0);
   });
+
+  test("an admin deletes an account: entrants removed, pictures gone, ledger kept without a name", async () => {
+    const pic = "/" + (await guest.get("/api/v1/portraits/of/valhalla")).json.portrait.frames[0];
+    assert.equal((await loki.req("DELETE", "/api/v1/members/odin")).status, 403);
+    assert.equal((await hs.req("DELETE", "/api/v1/members/hardsmoke")).status, 409); // the owner
+    const r = await hs.req("DELETE", "/api/v1/members/odin");
+    assert.equal(r.status, 200);
+    assert.equal(r.json.entrantsRemoved, 1);
+    assert.equal((await guest.req("GET", "/api/v1/members/odin")).status, 404);
+    assert.equal((await guest.req("GET", "/api/v1/entrants/valhalla")).status, 404);
+    assert.equal((await hs.req("GET", pic)).status, 404);
+    assert.equal((await odin.req("GET", "/api/v1/votes/me")).status, 401); // signed out everywhere
+    assert.ok(srv.app.arena.ledger.lines.some(l => l.t === "member_deleted"));
+    assert.ok(srv.app.arena.ledger.lines.some(l => l.t === "portrait_submit")); // history stays
+  });
 });

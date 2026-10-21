@@ -225,6 +225,15 @@ export class Accounts {
     return key;
   }
 
+  // Deletes an account (an admin's tool, server/arena/api.js DELETE /members/:username): the account and every
+  // sign-in it has. Records elsewhere that point at its id stay, but no longer resolve to a name.
+  removeUser(uid) {
+    if (!this.users.delete(uid)) return false;
+    for (const [k, s] of this.sessions) if (s.uid === uid) this.sessions.delete(k);
+    this.#scheduleSave();
+    return true;
+  }
+
   endOtherSessions(uid, keepToken) {
     const keep = this.sessionKey(keepToken);
     for (const [k, s] of this.sessions) if (s.uid === uid && k !== keep) this.sessions.delete(k);
