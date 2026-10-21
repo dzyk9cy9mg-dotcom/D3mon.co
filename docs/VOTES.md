@@ -63,6 +63,7 @@ Admins set, per session:
 
 1. **The log and the trade:** enter, cash out, re-enter, switch, priced at Kalshi; settlement at the result. Tests against the stand-in Kalshi
 2. **Live:** the `votes` feed topic and Up / Down / Cash out buttons on the Live page with the running split
+   - **Also here (owner, 2026-10-20):** restyle the Live page's battle of light (Kalshi's Up/Down odds) as **two laser beams colliding** at the odds line, in colours that suit the site better than plain red and green
 3. **Records:** profile stats, private by default, the public switch
 4. **Badges and notifications**
 5. **Admin controls:** locked or changeable, categories, Capstone access, guest callers
