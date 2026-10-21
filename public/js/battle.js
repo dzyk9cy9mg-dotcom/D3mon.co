@@ -77,12 +77,78 @@
 
   // ---------- the background video: the small one on small screens, paused when nobody can see it ----------
   const bg = $("bg");
+  const small = () => innerWidth * (devicePixelRatio || 1) < 1500;
   function video() {
     if (phone.matches || reduce) { bg.pause(); bg.removeAttribute("src"); bg.load(); return; }
-    const want = `media/${innerWidth * (devicePixelRatio || 1) < 1500 ? "cockpit-720" : "cockpit"}.mp4`;
+    const want = `media/${small() ? "cockpit-720" : "cockpit"}.mp4`;
     if (!bg.src.endsWith(want)) bg.src = want;
-    if (!document.hidden && $("wall").hidden) bg.play().catch(() => {});
+    if (!document.hidden && $("wall").hidden && !document.body.classList.contains("bt-gated")) bg.play().catch(() => {});
   }
+
+  // ---------- the intro: a cinematic flight that lands exactly on the cockpit ----------
+  // media/intro.mp4 (made in Higgsfield, with sound) ends on the cockpit still the loop starts from. It plays once,
+  // on a visitor's first visit, after they press "Enter the battle" (browsers only allow sound after a click); "▶ Intro"
+  // under the cockpit plays it again. When its camera has settled (SETTLE s), the loop starts underneath, the intro is
+  // nudged onto the cockpit's exact framing (FIX, measured from the two videos' main screens), its sound fades and it
+  // fades out, and the screens light up one by one. Remeasure FIX if either video changes.
+  const INTRO = { SETTLE: 12.1, END: 13.0, FIX: [813 / 802, 486 / 472, (549 - (813 / 802) * 536) * 1920 / 1912, 147 - (486 / 472) * 142] };
+  let film = null;
+  const seen = () => { try { return localStorage.getItem("d3b.intro") === "1"; } catch { return false; } };
+  function gate() {
+    if (reduce || (seen() && !qs.has("intro"))) return;
+    document.body.classList.add("bt-gated"); bg.pause();
+    $("gate").hidden = false; $("enterBtn").focus();
+  }
+  function playIntro() {
+    if (film) return;
+    try { localStorage.setItem("d3b.intro", "1"); } catch {}
+    $("gate").hidden = true;
+    const flat = phone.matches, v = document.createElement("video");
+    v.className = "bt-intro"; v.playsInline = true; v.preload = "auto"; v.poster = "media/intro.jpg";
+    v.src = `media/${small() ? "intro-720" : "intro"}.mp4`;
+    if (flat) { $("film").hidden = false; $("film").append(v); } else $("stage").append(v);
+    document.body.classList.add("bt-gated", "bt-filming"); bg.pause();
+    if (!$("wall").hidden) closeWall();
+    $("skipIntro").hidden = false; $("skipIntro").focus();
+    film = { v, handed: false };
+    const step = () => {
+      if (!film || film.v !== v) return;
+      const t = v.currentTime;
+      if (t >= INTRO.SETTLE && !film.handed) handoff(false);
+      if (t >= INTRO.SETTLE) v.volume = Math.max(0, 1 - (t - INTRO.SETTLE) / (INTRO.END - INTRO.SETTLE + 0.2));
+      requestAnimationFrame(step);
+    };
+    v.addEventListener("ended", () => { if (film && !film.handed) handoff(false); });
+    v.addEventListener("error", () => { if (film && !film.handed) handoff(true); });
+    v.play().then(() => requestAnimationFrame(step)).catch(() => handoff(true));
+  }
+  // the hand-off: quick when skipped, otherwise timed to the intro's last second
+  function handoff(quick) {
+    if (!film || film.handed) return;
+    film.handed = true;
+    const v = film.v, flat = phone.matches, ms = quick ? 450 : 900;
+    document.body.classList.remove("bt-gated", "bt-filming");
+    video();
+    if (quick) { const from = v.volume, t0 = performance.now(); const fade = () => { const k = Math.min(1, (performance.now() - t0) / ms); v.volume = from * (1 - k); if (k < 1) requestAnimationFrame(fade); }; fade(); }
+    const [sx, sy, tx, ty] = INTRO.FIX;
+    v.style.transition = `transform ${ms * 0.8}ms ease-out, opacity ${ms}ms ease ${quick ? 0 : 100}ms`;
+    if (!flat) v.style.transform = `matrix(${sx},0,0,${sy},${tx},${ty})`;
+    v.style.opacity = "0";
+    if (flat) $("film").classList.add("out");
+    document.body.classList.add("bt-arrive");
+    $("skipIntro").hidden = true;
+    setTimeout(() => {
+      v.pause(); v.removeAttribute("src"); v.load(); v.remove(); film = null;
+      $("film").hidden = true; $("film").classList.remove("out");
+      document.body.classList.remove("bt-arrive");
+    }, ms + 1400);
+  }
+  function skipGate() { try { localStorage.setItem("d3b.intro", "1"); } catch {} $("gate").hidden = true; document.body.classList.remove("bt-gated"); document.body.classList.add("bt-arrive"); video(); setTimeout(() => document.body.classList.remove("bt-arrive"), 1600); $("wallBtn").focus(); }
+  $("enterBtn").addEventListener("click", playIntro);
+  $("skipGate").addEventListener("click", skipGate);
+  $("skipIntro").addEventListener("click", () => handoff(true));
+  $("introBtn").addEventListener("click", playIntro);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && film && !film.handed) handoff(true); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) bg.pause(); else video(); });
 
   // ---------- the data ----------
@@ -537,6 +603,7 @@
   // ---------- start ----------
   (async () => {
     place(); phone.addEventListener("change", () => { place(); video(); renderAll(); });
+    gate(); $("introBtn").hidden = reduce;
     addEventListener("resize", fit);
     if (!DEMO) await A.syncClock().catch(() => {});
     S.me = DEMO ? null : await A.session().catch(() => null);
