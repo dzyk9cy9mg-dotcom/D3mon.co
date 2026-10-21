@@ -76,7 +76,7 @@
         const done = (d.mine || []).filter(t => t.status === "cashed");
         $(".vw-mine").innerHTML = done.length ? `This round: ${done.map(t => t.profit == null ? "cashed out" : `<span class="${t.profit >= 0 ? "up" : "dn"}">${signed(t.profit)}</span>`).join(" · ")}` : blocked ? "" : "Call it: Up or Down by the end of the round.";
       }
-      $(".vw-feed").innerHTML = d.actions.slice(-6).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}><b>${esc(a.name)}</b>${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}<time>${mmss(a.at - d.round)} in</time></li>`).join("") || `<li class="vw-empty">No votes yet this round.</li>`;
+      $(".vw-feed").innerHTML = d.actions.slice(-6).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}>${a.username ? `<a href="profile?u=${encodeURIComponent(a.username)}"><b>${esc(a.name)}</b></a>` : `<b>${esc(a.name)}</b>`}${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}<time>${mmss(a.at - d.round)} in</time></li>`).join("") || `<li class="vw-empty">No votes yet this round.</li>`;
       $(".vw-guests").hidden = !(kind === "capstone" && st.s.admin);
     }
 

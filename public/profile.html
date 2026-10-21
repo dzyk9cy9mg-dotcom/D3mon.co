@@ -75,6 +75,29 @@
     </section>
   </div>
 
+  <!-- a member's own profile (/profile?u=<username>) -->
+  <div class="pf-body" id="mbody" hidden>
+    <section class="pf-sec" aria-labelledby="mRecT">
+      <h2 id="mRecT">On the floor</h2>
+      <p class="pf-lede">Up and Down calls on the Live floor, as paper trades at Kalshi's prices.</p>
+      <div class="pf-stats" id="mStats"></div>
+      <p class="pf-empty" id="mPrivate" hidden>This member keeps their floor record private.</p>
+    </section>
+    <section class="pf-sec" id="mCallsSec" aria-labelledby="mCallsT" hidden>
+      <h2 id="mCallsT">Recent floor calls</h2>
+      <ol class="pf-calls" id="mCalls"></ol>
+    </section>
+    <section class="pf-sec" id="mEntSec" aria-labelledby="mEntT" hidden>
+      <h2 id="mEntT">Their callers, bots and scripts</h2>
+      <ul class="pf-list" id="mEnts"></ul>
+    </section>
+    <section class="pf-sec" id="mOwn" aria-labelledby="mOwnT" hidden>
+      <h2 id="mOwnT">Your profile</h2>
+      <p class="pf-lede" id="mPubNote"></p>
+      <div class="pf-actions"><button class="s-amber" type="button" id="mPub">Make my record public</button><a class="btn ghost" href="my">My bots</a><a class="btn ghost" href="login">Account and sign out</a></div>
+    </section>
+  </div>
+
   <section class="pf-pick" id="pick" aria-labelledby="pickT" hidden>
     <h1 class="s-title" id="pickT">Profiles</h1>
     <p class="pf-lede">Every caller, bot and chart script on D3MON. Choose one to see its record.</p>

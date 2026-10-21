@@ -9,7 +9,7 @@
   "use strict";
   const { api, esc, kindName, statText, statValue, verifTag, wide } = window.Arena;
   const $ = id => document.getElementById(id);
-  const slug = new URLSearchParams(location.search).get("e") || "";
+  const qs = new URLSearchParams(location.search), slug = qs.get("e") || "", uname = qs.get("u") || "";
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const COLOR = { bot: "#4DA3FF", script: "#B98CFF", caller: "#FFB547" };
   const RGB = { bot: [77, 163, 255], script: [185, 140, 255], caller: [255, 181, 71] };
@@ -18,8 +18,8 @@
   const time = ms => new Date(ms).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   // ---------- the art, driven by the scroll (p: 0 at the top of the page, 1 when the stage lets go) ----------
-  function art(kind, portrait) {
-    const cv = $("art"), g = cv.getContext("2d"), hero = $("hero"), C = RGB[kind] || RGB.bot;
+  function art(kind, portrait, rgb) {
+    const cv = $("art"), g = cv.getContext("2d"), hero = $("hero"), C = rgb || RGB[kind] || RGB.bot;
     const rgba = a => `rgba(${C[0]},${C[1]},${C[2]},${a})`;
     let W = 0, H = 0, dpr = 1, p = reduce ? 1 : 0, show = p, t = 0, last = performance.now(), raf = 0;
     let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -74,6 +74,20 @@
       g.fillStyle = pool; g.fillRect(0, 0, W, H);
       g.save(); g.translate(x, y);
       if (portrait) { /* the owner's moving picture stands in for the drawn figure */ }
+      else if (kind === "member") {
+        const S = s * 0.5, P = [[0, -1], [0.866, 0.5], [-0.866, 0.5]].map(([a, b]) => [a * S, b * S]), CC = [RGB.caller, RGB.bot, RGB.script];
+        for (let i = 0; i < 3; i++) { // each side draws itself from one corner to the next
+          const u = ease((k - i * 0.18) / 0.45); if (u <= 0) continue;
+          const [a, b] = [P[i], P[(i + 1) % 3]], c = CC[i];
+          g.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},0.9)`; g.lineWidth = 2.4; g.shadowColor = `rgba(${c[0]},${c[1]},${c[2]},1)`; g.shadowBlur = 18;
+          g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u); g.stroke();
+          const glow = g.createRadialGradient(a[0], a[1], 0, a[0], a[1], S * 0.18); glow.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${0.7 * u})`); glow.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+          g.fillStyle = glow; g.beginPath(); g.arc(a[0], a[1], S * 0.18, 0, 7); g.fill();
+        }
+        g.shadowBlur = 0;
+        const h = ss(0.55, 1, k), beat = reduce ? 1 : 0.85 + 0.15 * Math.sin(t * 2.6); // the member's own light at the heart
+        if (h > 0) { const core = g.createRadialGradient(0, S * 0.1, 0, 0, S * 0.1, S * 0.45 * beat); core.addColorStop(0, `rgba(255,248,235,${0.9 * h})`); core.addColorStop(0.25, rgba(0.6 * h)); core.addColorStop(1, rgba(0)); g.fillStyle = core; g.beginPath(); g.arc(0, S * 0.1, S * 0.45, 0, 7); g.fill(); }
+      }
       else if (kind === "bot") {
         const S = s * 0.42;
         for (const pl of plates) {
@@ -228,6 +242,51 @@
     art(kind, !!(pic && pic.frames.length));
   }
 
+  // ---------- a member's own profile (/profile?u=<username>) ----------
+  // The same cinematic hero ("I am NAME.", the D3MON triangle drawing itself with the member's own light at its heart),
+  // then their floor record (when they made it public), their recent floor calls and the callers, bots and scripts
+  // they've put on D3MON. On your own profile: the public/private switch and a link to your account.
+  async function member() {
+    const m = await api("GET", `members/${encodeURIComponent(uname)}`);
+    const hex = /^#[0-9a-f]{6}$/i.test(m.color) ? m.color : "#FFC56A", rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    document.title = `${m.name} · Member · D3MON`;
+    document.body.style.setProperty("--kc", hex); document.body.dataset.kind = "member";
+    $("hero").hidden = false; $("mbody").hidden = false;
+    $("kind").innerHTML = `<img class="pf-av" src="${esc(m.avatarUrl)}" alt="" width="28" height="28"><span>Member${m.badge ? " · ★ Badge" : ""}</span>`;
+    $("nameEm").textContent = `${m.name}.`;
+    requestAnimationFrame(() => { const em = $("nameEm"), room = $("pfName").clientWidth, need = em.scrollWidth; if (need > room) em.style.fontSize = `${(parseFloat(getComputedStyle(em).fontSize) * room / need).toFixed(1)}px`; });
+    $("by").innerHTML = `@${esc(m.username)}`;
+    $("badges").innerHTML = "";
+    $("quote").hidden = true;
+    const r = m.record;
+    $("hudTL").innerHTML = `Member<br><b>${esc(m.name)}</b>`;
+    $("hudTR").innerHTML = `Member since<br><b>${esc(when(m.since))}</b>`;
+    $("hudBL").innerHTML = r ? `<i class="on"></i>Floor record ${m.public ? "public" : "private (only you see it)"}` : "<i></i>Floor record private";
+    $("hudBR").innerHTML = `Calls on the floor <b>${r ? r.calls : "–"}</b>`;
+    // the record
+    const stat = (l, v) => `<div class="pf-stat"><span class="pf-sl">${esc(l)}</span><span class="pf-sv">${esc(String(v))}</span></div>`;
+    $("mStats").innerHTML = r ? [stat("Calls on the floor", r.calls), stat("Right", r.successRate != null ? `${r.successRate}%` : "–"), stat("Average call", r.avgCallMin != null ? `${r.avgCallMin} min in` : "–"),
+      stat("Average result", r.avgProfit != null ? `${r.avgProfit >= 0 ? "+" : "−"}${Math.abs(Math.round(r.avgProfit * 100))}¢ a call` : "–"), stat("Cash outs", r.cashOuts)].join("") : "";
+    $("mPrivate").hidden = !!r;
+    const c = x => (x == null ? "" : `${Math.round(x * 100)}¢`);
+    $("mCalls").innerHTML = r && m.recent.length ? m.recent.map(t => `<li><time>${esc(time(t.at))}</time><span>${t.dir === "up" ? '<b class="up">▲ Up</b>' : '<b class="dn">▼ Down</b>'}${t.paid != null ? ` <span class="pf-k">@${c(t.paid)}</span>` : ""}</span>
+        <span>${t.status === "cashed" ? `<span class="pf-k">Cashed out${t.got != null ? ` @${c(t.got)}` : ""}</span>${t.profit != null ? ` <b class="${t.profit >= 0 ? "up" : "dn"}">${t.profit >= 0 ? "+" : "−"}${Math.abs(Math.round(t.profit * 100))}¢</b>` : ""}` : t.status === "settled" ? (t.correct ? '<b class="up">Right</b>' : '<b class="dn">Wrong</b>') : t.status === "settling" ? '<span class="pf-k">Waiting for Kalshi</span>' : '<span class="pf-k">Open</span>'}</span></li>`).join("")
+      : `<li class="pf-empty">${r ? "No floor calls yet. Make one on the Live page." : "Hidden."}</li>`;
+    $("mCallsSec").hidden = !r;
+    // their callers, bots and scripts
+    $("mEntSec").hidden = !m.entrants.length;
+    $("mEnts").innerHTML = m.entrants.map(e => `<li class="k-${esc(e.kind)}"><a href="profile?e=${encodeURIComponent(e.slug)}"><canvas width="80" height="80" aria-hidden="true" data-kind="${esc(e.kind)}"></canvas><span><b>${esc(e.name)}</b><small>${esc(KIND[e.kind] || kindName(e.kind))}</small></span></a></li>`).join("");
+    if (window.D3Sigils) for (const cv of $("mEnts").querySelectorAll("canvas")) window.D3Sigils.draw(cv.getContext("2d"), cv.dataset.kind, 40, 40, 60, { t: 1, a: 1, lit: 0.5 });
+    // your own profile: the switch and your account
+    $("mOwn").hidden = !m.mine;
+    if (m.mine) {
+      $("mPub").textContent = m.public ? "Make my record private" : "Make my record public";
+      $("mPubNote").textContent = m.public ? "Everyone can see your floor record and recent calls." : "Only you can see your floor record. Make it public to show it here.";
+      $("mPub").onclick = async () => { try { await api("PUT", "votes/settings", { public: !m.public }); location.reload(); } catch (err) { $("msg").textContent = err.message; } };
+    }
+    art("member", false, rgb);
+  }
+
   // ---------- no one chosen: every entrant to choose from ----------
   async function pick() {
     $("pick").hidden = false;
@@ -239,7 +298,7 @@
   }
 
   (async () => {
-    try { await (slug ? load() : pick()); }
-    catch (e) { $("msg").textContent = slug ? `We couldn't find that profile. ${e.message}` : e.message; if (slug) pick().catch(() => {}); }
+    try { await (uname ? member() : slug ? load() : pick()); }
+    catch (e) { $("msg").textContent = slug || uname ? `We couldn't find that profile. ${e.message}` : e.message; if (slug || uname) pick().catch(() => {}); }
   })();
 })();

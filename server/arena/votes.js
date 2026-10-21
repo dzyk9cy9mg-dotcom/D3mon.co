@@ -194,7 +194,7 @@ export class Votes {
 
   // ---------- views
   #actionView(l) {
-    const out = { id: l.id, session: l.session, round: l.round, at: l.at, name: this.userName(l.uid) || "Member", dir: l.dir, badge: this.badge(l.uid, l.session) };
+    const out = { id: l.id, session: l.session, round: l.round, at: l.at, name: this.userName(l.uid) || "Member", username: this.accounts.users.get(l.uid)?.username || null, dir: l.dir, badge: this.badge(l.uid, l.session) };
     if (l.t === "vote") Object.assign(out, { action: l.switched ? "switch" : "enter", paid: l.paid });
     else Object.assign(out, { action: "exit", got: l.got });
     return out;
@@ -268,6 +268,17 @@ export class Votes {
     const own = ctx.uid === e.ownerId;
     if (!own && !this.privacy.get(e.ownerId)) return { private: true };
     return { public: !!this.privacy.get(e.ownerId), record: this.record(e.ownerId), notice: "Paper votes at Kalshi's prices. Not financial advice." };
+  }
+
+  // GET /members/:username: a member's own profile (owner, 2026-10-20). Public: their name, colour, picture, when
+  // they joined, their badge and the callers, bots and scripts they've put on D3MON (sellers want to be found).
+  // Their floor record and recent calls only when they made the record public, or to themselves.
+  memberView(ctx, username) {
+    const uid = this.byUsername(username), u = this.accounts.users.get(uid), own = ctx.uid === uid;
+    const entrants = this.registry.allEntrants().filter(e => e.ownerId === uid && e.status === "active").map(e => this.registry.entrantView(e, ctx));
+    const rec = this.recordView(ctx, uid);
+    return { username: u.username, name: u.name || u.username, color: u.color, avatarUrl: this.accounts.profile(u, ctx.uid).avatarUrl, since: u.created, badge: this.badge(uid), mine: own,
+      entrants, public: rec.public, ...(rec.private ? { private: true } : { record: rec.record, recent: rec.recent }), notice: "Paper votes at Kalshi's prices. Not financial advice. D3MON never trades." };
   }
 
   byUsername(name) {
