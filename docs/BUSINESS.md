@@ -47,7 +47,11 @@ Members joined, members who voted, creators listed, Spotlight and Capstone subsc
 - **Prizes:** if tournaments or battles ever give prizes for winning, check the rules on contests first.
 - **Terms and Privacy** are written with paid plans in mind (`/terms`, `/privacy`), but a lawyer should read them before launch.
 
-## 6. Build order
+## 6. Status (2026-10-20)
+
+**The payment system is built** (`server/arena/billing.js`, Pricing and Payments pages); how it works and how to switch it on: [`PAYMENTS.md`](PAYMENTS.md). Prices are still the owner's to decide; nothing is on sale until a plan is switched on with a price and Stripe's keys are on the server. Creator listing isn't enforced (listing stays free); Spotlight already puts creators first in the Marketplace with a badge.
+
+## 7. Build order (original)
 1. Owner decides prices (this doc) and sets up a Stripe account.
 2. Pricing page and the plan records in the ledger.
 3. Stripe Checkout and the automatic on/off (tested against Stripe's test mode).

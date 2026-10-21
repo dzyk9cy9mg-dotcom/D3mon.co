@@ -168,7 +168,7 @@
     const p = (S.portraits || {})[e.id] || {}, thumbs = v => v.frames.map(u => `<img src="${esc(u)}" alt="" width="72" height="72" loading="lazy">`).join("");
     const state = p.pending ? `<p class="meta">Waiting for an admin to approve:</p><div class="pthumbs">${thumbs(p.pending)}</div>`
       : p.rejected ? `<p class="meta bad">Not approved${p.rejected.note ? `: ${esc(p.rejected.note)}` : "."} Try different pictures.</p>` : "";
-    return `<h3 class="sub">Moving profile picture</h3>
+    return `<p class="meta"><a href="pricing">Get a Spotlight</a>: featured spots on the front page and the Live floor.</p><h3 class="sub">Moving profile picture</h3>
       <p class="meta">Upload 1 to 3 stills of the same scene (for example three frames of a small movement). Your profile blends them into one picture that moves slightly. PNG, JPEG or WebP, under 1.5 MB each. An admin approves it before it shows.</p>
       ${p.approved ? `<p class="meta">Showing now:</p><div class="pthumbs">${thumbs(p.approved)}</div>` : ""}${state}
       <form class="callbox" data-portrait="${esc(e.id)}">

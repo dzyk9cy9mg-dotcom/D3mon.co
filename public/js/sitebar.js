@@ -8,7 +8,7 @@
   const HOME = "next";
   const MAIN = [["live", "Live"], [`${HOME}#battle`, "Battles"], [`${HOME}#market`, "Marketplace"], ["tournaments", "Tournaments"], ["vip", "Capstone"], ["my", "My bots"]];
   const ADMIN = [
-    ["Bots and stats", [["applications", "Applications"], ["vip", "VIP access"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Displays and hall video"]]],
+    ["Bots and stats", [["applications", "Applications"], ["vip", "VIP access"], ["billing", "Payments"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Displays and hall video"]]],
     ["Battle show", [["metrics", "Round metrics"], ["board", "Battle board"]]],
   ];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -37,7 +37,7 @@
     if (!document.querySelector(".n-foot, .s-foot")) {
       const foot = document.createElement("footer");
       foot.className = "s-foot";
-      foot.innerHTML = `<span>Paper trades only. Not financial advice. D3MON never trades.</span><nav aria-label="The small print"><a href="privacy">Privacy</a><a href="terms">Terms</a></nav>`;
+      foot.innerHTML = `<span>Paper trades only. Not financial advice. D3MON never trades.</span><nav aria-label="The small print"><a href="pricing">Pricing</a><a href="privacy">Privacy</a><a href="terms">Terms</a></nav>`;
       document.body.append(foot);
     }
     // a real page title, taken from the document title ("Tournaments · D3MON.CO" → "Tournaments"), unless the page has one

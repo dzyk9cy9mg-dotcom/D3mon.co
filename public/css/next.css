@@ -242,3 +242,4 @@ a{color:inherit}
 .reveal.in .n-kicker::before,.reveal.in.n-kicker::before{animation:n-flip 1.4s var(--ease) .1s both}
 @keyframes n-flip{from{transform:perspective(60px) rotateY(-180deg)}to{transform:perspective(60px) rotateY(0)}}
 @media (prefers-reduced-motion:reduce){.tilt{transform:none!important;transition:none}.tilt.on{background-image:none}.n-amber{translate:none}.reveal.in h2,.reveal.in .n-kicker::before{animation:none}}
+.n-item.spot{border-color:rgba(255,197,106,.55)}.n-spot{color:#FFC56A;font-weight:700}

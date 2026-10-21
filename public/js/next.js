@@ -487,15 +487,18 @@
 
   // ---------- the marketplace ----------
   function renderShop() {
-    const list = S.entrants.filter(e => S.filter === "all" || e.kind === S.filter);
-    $("shop").innerHTML = list.length ? list.map(e => `<a class="n-item tilt k-${esc(e.kind)}" href="profile?e=${encodeURIComponent(e.slug)}"><i class="glow" aria-hidden="true"></i>
-        <small>${esc(KIND[e.kind] || e.kind)}${(e.badges || []).length ? " · battle winner" : ""}</small><h3>${esc(e.name)}</h3>
+    // Spotlight plans (docs/BUSINESS.md) come first, with their badge; the rest keep their order
+    const spot = new Set(S.spotlights || []);
+    const list = S.entrants.filter(e => S.filter === "all" || e.kind === S.filter).sort((a, b) => spot.has(b.id) - spot.has(a.id));
+    $("shop").innerHTML = list.length ? list.map(e => `<a class="n-item tilt k-${esc(e.kind)}${spot.has(e.id) ? " spot" : ""}" href="profile?e=${encodeURIComponent(e.slug)}"><i class="glow" aria-hidden="true"></i>
+        <small>${spot.has(e.id) ? '<b class="n-spot">★ Spotlight</b> · ' : ""}${esc(KIND[e.kind] || e.kind)}${(e.badges || []).length ? " · battle winner" : ""}</small><h3>${esc(e.name)}</h3>
         <p>by ${esc(e.creatorName)}</p>${e.tagline ? `<p class="tag">“${esc(e.tagline)}”</p>` : ""}
         <span class="go">${e.shopUrl ? `Get ${esc(e.name)} →` : "See the record →"}</span></a>`).join("")
       : `<p class="n-empty">Nobody here yet. <a href="apply">Be the first.</a></p>`;
   }
   async function loadShop() {
-    S.entrants = (await api("GET", "entrants")).entrants.filter(e => e.status === "active");
+    const [all, sp] = await Promise.all([api("GET", "entrants"), api("GET", "billing/spotlights").catch(() => ({ entrants: [] }))]);
+    S.entrants = all.entrants.filter(e => e.status === "active"); S.spotlights = sp.entrants;
     renderShop();
   }
 
