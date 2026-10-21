@@ -258,3 +258,5 @@ body.bt-arrive [data-slot="console"]{animation-delay:.68s}
 .bt-film .bt-intro{object-fit:contain}
 body.bt-cards .bt-gate{position:fixed;z-index:94}
 @media (prefers-reduced-motion:reduce){body.bt-arrive .bt-scr{animation:none}}
+.bt-loading{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:97;margin:0;padding:10px 18px;background:rgba(2,3,6,.72);border:1px solid rgba(255,197,106,.45);color:var(--ink);font:500 14px "IBM Plex Mono",monospace;backdrop-filter:blur(6px)}
+.bt-loading[hidden]{display:none}.bt-loading b{color:var(--gold);margin-left:6px}
