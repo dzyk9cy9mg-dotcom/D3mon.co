@@ -36,3 +36,4 @@
 .pr-rows{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:4px}
 .pr-rows li{display:flex;flex-wrap:wrap;gap:6px 18px;padding:8px 0;border-bottom:1px solid var(--s-edge)}
 .pr-rows li b{margin-left:auto;color:var(--ink)}
+#prices .pr-wide{flex:1 1 100%}#prices .pr-wide input,#prices .pr-wide textarea{width:100%;max-width:640px;font:500 16px var(--body)}

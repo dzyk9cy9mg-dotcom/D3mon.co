@@ -79,6 +79,9 @@ export class Billing {
   get configured() { return !!this.key; }
   get mode() { return !this.key ? "off" : this.key.startsWith("sk_live_") ? "live" : "test"; }
 
+  // A plan's name: the owner's own words, or the default
+  nameOf(id) { return this.plans[id]?.name || NAMES[id]; }
+
   // ---------- what someone has
   // A caller's, bot's or script's plan right now: "spotlight", "creator" or null.
   entrantPlan(entrantId) {
@@ -98,7 +101,7 @@ export class Billing {
   publicPlans() {
     return {
       payments: this.configured,
-      plans: PLAN_IDS.map(id => ({ id, name: NAMES[id], blurb: BLURBS[id], ...this.plans[id] }))
+      plans: PLAN_IDS.map(id => ({ id, ...this.plans[id], name: this.nameOf(id), blurb: this.plans[id].blurb || BLURBS[id] }))
         .filter(p => p.on && (p.month || p.year || p.pass))
         .map(p => ({ id: p.id, name: p.name, blurb: p.blurb, month: p.month, year: p.year, ...(p.id === "capstone" ? { pass: p.pass, passHours: p.passHours } : {}) })),
       currency: "usd",
@@ -136,7 +139,7 @@ export class Billing {
     if (!PLAN_IDS.includes(id)) throw new ApiError(400, "invalid_argument", "plan is capstone, creator or spotlight.", "plan");
     if (!["month", "year", "pass"].includes(interval) || (interval === "pass" && id !== "capstone")) throw new ApiError(400, "invalid_argument", "interval is month or year (or pass, for Capstone).", "interval");
     const amount = p[interval];
-    if (!p.on || !amount) throw new ApiError(409, "not_for_sale", `${NAMES[id]} isn't on sale yet.`);
+    if (!p.on || !amount) throw new ApiError(409, "not_for_sale", `${this.nameOf(id)} isn't on sale yet.`);
     let entrant = null;
     if (id !== "capstone") {
       entrant = this.registry.entrantById(String(body.entrantId || ""));
@@ -145,7 +148,7 @@ export class Billing {
     const site = this.#site(origin);
     if (!/^https?:\/\//.test(site)) throw new ApiError(503, "payments_off", "Payments aren't set up yet (no site address).");
     const meta = { uid: ctx.uid, plan: id, entrantId: entrant ? entrant.id : "", interval };
-    const name = entrant ? `${NAMES[id]} · ${entrant.name}` : NAMES[id];
+    const name = entrant ? `${this.nameOf(id)} · ${entrant.name}` : this.nameOf(id);
     const params = {
       mode: interval === "pass" ? "payment" : "subscription",
       client_reference_id: ctx.uid,
@@ -232,6 +235,9 @@ export class Billing {
         if (!cents(v[k])) throw new ApiError(400, "invalid_argument", "Prices are in cents, at least 50 (or empty).", `${id}.${k}`);
         p[k] = v[k];
       }
+      // the owner's own wording; empty brings back the default
+      if (v.name !== undefined) { const n = String(v.name).trim(); if (n.length > 40 || (n && n.length < 3)) throw new ApiError(400, "invalid_argument", "A plan's name is 3 to 40 characters.", `${id}.name`); p.name = n || null; }
+      if (v.blurb !== undefined) { const b = String(v.blurb).trim(); if (b.length > 240) throw new ApiError(400, "invalid_argument", "A description is up to 240 characters.", `${id}.blurb`); p.blurb = b || null; }
       if (id === "capstone" && v.passHours !== undefined) { if (!Number.isInteger(v.passHours) || v.passHours < 1 || v.passHours > 720) throw new ApiError(400, "invalid_argument", "A pass lasts 1 to 720 hours.", "capstone.passHours"); p.passHours = v.passHours; }
     }
     this.ledger.append([{ t: "billing_plans", plans: next }], ctx.uid, this.now());
@@ -248,7 +254,7 @@ export class Billing {
     const capstone = [...this.vip.access.entries()].map(([uid, ls]) => ({ username: name(uid), until: ls.at(-1).until, paid: /Stripe/.test(ls.at(-1).note || "") })).filter(x => x.until > now);
     return {
       stripe: { mode: this.mode, key: !!this.key, webhook: !!this.webhookSecret, site: this.siteUrl || null },
-      plans: this.plans, subscriptions: subs, capstone, months,
+      plans: Object.fromEntries(PLAN_IDS.map(id => [id, { ...this.plans[id], defaultName: NAMES[id], defaultBlurb: BLURBS[id] }])), subscriptions: subs, capstone, months,
       recent: this.payments.slice(-25).reverse().map(p => ({ at: p.at, username: name(p.uid), plan: p.plan, amount: p.amount, kind: p.kind })),
     };
   }

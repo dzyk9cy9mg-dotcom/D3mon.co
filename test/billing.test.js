@@ -49,6 +49,14 @@ describe("payments", () => {
     const pub = (await guest.get("/api/v1/billing/plans")).json.plans;
     assert.deepEqual(pub.map(p => p.id), ["capstone", "spotlight"]);
     assert.equal(pub[0].month, 3900);
+    // the owner's own wording, and empty brings the default back
+    assert.equal((await hs.req("PUT", "/api/v1/billing/plans", { capstone: { name: "x" } })).status, 400);
+    await hs.req("PUT", "/api/v1/billing/plans", { capstone: { name: "The Capstone Room", blurb: "Trade live with the best callers." } });
+    let c = (await guest.get("/api/v1/billing/plans")).json.plans[0];
+    assert.deepEqual([c.name, c.blurb, c.month], ["The Capstone Room", "Trade live with the best callers.", 3900]);
+    await hs.req("PUT", "/api/v1/billing/plans", { capstone: { name: "", blurb: "" } });
+    c = (await guest.get("/api/v1/billing/plans")).json.plans[0];
+    assert.equal(c.name, "Capstone");
   });
 
   test("checkout opens a Stripe page with the owner's price and the buyer's details", async () => {
