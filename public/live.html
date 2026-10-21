@@ -17,8 +17,8 @@
 <script src="js/sigils.js"></script>
 <script src="js/wall.js"></script>
 </head>
-<!-- The trading floor (owner, 2026-10-20): the round open now, Kalshi's odds as a battle of light (green Above
-     against red Below, the clash where the market stands), the calls as they land, the lock moment, the chat
+<!-- The trading floor (owner, 2026-10-20): the round open now, Kalshi's odds as two laser beams colliding (teal
+     Above against rose Below, colliding where the market stands), the members' own votes, the calls as they land, the lock moment, the chat
      (the site's chat, linked both ways with the D3MON Discord), the stream when there is one, and who's here.
      A thin client over /api/v1 (js/live.js). On phones the floor folds into tabs: Round, Chat, Stream. -->
 <body>
@@ -50,6 +50,41 @@
         <p class="lv-say" id="say" role="status" aria-live="polite"></p>
         <div class="lv-bar" aria-hidden="true"><i id="bar"></i></div>
         <p class="lv-note">Kalshi's market prices for this round, for information. Not financial advice. D3MON never trades.</p>
+      </section>
+
+      <!-- the members' own calls: Up or Down at Kalshi's price, cash out and go again (docs/VOTES.md) -->
+      <section class="lv-vote" aria-labelledby="voteT">
+        <div class="lv-row"><h2 id="voteT">Your call</h2><span class="lv-crowd" id="crowd">The floor</span></div>
+        <div class="lv-split" aria-hidden="true"><i class="up" id="splitUp"></i><i class="dn" id="splitDn"></i></div>
+        <div class="lv-vbtns" id="vbtns">
+          <button class="lv-vb up" id="vUp" type="button">▲ Up</button>
+          <button class="lv-vb dn" id="vDn" type="button">▼ Down</button>
+          <button class="lv-vb out" id="vOut" type="button" hidden>Cash out</button>
+        </div>
+        <p class="lv-mine" id="vMine" aria-live="polite"></p>
+        <p class="lv-signin" id="vSignin" hidden>Sign in to make your call. <a href="login">Sign in</a></p>
+        <p class="lv-signin" id="vOff" hidden>Voting is off for you in this session.</p>
+        <p class="lv-err" id="vErr" role="alert"></p>
+        <ol class="lv-vfeed" id="vFeed"></ol>
+        <div class="lv-rec" id="vRec" hidden></div>
+        <details class="lv-adm" id="vAdm" hidden>
+          <summary>Admin: voting controls</summary>
+          <div class="lv-adm-in">
+            <label class="lv-chk"><input type="checkbox" id="aChange"> Let members switch Up ↔ Down this session</label>
+            <fieldset><legend>Voting on for</legend>
+              <label class="lv-chk"><input type="checkbox" data-cat="members" checked> Members</label>
+              <label class="lv-chk"><input type="checkbox" data-cat="callers" checked> Callers</label>
+              <label class="lv-chk"><input type="checkbox" data-cat="bots" checked> Bot owners</label>
+              <label class="lv-chk"><input type="checkbox" data-cat="scripts" checked> Script owners</label>
+            </fieldset>
+            <form class="lv-badge-form" id="aBadge" autocomplete="off">
+              <label for="aUser">Give or take a badge (username)</label>
+              <div><input id="aUser" required maxlength="40" placeholder="username"><button class="btn" type="submit" data-on="1">Give</button><button class="lv-link" type="submit" data-on="0">Take</button></div>
+            </form>
+            <p class="lv-err" id="aErr" role="alert"></p>
+          </div>
+        </details>
+        <p class="lv-note">Paper votes at Kalshi's prices, for fun and bragging rights. Not financial advice. D3MON never trades.</p>
       </section>
 
       <!-- the calls, as they land -->
@@ -90,6 +125,7 @@
     </aside>
   </div>
 </main>
+<div class="lv-toasts" id="toasts" aria-live="polite"></div>
 <script src="js/arena.js"></script>
 <script src="js/live.js"></script>
 <script src="js/sitebar.js"></script>
