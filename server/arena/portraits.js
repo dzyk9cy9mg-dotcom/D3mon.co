@@ -122,6 +122,15 @@ export class Portraits {
     return { set, status: decision };
   }
 
+  // A deleted member's pictures: the files are removed from disk (their ledger lines stay, and now serve nothing).
+  removeFor(entrantIds) {
+    const ids = new Set(entrantIds);
+    for (const s of this.sets.values()) if (ids.has(s.entrantId)) {
+      for (const f of s.frames) { try { fs.unlinkSync(path.join(this.dir, f.file)); } catch { /* already gone */ } }
+      s.status = "removed";
+    }
+  }
+
   // GET /portraits/:file: approved pictures for everyone; waiting or rejected ones for the owner and admins.
   file(ctx, name) {
     if (!FILE.test(name)) throw new ApiError(404, "not_found", "No such picture.");

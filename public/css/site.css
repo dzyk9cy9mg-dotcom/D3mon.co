@@ -128,3 +128,10 @@ body>main.arena{padding-left:max(20px,env(safe-area-inset-left,0px));padding-rig
 .pthumbs img{width:72px;height:72px;object-fit:cover;border:1px solid rgba(255,255,255,.12)}
 .meta.bad{color:#FF4F7A}
 .pq{padding:14px 0;border-top:1px solid rgba(255,255,255,.08)}.pq .pthumbs img{width:120px;height:120px}.pq .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.pq .pnote{flex:1 1 220px;min-height:44px}
+
+/* the small print at the foot of every page */
+.s-foot{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;justify-content:space-between;max-width:1240px;margin:40px auto 0;padding:22px max(20px,env(safe-area-inset-right,0px)) max(28px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));border-top:1px solid var(--s-edge);font:400 13px var(--body);color:var(--ink-3)}
+.s-foot nav{display:flex;gap:18px}
+.s-foot a{display:inline-flex;align-items:center;min-height:44px;color:var(--ink-2);text-underline-offset:3px}
+.s-agree{margin:4px 0 8px;font:400 14px/1.5 var(--body);color:var(--ink-2)}
+.s-agree a{color:var(--ink)}

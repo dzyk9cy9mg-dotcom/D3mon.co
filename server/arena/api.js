@@ -200,6 +200,21 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /votes/me") { if (!ctx.uid) throw new ApiError(401, "unauthenticated", "Sign in first."); return ok(votes.recordView(ctx, ctx.uid)); }
     if (route === "PUT /votes/settings") { writer(); return ok(votes.setPrivacy(ctx, await body())); }
     if ((m = route.match(/^GET \/members\/([A-Za-z0-9_.-]{1,40})$/))) return ok(votes.memberView(ctx, m[1]));
+    // An admin deletes a member's account (privacy page: "ask an admin"). Not the owner, not yourself. Their
+    // callers, bots and scripts are removed, their pictures deleted; the ledger keeps their calls and votes, which
+    // then show no name. A ledger line records that it happened (no name in it).
+    if ((m = route.match(/^DELETE \/members\/([A-Za-z0-9_.-]{1,40})$/))) {
+      if (!isAdmin(ctx)) throw new ApiError(ctx.uid ? 403 : 401, "not_granted", "Only admins delete accounts.");
+      writer();
+      const uid = votes.byUsername(m[1]);
+      if (accounts.role(uid) === "owner") throw new ApiError(409, "is_owner", "The owner's account can't be deleted.");
+      if (uid === ctx.uid) throw new ApiError(409, "is_you", "Ask another admin to delete your own account.");
+      const gone = registry.removeOwner(uid);
+      portraits.removeFor(gone);
+      ledger.append([{ t: "member_deleted", uid, entrants: gone }], ctx.uid);
+      accounts.removeUser(uid);
+      return ok({ deleted: true, entrantsRemoved: gone.length });
+    }
     if ((m = route.match(/^GET \/votes\/members\/([A-Za-z0-9_.-]{1,40})$/))) return ok(votes.recordView(ctx, votes.byUsername(m[1])));
     if (route === "GET /votes/badges") return ok(votes.badgeList(ctx));
     if ((m = route.match(/^GET \/votes\/entrant\/([a-z0-9-]{1,40})$/))) return ok(votes.entrantRecord(ctx, m[1]));

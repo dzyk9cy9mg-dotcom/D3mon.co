@@ -284,6 +284,15 @@
       $("mPubNote").textContent = m.public ? "Everyone can see your floor record and recent calls." : "Only you can see your floor record. Make it public to show it here.";
       $("mPub").onclick = async () => { try { await api("PUT", "votes/settings", { public: !m.public }); location.reload(); } catch (err) { $("msg").textContent = err.message; } };
     }
+    // admins: delete this account (privacy page: "ask an admin"); never the owner's or your own
+    const me = await window.Arena.session().catch(() => null);
+    if (me && (me.role === "admin" || me.role === "owner") && !m.mine) {
+      $("mAdm").hidden = false;
+      $("mDel").onclick = async () => {
+        if (!confirm(`Delete ${m.name}'s account? Their callers, bots and scripts come off the site and their pictures are deleted. Their calls and votes stay in the records without a name. This can't be undone.`)) return;
+        try { await api("DELETE", `members/${encodeURIComponent(m.username)}`); location.href = "profile"; } catch (err) { $("msg").textContent = err.message; }
+      };
+    }
     art("member", false, rgb);
   }
 
