@@ -91,7 +91,7 @@
   // under the cockpit plays it again. When its camera has settled (SETTLE s), the loop starts underneath, the intro is
   // nudged onto the cockpit's exact framing (FIX, measured from the two videos' main screens), its sound fades and it
   // fades out, and the screens light up one by one. Remeasure FIX if either video changes.
-  const INTRO = { SETTLE: 12.1, END: 13.0, FIX: [813 / 802, 486 / 472, (549 - (813 / 802) * 536) * 1920 / 1912, 147 - (486 / 472) * 142] };
+  const INTRO = { SETTLE: 12.45, END: 13.05, FIX: [813 / 802, 486 / 471, (549 - (813 / 802) * 536) * 1920 / 1912, 147 - (486 / 471) * 143] };
   let film = null;
   const seen = () => { try { return localStorage.getItem("d3b.intro") === "1"; } catch { return false; } };
   function gate() {
