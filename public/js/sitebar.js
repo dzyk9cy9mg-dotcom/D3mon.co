@@ -6,10 +6,10 @@
 (function () {
   "use strict";
   const HOME = "next";
-  const MAIN = [["live", "Live"], [`${HOME}#battle`, "Battles"], [`${HOME}#market`, "Marketplace"], ["tournaments", "Tournaments"], ["vip", "Capstone"], ["my", "My bots"]];
+  const MAIN = [["live", "Live"], ["battle", "Battles"], [`${HOME}#market`, "Marketplace"], ["tournaments", "Tournaments"], ["vip", "Capstone"], ["my", "My bots"]];
   const ADMIN = [
     ["Bots and stats", [["applications", "Applications"], ["vip", "VIP access"], ["billing", "Payments"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Displays and hall video"]]],
-    ["Battle show", [["metrics", "Round metrics"], ["board", "Battle board"]]],
+    ["Battle show", [["battle", "Battle cockpit (HardSmoke's controls)"], ["metrics", "Round metrics"], ["board", "Battle board"]]],
   ];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const here = location.pathname.split("/").pop() || "./";
