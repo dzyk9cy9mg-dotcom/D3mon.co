@@ -68,6 +68,7 @@ const TYPES = {
   ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8", ".txt": "text/plain; charset=utf-8", ".svg": "image/svg+xml",
   ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".ico": "image/x-icon", ".woff2": "font/woff2",
+  ".mp4": "video/mp4", ".webm": "video/webm",
 };
 const gzipCache = new Map(); // file -> { etag, body }
 
@@ -89,7 +90,17 @@ export function serveFile(req, res, file, headers = {}) {
     res.writeHead(200, { ...base, "content-encoding": "gzip", "content-length": c.body.length });
     return res.end(req.method === "HEAD" ? undefined : c.body), true;
   }
-  res.writeHead(200, { ...base, "content-length": st.size });
+  // Videos are read in pieces (Safari won't play one without byte ranges): one range per request.
+  const range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ""));
+  if (range && type.startsWith("video/") && (range[1] || range[2])) {
+    let start = range[1] ? +range[1] : Math.max(0, st.size - +range[2]), end = range[1] && range[2] ? Math.min(+range[2], st.size - 1) : st.size - 1;
+    if (start > end || start >= st.size) { res.writeHead(416, { ...base, "content-range": `bytes */${st.size}` }); return res.end(), true; }
+    res.writeHead(206, { ...base, "accept-ranges": "bytes", "content-range": `bytes ${start}-${end}/${st.size}`, "content-length": end - start + 1 });
+    if (req.method === "HEAD") return res.end(), true;
+    fs.createReadStream(file, { start, end }).pipe(res);
+    return true;
+  }
+  res.writeHead(200, { ...base, "content-length": st.size, ...(type.startsWith("video/") ? { "accept-ranges": "bytes" } : {}) });
   if (req.method === "HEAD") return res.end(), true;
   fs.createReadStream(file).pipe(res);
   return true;

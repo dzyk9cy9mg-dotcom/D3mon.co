@@ -24,6 +24,7 @@ import { Portraits } from "./portraits.js";
 import { Billing } from "./billing.js";
 import { BattleResults } from "./results.js";
 import { Hall } from "./hall.js";
+import { Cockpit } from "./cockpit.js";
 import { HallChat } from "./hallchat.js";
 import { DiscordBridge } from "./discord.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
@@ -44,7 +45,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": return id === undefined;
+      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "admin": return (id === "applications" || id === "monitor") && isAdmin(ctx);
@@ -88,6 +89,7 @@ export function createArena({ store, accounts, cfg }) {
   if (discord) hallChat.linked = () => discord.channels();
   if (discord && cfg.discordPoll) discord.start();
   const hall = new Hall({ ledger, feed, ...(cfg.ytThumbUrl ? { thumbBase: cfg.ytThumbUrl } : {}) });
+  const cockpit = new Cockpit({ ledger, feed, registry });
   const displays = new Displays({ store, registry, stats, catalog, feed });
   displays.seed();
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
@@ -191,6 +193,8 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /hall/chat") return ok({ ...hallChat.read(+url.searchParams.get("limit") || 30, url.searchParams.get("channel") || "main"), discord: !!discord, ...(isAdmin(ctx) && discord ? { link: discord.status() } : {}) });
     if (route === "POST /hall/chat") { writer(); return ok(hallChat.send(ctx, await body()), 201); }
     if (route === "GET /hall/video") return ok(hall.view());
+    if (route === "GET /cockpit") return ok(cockpit.view(ctx));
+    if (route === "PUT /cockpit") { writer(); return ok(cockpit.set(ctx, await body())); }
     if (route === "GET /hall/video/thumb") {
       const t = await hall.thumb();
       if (!t) throw new ApiError(404, "not_found", "No thumbnail right now.");
@@ -327,5 +331,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, billing, results, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }

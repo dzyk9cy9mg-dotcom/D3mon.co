@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Battle of the Bots · D3MON</title>
+<meta name="description" content="HardSmoke's Battle of the Bots, live: the bots, callers and chart scripts calling Bitcoin's 15-minute rounds, Kalshi's odds, every stream, the crowd's votes and the chat.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L94 88H6Z' fill='none' stroke='%23FFB547' stroke-width='8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/battle.css">
+<script src="js/sigils.js"></script>
+<script src="js/wall.js"></script>
+</head>
+<!-- HardSmoke's Battle of the Bots, live (owner, 2026-10-20). A looping cockpit video (made in Higgsfield, media/cockpit.mp4)
+     with the battle's displays fitted onto its seven screens, each in the screen's own perspective. Admins choose what
+     every screen shows (GET/PUT /api/v1/cockpit). The stream screen opens the full-screen Stream Wall. On phones the
+     screens stack as cards over a still of the cockpit. A thin client over /api/v1 (js/battle.js). -->
+<body class="bt-body">
+<main class="bt" id="main">
+  <h1 class="bt-visually">Battle of the Bots</h1>
+  <div class="bt-view" id="view">
+    <div class="bt-stage" id="stage">
+      <video class="bt-bg" id="bg" muted loop playsinline preload="auto" poster="media/cockpit.jpg" aria-hidden="true"></video>
+      <section class="bt-scr bt-flat" id="ticker" data-slot="ticker" data-size="strip"></section>
+      <section class="bt-scr bt-flat" id="mainScr" data-slot="main" data-size="big"></section>
+      <div class="bt-quad" id="qLeft" data-quad="left">
+        <section class="bt-scr" data-slot="leftTop" data-size="wing"></section>
+        <section class="bt-scr" data-slot="leftBottom" data-size="wing"></section>
+      </div>
+      <div class="bt-quad" id="qRight" data-quad="right">
+        <section class="bt-scr" data-slot="rightTop" data-size="wing"></section>
+        <section class="bt-scr" data-slot="rightBottom" data-size="wing"></section>
+      </div>
+      <div class="bt-quad" id="qConsole" data-quad="console">
+        <section class="bt-scr" data-slot="console" data-size="desk"></section>
+      </div>
+    </div>
+  </div>
+
+  <!-- under the cockpit: the battle's name and state, and HardSmoke's controls -->
+  <div class="bt-strip">
+    <p class="bt-title"><span class="bt-dot" id="liveDot" aria-hidden="true"></span><b id="bTitle">Battle of the Bots</b><span id="bState"></span></p>
+    <div class="bt-acts">
+      <button type="button" class="bt-btn" id="wallBtn">Stream Wall</button>
+      <button type="button" class="bt-btn" id="soundBtn" aria-pressed="false" hidden>Sound off</button>
+      <button type="button" class="bt-btn bt-gold" id="ctlBtn" hidden>HardSmoke's controls</button>
+    </div>
+  </div>
+  <p class="bt-note">Paper calls at Kalshi's prices. Not financial advice. D3MON never trades.</p>
+</main>
+
+<!-- the Stream Wall: every stream at once, one featured big with its sound -->
+<div class="bt-wall" id="wall" role="dialog" aria-modal="true" aria-labelledby="wallT" hidden>
+  <div class="bt-wall-top">
+    <h2 id="wallT">Stream Wall</h2>
+    <span class="bt-wall-help">← → change stream · G grid · Esc back</span>
+    <button type="button" class="bt-btn" id="gridBtn" aria-pressed="false">Grid</button>
+    <button type="button" class="bt-btn" id="wallClose">Back to the battle</button>
+  </div>
+  <div class="bt-wall-body" id="wallBody"></div>
+</div>
+
+<!-- HardSmoke's controls (admins): what each screen shows, the battle, the stream everyone sees, the votes -->
+<div class="bt-ctl" id="ctl" role="dialog" aria-modal="true" aria-labelledby="ctlT" hidden>
+  <form class="bt-ctl-in" id="ctlForm" autocomplete="off">
+    <div class="bt-ctl-head"><h2 id="ctlT">HardSmoke's controls</h2><button type="button" class="bt-btn" id="ctlClose">Close</button></div>
+    <fieldset>
+      <legend>The battle on this page</legend>
+      <select id="cBattle"></select>
+      <p class="bt-hint">Set up battles, their lineup and stream links on <a href="applications">Applications</a>.</p>
+    </fieldset>
+    <fieldset>
+      <legend>The stream everyone sees</legend>
+      <select id="cFeatured"></select>
+    </fieldset>
+    <fieldset>
+      <legend>What each screen shows</legend>
+      <div class="bt-ctl-grid" id="cScreens"></div>
+    </fieldset>
+    <fieldset id="cVotes">
+      <legend>The crowd's votes</legend>
+      <label class="bt-chk"><input type="checkbox" id="cChange"> Let members switch Up ↔ Down</label>
+      <div class="bt-cats">
+        <label class="bt-chk"><input type="checkbox" data-cat="members"> Members</label>
+        <label class="bt-chk"><input type="checkbox" data-cat="callers"> Callers</label>
+        <label class="bt-chk"><input type="checkbox" data-cat="bots"> Bot owners</label>
+        <label class="bt-chk"><input type="checkbox" data-cat="scripts"> Script owners</label>
+      </div>
+      <p class="bt-hint" id="cVoteSession"></p>
+    </fieldset>
+    <p class="bt-err" id="ctlErr" role="alert"></p>
+    <div class="bt-ctl-foot"><button type="button" class="bt-btn" id="ctlReset">Back to the usual screens</button><button type="submit" class="bt-btn bt-gold">Save for everyone</button></div>
+  </form>
+</div>
+
+<div class="bt-toasts" id="toasts" aria-live="polite"></div>
+<script src="js/arena.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/sitebar.js"></script>
+</body>
+</html>
