@@ -97,3 +97,17 @@ body{--kc:var(--bots)}
 }
 @media (prefers-reduced-motion:reduce){.pf-quote{transition:none}.pf-text{transform:translateY(-50%);opacity:1}}
 @media (prefers-reduced-motion:reduce) and (max-width:900px){.pf-text{transform:none}}
+
+/* the owner's moving picture (owner, 2026-10-20): 1 to 3 stills blending into one another with a slow drift, in the
+   figure's place, fading in and settling as you scroll; its edges melt into the smoke */
+.pf-portrait{position:absolute;right:4%;top:50%;width:min(46vw,640px);aspect-ratio:1;transform:translateY(-50%) scale(calc(1.08 - .08 * var(--p,0)));opacity:calc(.35 + .65 * var(--p,0));pointer-events:none;
+  -webkit-mask-image:radial-gradient(closest-side,#000 62%,transparent);mask-image:radial-gradient(closest-side,#000 62%,transparent)}
+.pf-portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:pf-drift 18s ease-in-out infinite alternate}
+.pf-portrait[data-n="1"] img{opacity:1}
+.pf-portrait[data-n="2"] img{animation:pf-drift 18s ease-in-out infinite alternate,pf-fade2 5s ease-in-out infinite;animation-delay:0s,calc(var(--i) * -2.5s)}
+.pf-portrait[data-n="3"] img{animation:pf-drift 18s ease-in-out infinite alternate,pf-fade3 6s ease-in-out infinite;animation-delay:0s,calc(var(--i) * -2s)}
+@keyframes pf-drift{from{transform:scale(1.04) translate(-1%,.5%)}to{transform:scale(1.09) translate(1%,-1%)}}
+@keyframes pf-fade2{0%,10%{opacity:0}30%,60%{opacity:1}80%,100%{opacity:0}}
+@keyframes pf-fade3{0%{opacity:0}15%,35%{opacity:1}50%,100%{opacity:0}}
+@media (max-width:900px){.pf-portrait{right:50%;top:30%;width:min(78vw,420px);transform:translate(50%,-50%) scale(calc(1.08 - .08 * var(--p,0)))}}
+@media (prefers-reduced-motion:reduce){.pf-portrait img{animation:none}.pf-portrait img:first-child{opacity:1}}

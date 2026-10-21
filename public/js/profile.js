@@ -18,7 +18,7 @@
   const time = ms => new Date(ms).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   // ---------- the art, driven by the scroll (p: 0 at the top of the page, 1 when the stage lets go) ----------
-  function art(kind) {
+  function art(kind, portrait) {
     const cv = $("art"), g = cv.getContext("2d"), hero = $("hero"), C = RGB[kind] || RGB.bot;
     const rgba = a => `rgba(${C[0]},${C[1]},${C[2]},${a})`;
     let W = 0, H = 0, dpr = 1, p = reduce ? 1 : 0, show = p, t = 0, last = performance.now(), raf = 0;
@@ -50,6 +50,11 @@
     // the chart script: candles rising on a grid, then the rising wave drawing itself in light, with the maths
     let price = 0.5; const candles = Array.from({ length: 26 }, (_, i) => { const o = price; price = Math.min(0.9, Math.max(0.12, price + (rnd() - 0.42) * 0.12)); return { o, c: price, h: Math.max(o, price) + rnd() * 0.05, l: Math.min(o, price) - rnd() * 0.05, d: i / 26 }; });
     const maths = ["Σ(Δp · v) / n", "∂p/∂t > 0", "μ + 2σ", "EMA₂₁ ↗", "p = 0.71"];
+    // the smoke (owner, 2026-10-20: "dark, smoky, cinematic", like the Iron Man scrolling page): slow soft puffs of
+    // dark haze tinted with the kind's colour, drifting across the stage and thinning as the figure forms
+    const puffs = Array.from({ length: 9 }, () => ({ x: rnd(), y: 0.25 + rnd() * 0.7, r: 0.25 + rnd() * 0.35, vx: (rnd() - 0.5) * 0.012, ph: rnd() * 6.28, a: 0.05 + rnd() * 0.07 }));
+    let onScreen = true;
+    new IntersectionObserver(([en]) => { onScreen = en.isIntersecting; kick(); }).observe(hero);
 
     function size() { dpr = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0); }
     function frame(nowMs) {
@@ -58,11 +63,18 @@
       show += (p - show) * Math.min(1, dt * 6);
       const k = reduce ? 1 : show, { x, y, s } = place();
       g.clearRect(0, 0, W, H);
+      for (const f of puffs) { // the smoke
+        const px = ((f.x + t * f.vx) % 1.4 + 1.4) % 1.4 * W - W * 0.2, py = f.y * H + Math.sin(t * 0.2 + f.ph) * H * 0.03, r = f.r * Math.max(W, H);
+        const sm = g.createRadialGradient(px, py, 0, px, py, r);
+        sm.addColorStop(0, `rgba(${(C[0] * 0.25 + 40) | 0},${(C[1] * 0.25 + 42) | 0},${(C[2] * 0.25 + 48) | 0},${(f.a * (1 - 0.4 * k)).toFixed(3)})`); sm.addColorStop(1, "rgba(30,32,38,0)");
+        g.fillStyle = sm; g.fillRect(0, 0, W, H);
+      }
       // a pool of the kind's colour behind the figure, growing as it forms
       const pool = g.createRadialGradient(x, y, 0, x, y, s * 1.2); pool.addColorStop(0, rgba(0.16 * (0.3 + k))); pool.addColorStop(1, rgba(0));
       g.fillStyle = pool; g.fillRect(0, 0, W, H);
       g.save(); g.translate(x, y);
-      if (kind === "bot") {
+      if (portrait) { /* the owner's moving picture stands in for the drawn figure */ }
+      else if (kind === "bot") {
         const S = s * 0.42;
         for (const pl of plates) {
           const u = ease((k - pl.delay) / 0.55), fx = pl.from[0] * (1 - u) * S, fy = pl.from[1] * (1 - u) * S, rot = pl.spin * (1 - u);
@@ -133,7 +145,7 @@
         if (m > 0) { g.font = '500 14px "IBM Plex Mono", monospace'; maths.forEach((f, i) => { g.fillStyle = rgba(0.45 * m); g.fillText(f, gx + gw * (0.05 + (i % 3) * 0.33), gy - 18 - (i > 2 ? 22 : 0)); }); }
       }
       g.restore();
-      if (!reduce && Math.abs(p - show) > 0.001 || kind === "caller" && !reduce) raf = requestAnimationFrame(frame);
+      if (!reduce && onScreen && !document.hidden) raf = requestAnimationFrame(frame); // the smoke keeps drifting
     }
     const kick = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } };
     const onScroll = () => {
@@ -147,6 +159,7 @@
     };
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", () => { size(); kick(); });
+    document.addEventListener("visibilitychange", kick);
     size(); onScroll(); kick();
   }
 
@@ -155,10 +168,12 @@
     return `<div class="pf-stat${wide(st) ? " wide" : ""}"><span class="pf-sl">${esc(st.label)}</span><span class="pf-sv">${statValue(st)}</span>${st.description ? `<span class="pf-sd">${esc(st.description)}</span>` : ""}</div>`;
   }
   async function load() {
-    const [{ entrant: e }, card, calls] = await Promise.all([
+    const [{ entrant: e }, card, calls, pic, floor] = await Promise.all([
       api("GET", `entrants/${encodeURIComponent(slug)}`),
       api("GET", `entrants/${encodeURIComponent(slug)}/card`).catch(() => ({ stats: [] })),
       api("GET", `entrants/${encodeURIComponent(slug)}/calls?limit=12`).then(r => r.calls).catch(() => []),
+      api("GET", `portraits/of/${encodeURIComponent(slug)}`).then(r => r.portrait).catch(() => null),
+      api("GET", `votes/entrant/${encodeURIComponent(slug)}`).catch(() => null),
     ]);
     const kind = e.kind in COLOR ? e.kind : "bot";
     document.title = `${e.name} · ${KIND[kind]} · D3MON`;
@@ -198,7 +213,19 @@
       e.streamUrl ? `<a class="btn ghost" href="${esc(e.streamUrl)}" target="_blank" rel="noopener">Its stream</a>` : "",
       e.discordServer ? `<span class="pf-disc">Discord: <b>${esc(e.discordServer)}</b></span>` : "",
     ].join("");
-    art(kind);
+    // the owner's moving picture: its stills blend into one another with a slow drift, in the figure's place
+    if (pic && pic.frames.length) {
+      const box = $("portrait");
+      box.hidden = false; box.dataset.n = String(pic.frames.length);
+      box.innerHTML = pic.frames.map((u, i) => `<img src="${esc(u)}" alt="" style="--i:${i}" decoding="async">`).join("");
+      $("hero").classList.add("has-pic");
+    }
+    // the owner's own calls on the floor, when they've made that record public
+    const r = floor && floor.record;
+    $("floorSec").hidden = !r || !r.calls;
+    if (r && r.calls) $("floor").innerHTML = [["Calls on the floor", r.calls], ["Right", r.successRate != null ? `${r.successRate}%` : "–"], ["Average call", r.avgCallMin != null ? `${r.avgCallMin} min in` : "–"], ["Average result", r.avgProfit != null ? `${r.avgProfit >= 0 ? "+" : "−"}${Math.abs(Math.round(r.avgProfit * 100))}¢ a call` : "–"]]
+      .map(([l, v]) => `<div class="pf-stat"><span class="pf-sl">${esc(l)}</span><span class="pf-sv">${esc(String(v))}</span></div>`).join("");
+    art(kind, !!(pic && pic.frames.length));
   }
 
   // ---------- no one chosen: every entrant to choose from ----------

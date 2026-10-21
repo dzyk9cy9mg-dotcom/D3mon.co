@@ -260,6 +260,16 @@ export class Votes {
     return { ...base, record: this.record(uid), recent, notice: "Paper votes at Kalshi's prices. Not financial advice." };
   }
 
+  // GET /votes/entrant/:slug: the floor record of the entrant's owner, on the entrant's profile, only when the owner
+  // made their record public (no name: the profile already says who made it).
+  entrantRecord(ctx, slug) {
+    const e = this.registry.entrantBySlug(slug);
+    if (!e || e.status !== "active") throw new ApiError(404, "not_found", "No such entrant.");
+    const own = ctx.uid === e.ownerId;
+    if (!own && !this.privacy.get(e.ownerId)) return { private: true };
+    return { public: !!this.privacy.get(e.ownerId), record: this.record(e.ownerId), notice: "Paper votes at Kalshi's prices. Not financial advice." };
+  }
+
   byUsername(name) {
     const n = String(name || "").toLowerCase();
     for (const u of this.accounts.users.values()) if (u.username?.toLowerCase() === n) return u.id;

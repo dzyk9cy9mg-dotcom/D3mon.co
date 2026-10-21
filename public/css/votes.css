@@ -1,0 +1,51 @@
+/* The members' vote panel for battles and Capstone sessions (js/votes-widget.js). Self-contained, so it looks the
+   same on the front page and in the Capstone room; teal Up and rose Down as on the Live page. */
+.vw{--vup:#36E6C3;--vdn:#FF4F7A;--vgold:#FFC56A;--vink:#EEF1F6;--vink2:#A9B1BF;--vedge:rgba(255,255,255,.1);
+  display:grid;gap:14px;margin-top:22px;padding:22px;background:rgba(12,14,19,.72);border:1px solid var(--vedge);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  font-family:var(--body,Manrope,system-ui,sans-serif);color:var(--vink);text-align:left}
+.vw[hidden]{display:none}
+.vw .up{color:var(--vup)}.vw .dn{color:var(--vdn)}
+.vw-row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 14px}
+.vw-h{margin:0;font:600 18px var(--body,Manrope,sans-serif);color:var(--vink)}
+.vw-t{font-weight:500;color:var(--vink2)}
+.vw-crowd{font:500 13px var(--mono,"IBM Plex Mono",monospace);color:var(--vink2)}
+.vw-split{display:flex;height:6px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06)}
+.vw-split i{display:block;height:100%;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.vw-split .up{background:linear-gradient(90deg,rgba(54,230,195,.35),var(--vup));box-shadow:0 0 12px rgba(54,230,195,.5)}
+.vw-split .dn{background:linear-gradient(90deg,var(--vdn),rgba(255,79,122,.35));box-shadow:0 0 12px rgba(255,79,122,.5)}
+.vw-btns{display:flex;flex-wrap:wrap;gap:12px}
+.vw-btns[hidden]{display:none}
+.vw-b{flex:1 1 140px;min-height:52px;border:1px solid;background:rgba(255,255,255,.02);font:700 16px var(--body,Manrope,sans-serif);letter-spacing:.04em;cursor:pointer;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%);transition:background .2s,box-shadow .2s,transform .1s}
+.vw-b[hidden]{display:none}
+.vw-b.up{border-color:rgba(54,230,195,.55);color:var(--vup)}.vw-b.dn{border-color:rgba(255,79,122,.55);color:var(--vdn)}
+.vw-b.out{border-color:rgba(255,197,106,.6);color:var(--vgold)}
+.vw-b.up:hover{background:rgba(54,230,195,.12)}.vw-b.dn:hover{background:rgba(255,79,122,.12)}.vw-b.out:hover{background:rgba(255,197,106,.12)}
+.vw-b:active{transform:scale(.98)}
+.vw-b:focus-visible{outline:2px solid var(--vink);outline-offset:3px}
+.vw-mine,.vw-msg{margin:0;font:500 15px var(--body,Manrope,sans-serif);color:var(--vink2)}
+.vw-mine:empty{display:none}
+.vw-msg a{color:var(--vink)}
+.vw-err{margin:0;color:var(--vdn);font-size:14px}.vw-err:empty{display:none}
+.vw-feed{list-style:none;margin:0;padding:0;display:grid;gap:6px;font:500 13px var(--mono,"IBM Plex Mono",monospace);color:var(--vink2)}
+.vw-feed li{display:flex;gap:8px;align-items:baseline}
+.vw-feed b{color:var(--vink);font-family:var(--body,Manrope,sans-serif)}
+.vw-feed li.b b{color:var(--vgold)}
+.vw-feed i{font-style:normal;color:var(--vgold)}
+.vw-feed time{margin-left:auto;opacity:.6}
+.vw-guests{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--vedge)}
+.vw-guests[hidden]{display:none}
+.vw-guests label{font:500 13px var(--mono,"IBM Plex Mono",monospace);color:var(--vgold)}
+.vw-guests div{display:flex;gap:10px;flex-wrap:wrap}
+.vw-guests input{flex:1 1 200px;min-height:44px;font:500 16px var(--body,Manrope,sans-serif)}
+.vw-gmsg{margin:0;font-size:14px;color:var(--vink2)}
+.vw-note{margin:0;font:400 13px/1.5 var(--body,Manrope,sans-serif);color:var(--vink2);opacity:.75}
+.vw-toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));display:grid;gap:10px;z-index:60;pointer-events:none}
+.vw-toast{display:flex;gap:10px;align-items:center;padding:12px 16px;min-width:240px;max-width:min(380px,calc(100vw - 32px));background:rgba(10,11,15,.92);border:1px solid rgba(255,197,106,.55);
+  font:500 15px Manrope,system-ui,sans-serif;color:#EEF1F6;box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 30px rgba(255,197,106,.15);animation:vw-in .4s cubic-bezier(.2,.8,.2,1);transition:opacity .6s,transform .6s}
+.vw-toast i{font-style:normal;color:#FFC56A;font-size:18px}
+.vw-toast.up .d{color:#36E6C3}.vw-toast.dn .d{color:#FF4F7A}
+.vw-toast.out{opacity:0;transform:translateY(8px)}
+@keyframes vw-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.vw-toast{animation:none}.vw-split i{transition:none}}
