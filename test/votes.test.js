@@ -149,4 +149,18 @@ describe("member votes", () => {
     assert.equal(r.json.round.session, S);
     assert.equal((await hs.req("PUT", "/api/v1/votes/sessions/live", { guests: ["freya"] })).status, 400);
   });
+
+  test("member profiles: public basics and entrants; the record only when made public; never a password", async () => {
+    const g = (await guest.get("/api/v1/members/odin")).json;
+    assert.equal(g.name, "Odin");
+    assert.equal(g.badge, "auto");
+    assert.deepEqual(g.entrants.map(e => e.name), ["Valhalla"]);
+    assert.equal(g.private, true);
+    assert.equal(g.record, undefined);
+    assert.ok(!JSON.stringify(g).includes("pass"));
+    assert.equal((await odin.get("/api/v1/members/odin")).json.mine, true);
+    assert.ok((await odin.get("/api/v1/members/odin")).json.record);
+    assert.equal((await guest.get("/api/v1/members/loki")).json.record.calls, 3); // made public earlier
+    assert.equal((await guest.req("GET", "/api/v1/members/nobody")).status, 404);
+  });
 });

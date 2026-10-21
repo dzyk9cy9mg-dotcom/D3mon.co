@@ -199,6 +199,7 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "POST /votes/change") { writer(); return ok(await votes.change(ctx, await body())); }
     if (route === "GET /votes/me") { if (!ctx.uid) throw new ApiError(401, "unauthenticated", "Sign in first."); return ok(votes.recordView(ctx, ctx.uid)); }
     if (route === "PUT /votes/settings") { writer(); return ok(votes.setPrivacy(ctx, await body())); }
+    if ((m = route.match(/^GET \/members\/([A-Za-z0-9_.-]{1,40})$/))) return ok(votes.memberView(ctx, m[1]));
     if ((m = route.match(/^GET \/votes\/members\/([A-Za-z0-9_.-]{1,40})$/))) return ok(votes.recordView(ctx, votes.byUsername(m[1])));
     if (route === "GET /votes/badges") return ok(votes.badgeList(ctx));
     if ((m = route.match(/^GET \/votes\/entrant\/([a-z0-9-]{1,40})$/))) return ok(votes.entrantRecord(ctx, m[1]));

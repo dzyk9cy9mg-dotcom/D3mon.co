@@ -47,7 +47,7 @@
     document.addEventListener("click", e => { if (adm.open && !adm.contains(e.target)) adm.open = false; });
     fetch("api/session", { credentials: "same-origin" }).then(r => r.json()).then(({ user: me }) => {
       if (!me) return;
-      for (const a of bar.querySelectorAll("#acctBtn, #acctPhone")) a.textContent = me.name || me.username || "Account";
+      for (const a of bar.querySelectorAll("#acctBtn, #acctPhone")) { a.textContent = me.name || me.username || "Account"; if (me.username) a.href = `profile?u=${encodeURIComponent(me.username)}`; } // your name opens your profile
       bar.querySelector("#joinBtn").hidden = true; // members have My bots in the menu
       if (me.role === "admin" || me.role === "owner") adm.hidden = false;
     }).catch(() => {});

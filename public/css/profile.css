@@ -111,3 +111,7 @@ body{--kc:var(--bots)}
 @keyframes pf-fade3{0%{opacity:0}15%,35%{opacity:1}50%,100%{opacity:0}}
 @media (max-width:900px){.pf-portrait{right:50%;top:30%;width:min(78vw,420px);transform:translate(50%,-50%) scale(calc(1.08 - .08 * var(--p,0)))}}
 @media (prefers-reduced-motion:reduce){.pf-portrait img{animation:none}.pf-portrait img:first-child{opacity:1}}
+
+/* a member's own profile */
+.pf-av{width:28px;height:28px;border-radius:50%}
+#mOwn .pf-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
