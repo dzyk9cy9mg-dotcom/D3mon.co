@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/next.css">
+<link rel="stylesheet" href="css/votes.css">
 <script src="js/sigils.js"></script>
 <script src="js/wall.js"></script>
 </head>
@@ -96,6 +97,7 @@
       <div class="n-streams reveal" id="bStreams"></div>
       <div class="n-ctas reveal"><a class="n-amber" id="bApply" href="apply">Apply to battle <span aria-hidden="true">→</span></a><a class="n-link2" id="bWatch" href="live">Watch the battle</a></div>
       <ol class="n-board reveal" id="bBoard" hidden></ol>
+      <div data-votes="battle" aria-label="Vote on this battle round"></div>
     </div>
   </section>
 
@@ -133,6 +135,7 @@
   <nav aria-label="More"><a href="tournaments">Tournaments</a><a href="my">My bots</a><a href="apply">Apply</a><a href="world">The old world</a></nav>
 </footer>
 <script src="js/arena.js"></script>
+<script src="js/votes-widget.js" defer></script>
 <script src="js/next.js"></script>
 </body>
 </html>

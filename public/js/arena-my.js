@@ -159,6 +159,21 @@
         <label>Shop link <span class="meta">(https://…, with D3MON's referral code; shown as "Get ${esc(e.name)}")</span><input name="shopUrl" maxlength="300" value="${esc(e.shopUrl || "")}" placeholder="https://"></label>
         <label>Stream link <span class="meta">(YouTube, Twitch, Kick or Discord)</span><input name="streamUrl" maxlength="300" value="${esc(e.streamUrl || "")}" placeholder="https://"></label>
         <div class="actions"><button class="btn sm" type="submit">Save profile</button></div>
+      </form>${portraitBox(e)}`;
+  }
+
+  // The moving profile picture (owner, 2026-10-20): 1 to 3 stills that the profile's hero blends into one slightly
+  // moving picture. An admin approves each upload before it shows.
+  function portraitBox(e) {
+    const p = (S.portraits || {})[e.id] || {}, thumbs = v => v.frames.map(u => `<img src="${esc(u)}" alt="" width="72" height="72" loading="lazy">`).join("");
+    const state = p.pending ? `<p class="meta">Waiting for an admin to approve:</p><div class="pthumbs">${thumbs(p.pending)}</div>`
+      : p.rejected ? `<p class="meta bad">Not approved${p.rejected.note ? `: ${esc(p.rejected.note)}` : "."} Try different pictures.</p>` : "";
+    return `<h3 class="sub">Moving profile picture</h3>
+      <p class="meta">Upload 1 to 3 stills of the same scene (for example three frames of a small movement). Your profile blends them into one picture that moves slightly. PNG, JPEG or WebP, under 1.5 MB each. An admin approves it before it shows.</p>
+      ${p.approved ? `<p class="meta">Showing now:</p><div class="pthumbs">${thumbs(p.approved)}</div>` : ""}${state}
+      <form class="callbox" data-portrait="${esc(e.id)}">
+        <label>Pictures <span class="meta">(choose up to 3, in order)</span><input type="file" name="pics" accept="image/png,image/jpeg,image/webp" multiple required></label>
+        <div class="actions"><button class="btn sm" type="submit">Send for approval</button></div>
       </form>`;
   }
 
@@ -181,6 +196,8 @@
     S.calls[e.id] = c.calls;
     if (k) S.keys[e.id] = k.keys;
     S.stats[e.id] = st;
+    S.portraits = S.portraits || {};
+    S.portraits[e.id] = await api("GET", `entrants/${e.id}/portrait`).catch(() => null);
   }
 
   async function load() {
@@ -269,6 +286,19 @@
   });
 
   document.addEventListener("submit", async ev => {
+    const pt = ev.target.closest("[data-portrait]");
+    if (pt) {
+      ev.preventDefault();
+      const id = pt.dataset.portrait, files = [...pt.elements.pics.files];
+      if (!files.length || files.length > 3) { msg("Choose 1 to 3 pictures."); return; }
+      if (files.some(f => f.size > 1.5 * 1024 * 1024)) { msg("Each picture must be under 1.5 MB."); return; }
+      const read = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
+      try {
+        S.portraits[id] = await api("POST", `entrants/${id}/portrait`, { frames: await Promise.all(files.map(read)) });
+        msg("Sent. An admin will approve it soon.", true); render();
+      } catch (e) { msg(e.message); }
+      return;
+    }
     const pf = ev.target.closest("[data-profile]");
     if (pf) {
       ev.preventDefault();

@@ -20,6 +20,7 @@ import { Prices } from "./prices.js";
 import { Tournaments } from "./tournaments.js";
 import { Vip } from "./vip.js";
 import { Votes } from "./votes.js";
+import { Portraits } from "./portraits.js";
 import { BattleResults } from "./results.js";
 import { Hall } from "./hall.js";
 import { HallChat } from "./hallchat.js";
@@ -76,6 +77,7 @@ export function createArena({ store, accounts, cfg }) {
   const vip = new Vip({ ledger, registry, calls, feed, accounts });
   const results = new BattleResults({ registry, calls, metrics });
   const votes = new Votes({ ledger, metrics, prices, registry, vip, feed, accounts, userName });
+  const portraits = new Portraits({ ledger, registry, feed, dir: path.join(cfg.dataDir, "portraits") });
   const hallChat = new HallChat({ store, feed, userName });
   // The hall chat and one D3MON Discord channel as one conversation, when the bot's settings are in .env.
   const discord = DiscordBridge.configured(cfg)
@@ -199,6 +201,19 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "PUT /votes/settings") { writer(); return ok(votes.setPrivacy(ctx, await body())); }
     if ((m = route.match(/^GET \/votes\/members\/([A-Za-z0-9_.-]{1,40})$/))) return ok(votes.recordView(ctx, votes.byUsername(m[1])));
     if (route === "GET /votes/badges") return ok(votes.badgeList(ctx));
+    if ((m = route.match(/^GET \/votes\/entrant\/([a-z0-9-]{1,40})$/))) return ok(votes.entrantRecord(ctx, m[1]));
+    // Moving profile pictures: owners upload 1 to 3 stills, admins approve them
+    if ((m = route.match(/^POST \/entrants\/([A-Za-z0-9]{8,40})\/portrait$/))) { writer(); return ok(portraits.submit(ctx, m[1], await readJson(req, 7 * 1024 * 1024)), 201); }
+    if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9]{8,40})\/portrait$/))) return ok(portraits.status(ctx, m[1]));
+    if ((m = route.match(/^GET \/portraits\/of\/([a-z0-9-]{1,40})$/))) { const e = registry.entrantBySlug(m[1]); return ok({ portrait: e && e.status === "active" ? portraits.approvedFor(e.id) : null }); }
+    if (route === "GET /portraits/queue") return ok(portraits.queue(ctx));
+    if ((m = route.match(/^POST \/portraits\/([A-Za-z0-9_-]{8,40})\/review$/))) { writer(); return ok(portraits.review(ctx, m[1], await body())); }
+    if ((m = route.match(/^GET \/portraits\/([A-Za-z0-9_.-]{1,60})$/))) {
+      const f = portraits.file(ctx, m[1]);
+      res.writeHead(200, { "content-type": f.type, "content-length": f.bytes.length, "cache-control": f.public ? "public, max-age=86400" : "private, no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'" });
+      res.end(f.bytes);
+      return true;
+    }
     if (route === "POST /votes/badges") { writer(); return ok(votes.setBadge(ctx, await body())); }
     if ((m = route.match(/^GET \/votes\/sessions\/(live|battle:[A-Za-z0-9_-]{6,40}|capstone:[A-Za-z0-9_-]{6,40})$/))) return ok(votes.sessionView(m[1]));
     if ((m = route.match(/^PUT \/votes\/sessions\/([^/]{1,60})$/))) { writer(); return ok(votes.setSession(ctx, decodeURIComponent(m[1]), await body())); }
@@ -264,5 +279,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, results, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, results, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }

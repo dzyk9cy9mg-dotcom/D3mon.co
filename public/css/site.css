@@ -122,3 +122,9 @@ body>main.arena{padding-left:max(20px,env(safe-area-inset-left,0px));padding-rig
   .blurb{font-size:16px}
 }
 @media (prefers-reduced-motion:reduce){.s-amber,.s-nav>a{transition:none}.s-amber:hover{transform:none}}
+
+/* My bots: the moving profile picture's thumbnails */
+.pthumbs{display:flex;gap:8px;margin:6px 0 10px}
+.pthumbs img{width:72px;height:72px;object-fit:cover;border:1px solid rgba(255,255,255,.12)}
+.meta.bad{color:#FF4F7A}
+.pq{padding:14px 0;border-top:1px solid rgba(255,255,255,.08)}.pq .pthumbs img{width:120px;height:120px}.pq .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.pq .pnote{flex:1 1 220px;min-height:44px}

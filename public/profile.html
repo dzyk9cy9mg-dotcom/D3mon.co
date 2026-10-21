@@ -28,6 +28,7 @@
   <section class="pf-hero" id="hero" aria-labelledby="pfName" hidden>
     <div class="pf-stage">
       <canvas class="pf-art" id="art" aria-hidden="true"></canvas>
+      <div class="pf-portrait" id="portrait" aria-hidden="true" hidden></div>
       <div class="pf-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <p class="pf-hud pf-tl" id="hudTL"></p>
       <p class="pf-hud pf-tr" id="hudTR"></p>
@@ -53,6 +54,12 @@
       <h3 class="pf-group" id="selfH" hidden>Self-reported</h3>
       <div class="pf-stats" id="self"></div>
       <p class="pf-empty" id="noStats" hidden>The owner hasn't made any stats public yet.</p>
+    </section>
+
+    <section class="pf-sec" id="floorSec" aria-labelledby="floorT" hidden>
+      <h2 id="floorT">The maker on the floor</h2>
+      <p class="pf-lede">The owner's own Up and Down calls on the Live floor, as paper trades at Kalshi's prices. Shown because they made their record public.</p>
+      <div class="pf-stats" id="floor"></div>
     </section>
 
     <section class="pf-sec" aria-labelledby="callsT">
