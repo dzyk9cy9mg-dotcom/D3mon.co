@@ -28,12 +28,22 @@ const LOOK = {
   synergyEvery: 6.4,                              // seconds between the three lights meeting and hitting the Capstone
   chargeSeconds: 1.6,                             // how long a press-and-hold takes to charge fully
   symbolSeconds: 0.45,                            // how fast a corner's symbol draws in when pointed at
+  // the gold look (owner, 2026-10-20: from the Higgsfield picture): mostly gold, each corner's own colour only a hint
+  gold: 0xffc56a,                                 // the frame's glowing edge, the rings, the heart and the beam
+  hint: 0.22,                                     // how much of each corner's colour shows through the gold (0 = all gold)
+  frame: { color: 0x1b1d22, width: 0.026, shine: 0.34 }, // the dark gunmetal beams along the edges: colour, thickness, roughness
+  panels: { size: 0.34, height: 0.17, inset: 0.3 }, // the framed corner panels with their icons: size, height, how far in from the corner
+  hoops: true,                                    // the two big gold rings round the beam, above the Cortex
+  reflection: 0.16,                               // how strongly the pyramid shows on the floor below (0 = none)
+  energy: 10,                                     // faint streaks of light rising beside it, blue left and violet right (owner: light, not smoke; 0 = none)
 };
 const COL = [LOOK.colors.callers, LOOK.colors.bots, LOOK.colors.scripts].map(c => new THREE.Color(c)); // callers, bots, chart scripts
 const GOLD = new THREE.Color(LOOK.colors.capstone), TIPC = new THREE.Color(LOOK.colors.tip);
 const R = 1, HT = LOOK.shape.height; // base corner radius and height, in world units
 let sheen = null;
 const SEAM = LOOK.shape.capstone; // the Capstone's gold seam, as a share of the height
+const GOLDF = new THREE.Color(LOOK.gold), HC = COL.map(c => GOLDF.clone().lerp(c, LOOK.hint)); // gold with a hint of each corner
+const UP = new THREE.Vector3(0, 1, 0);
 const BASE = (2 * Math.PI) / LOOK.turnSeconds;
 
 // a round soft light, for glows (drawn on a canvas once)
@@ -44,13 +54,13 @@ function glowTex() {
   g.fillStyle = r; g.fillRect(0, 0, 128, 128);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-// the floor under the pyramid: a soft pool of blue light that fades out with no edge (owner: no circles)
+// the floor under the pyramid: a soft pool of warm gold light that fades out with no edge (owner: no circles)
 function floorTex() {
   const N = 1024, c = document.createElement("canvas"); c.width = c.height = N;
   const g = c.getContext("2d"), m = N / 2;
   g.fillStyle = "#000"; g.fillRect(0, 0, N, N);
   const pool = g.createRadialGradient(m, m, 0, m, m, m * 0.9);
-  pool.addColorStop(0, "rgba(77,163,255,.34)"); pool.addColorStop(0.45, "rgba(60,120,210,.12)"); pool.addColorStop(1, "rgba(0,0,0,0)");
+  pool.addColorStop(0, "rgba(255,190,110,.26)"); pool.addColorStop(0.45, "rgba(190,130,70,.09)"); pool.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = pool; g.fillRect(0, 0, N, N);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
@@ -68,6 +78,33 @@ function tube(A, B, ca, cb, r, k = 1, fadeB = false, over = false) {
   m.position.copy(A).addScaledVector(d, 0.5);
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
   return m;
+}
+
+// a corner's framed panel (owner, 2026-10-20: from the Higgsfield picture): a dark triangle with a double gold frame
+// and the corner's icon in glowing gold line (the eye for callers, the chip with the triangle core for bots, the wave
+// through the lens for chart scripts), drawn on a canvas once and shown always facing us
+function panelTex(kind, hint) {
+  const N = 256, c = document.createElement("canvas"); c.width = c.height = N;
+  const g = c.getContext("2d"), gold = "#ffc56a", h = N * 0.86, top = N * 0.08, mid = N / 2;
+  const tri = (k) => { const w = h * 1.1547 * k / 2, y0 = top + h * (1 - k) * 0.62, y1 = y0 + h * k; g.beginPath(); g.moveTo(mid, y0); g.lineTo(mid + w, y1); g.lineTo(mid - w, y1); g.closePath(); };
+  tri(1); g.fillStyle = "rgba(14,13,12,.82)"; g.fill();
+  g.strokeStyle = gold; g.shadowColor = gold; g.shadowBlur = 10;
+  g.lineWidth = 4; tri(1); g.stroke(); g.lineWidth = 1.5; g.globalAlpha = 0.7; tri(0.86); g.stroke(); g.globalAlpha = 1;
+  g.save(); g.translate(mid, top + h * 0.64); g.lineWidth = 4; g.lineCap = g.lineJoin = "round"; g.strokeStyle = g.fillStyle = gold; g.shadowBlur = 14;
+  if (kind === 0) { // the eye
+    g.beginPath(); g.moveTo(-40, 0); g.quadraticCurveTo(0, -34, 40, 0); g.quadraticCurveTo(0, 34, -40, 0); g.stroke();
+    g.beginPath(); g.arc(0, 0, 13, 0, 6.2832); g.stroke(); g.beginPath(); g.arc(0, 0, 5, 0, 6.2832); g.fill();
+  } else if (kind === 1) { // the chip with the triangle core
+    g.strokeRect(-24, -24, 48, 48);
+    for (let i = -1; i <= 1; i++) { const q = i * 13; g.beginPath(); g.moveTo(q, -24); g.lineTo(q, -34); g.moveTo(q, 24); g.lineTo(q, 34); g.moveTo(-24, q); g.lineTo(-34, q); g.moveTo(24, q); g.lineTo(34, q); g.stroke(); }
+    g.lineWidth = 3; g.beginPath(); g.moveTo(0, -11); g.lineTo(11, 8); g.lineTo(-11, 8); g.closePath(); g.stroke();
+  } else { // the wave through the lens
+    g.beginPath(); g.arc(0, 0, 26, 0, 6.2832); g.stroke();
+    g.lineWidth = 1.5; g.globalAlpha = 0.6; g.beginPath(); g.moveTo(-26, 0); g.lineTo(26, 0); g.moveTo(0, -26); g.lineTo(0, 26); g.stroke(); g.globalAlpha = 1;
+    g.lineWidth = 4; g.beginPath(); for (let x = -46; x <= 46; x += 2) { const y = -Math.sin(x / 9) * 9 * Math.exp(-(x * x) / 1400); x === -46 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke();
+  }
+  g.restore();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
 export function start({ hero, labels, stageAt, onGo }) {
@@ -104,7 +141,7 @@ export function start({ hero, labels, stageAt, onGo }) {
   {
     const faces = [[0, 1, 3], [1, 2, 3], [2, 0, 3], [0, 2, 1]], pos = [], col = [];
     for (const f of faces) {
-      const tint = f[2] === 3 ? COL[f[0]].clone().lerp(COL[f[1]], 0.5).lerp(new THREE.Color(1, 1, 1), 0.4) : new THREE.Color(0.85, 0.9, 1);
+      const tint = f[2] === 3 ? HC[f[0]].clone().lerp(HC[f[1]], 0.5).lerp(new THREE.Color(1, 0.96, 0.88), 0.35) : new THREE.Color(0.95, 0.9, 0.8);
       for (const n of f) { pos.push(V[n].x, V[n].y, V[n].z); col.push(tint.r, tint.g, tint.b); }
     }
     const geo = new THREE.BufferGeometry();
@@ -112,7 +149,7 @@ export function start({ hero, labels, stageAt, onGo }) {
     geo.computeVertexNormals();
     const glass = new THREE.MeshPhysicalMaterial({
       vertexColors: true, metalness: 0, roughness: 0.03, transmission: 1, thickness: 0.35, ior: LOOK.glass.bend, dispersion: LOOK.glass.rainbow, depthWrite: false,
-      specularIntensity: 1, envMapIntensity: 1.3, clearcoat: 1, clearcoatRoughness: 0.05, attenuationColor: new THREE.Color(0.75, 0.82, 1), attenuationDistance: 3,
+      specularIntensity: 1, envMapIntensity: 1.3, clearcoat: 1, clearcoatRoughness: 0.05, attenuationColor: new THREE.Color(1, 0.92, 0.8), attenuationDistance: 3,
       polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
     });
     turn.add(new THREE.Mesh(geo, glass));
@@ -134,9 +171,21 @@ export function start({ hero, labels, stageAt, onGo }) {
   // the edges: base corner to corner, each corner up to the tip
   const EDGE = LOOK.edgeWidth, edges = [];
   const edge = (A, B, ca, cb, r, k, at, dur) => { const m = tube(A, B, ca, cb, r, k, false, true); Object.assign(m.userData, { mid: A.clone().add(B).multiplyScalar(0.5), A: A.clone(), d: B.clone().sub(A), at, dur }); edges.push(m); turn.add(m); };
+  // the frame (owner, 2026-10-20): each edge is a thick dark gunmetal beam set just inside the glass, with the
+  // glowing gold edge along its outside and a fine gold line along its inside
+  const FR = LOOK.frame, CEN = new THREE.Vector3(0, HT / 4, 0);
+  const metal = new THREE.MeshStandardMaterial({ color: FR.color, metalness: 1, roughness: FR.shine, envMapIntensity: 1.5 });
+  const inward = (A, B, f) => CEN.clone().sub(A.clone().add(B).multiplyScalar(0.5)).normalize().multiplyScalar(FR.width * f);
+  const beamOf = (A, B, at, dur) => {
+    const off = inward(A, B, 1.1), dir = B.clone().sub(A).normalize(), a = A.clone().add(off).addScaledVector(dir, -FR.width), b = B.clone().add(off).addScaledVector(dir, FR.width), d = b.clone().sub(a);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(FR.width, FR.width, d.length(), 4, 1), metal);
+    m.quaternion.setFromUnitVectors(UP, dir); m.position.copy(a).addScaledVector(d, 0.5);
+    Object.assign(m.userData, { mid: a.clone().addScaledVector(d, 0.5), A: a, d, at, dur, solid: true }); edges.push(m); turn.add(m);
+  };
+  const inner = (A, B, ca, cb, at, dur) => { const off = inward(A, B, 2.3); edge(A.clone().add(off), B.clone().add(off), ca, cb, EDGE * 0.5, 0.75, at, dur); };
   // on arrival the base triangle draws itself corner to corner, then each corner's edge climbs to the tip
-  [[0, 1], [1, 2], [2, 0]].forEach(([i, j], n) => edge(V[i], V[j], COL[i], COL[j], EDGE, 1.25, 0.15 + n * 0.22, 0.6));
-  for (let k = 0; k < 3; k++) edge(V[k], tip, COL[k], TIPC, EDGE, 1.25, 0.95 + k * 0.12, 0.75);
+  [[0, 1], [1, 2], [2, 0]].forEach(([i, j], n) => { const at = 0.15 + n * 0.22; beamOf(V[i], V[j], at, 0.6); edge(V[i], V[j], HC[i], HC[j], EDGE, 1.6, at, 0.6); inner(V[i], V[j], HC[i], HC[j], at + 0.1, 0.6); });
+  for (let k = 0; k < 3; k++) { const at = 0.95 + k * 0.12; beamOf(V[k], tip, at, 0.75); edge(V[k], tip, HC[k], TIPC, EDGE, 1.6, at, 0.75); inner(V[k], tip, HC[k], GOLDF, at + 0.1, 0.75); }
   // the Capstone's seam: a fine gold triangle round the glass near the tip
   const seam = V.slice(0, 3).map(c => c.clone().lerp(tip, SEAM));
   for (let k = 0; k < 3; k++) edge(seam[k], seam[(k + 1) % 3], GOLD, GOLD, EDGE * 0.6, 1.1, 1.85 + k * 0.08, 0.35);
@@ -166,7 +215,7 @@ export function start({ hero, labels, stageAt, onGo }) {
   // the gems at the corners and the tip, each with a soft glow
   const sprite = (c, s, o = 1) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, toneMapped: false })); m.scale.setScalar(s); return m; };
   const gems = V.map((p, k) => {
-    const c = k === 3 ? TIPC : COL[k];
+    const c = k === 3 ? TIPC : HC[k];
     const g = new THREE.Group(); g.position.copy(p);
     const stone = new THREE.Mesh(new THREE.OctahedronGeometry(k === 3 ? 0.05 : 0.042), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.5), toneMapped: false, transparent: true }));
     const halo = sprite(c, k === 3 ? 0.34 : 0.3, 0.5);
@@ -178,13 +227,13 @@ export function start({ hero, labels, stageAt, onGo }) {
   const cortex = new THREE.Group(); turn.add(cortex);
   // on the floor: the emblem's triangle pointing at the pyramid's corners, its spokes, the fine inner circle
   const ER = 0.36, tri = corner.map(c => c.clone().setLength(ER).setY(0.004));
-  for (let k = 0; k < 3; k++) cortex.add(tube(tri[k], tri[(k + 1) % 3], COL[k], COL[(k + 1) % 3], 0.0045, 1.6));
+  for (let k = 0; k < 3; k++) cortex.add(tube(tri[k], tri[(k + 1) % 3], HC[k], HC[(k + 1) % 3], 0.0045, 1.6));
   const mid = new THREE.Vector3(0, 0.004, 0);
-  for (let k = 0; k < 3; k++) cortex.add(tube(tri[k], mid, COL[k], COL[k], 0.002, 0.6));
-  for (let k = 0; k < 3; k++) { const d = new THREE.Mesh(new THREE.CircleGeometry(0.018, 20), new THREE.MeshBasicMaterial({ color: COL[k].clone().multiplyScalar(2), toneMapped: false })); d.rotation.x = -Math.PI / 2; d.position.copy(tri[k]).setY(0.006); cortex.add(d); }
+  for (let k = 0; k < 3; k++) cortex.add(tube(tri[k], mid, HC[k], HC[k], 0.002, 0.6));
+  for (let k = 0; k < 3; k++) { const d = new THREE.Mesh(new THREE.CircleGeometry(0.018, 20), new THREE.MeshBasicMaterial({ color: HC[k].clone().multiplyScalar(2), toneMapped: false })); d.rotation.x = -Math.PI / 2; d.position.copy(tri[k]).setY(0.006); cortex.add(d); }
   // the three rings, tumbling as on the main page (14 s round X, 11 s round Y, 8 s back round X), each spinning in
   // its own plane (30 s, 16 s back, 10 s)
-  const HEART = 0.42, rings = [], RC = [[COL[0], COL[1]], [COL[1], COL[2]], [COL[2], COL[0]]];
+  const HEART = 0.42, rings = [], RC = [[GOLDF, HC[1]], [GOLDF, HC[2]], [GOLDF, HC[0]]]; // gold, warming to a hint of a corner
   [[0.3, 0.0042], [0.25, 0.005], [0.2, 0.0042]].forEach(([r, w], i) => {
     const geo = new THREE.TorusGeometry(r, w, 6, 160), pos = geo.attributes.position, col = [];
     for (let n = 0; n < pos.count; n++) {
@@ -195,17 +244,44 @@ export function start({ hero, labels, stageAt, onGo }) {
     const tumble = new THREE.Group(), spin = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
     tumble.position.y = HEART; tumble.add(spin); cortex.add(tumble); rings.push({ tumble, spin });
   });
-  const heart = new THREE.Mesh(new THREE.SphereGeometry(0.04, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xdce7ee).multiplyScalar(3), toneMapped: false }));
+  // the hoops: two big gold rings round the beam above the Cortex, ticked like a dial, slowly turning
+  const hoops = [];
+  if (LOOK.hoops) [[0.72, 0.24, 1], [0.98, 0.17, -1]].forEach(([y, r, dirn]) => {
+    const geo = new THREE.TorusGeometry(r, 0.0035, 6, 200), pos = geo.attributes.position, col = [];
+    for (let n = 0; n < pos.count; n++) { const a = Math.atan2(pos.getY(n), pos.getX(n)), tick = Math.sin(a * 48) > 0.85 ? 1.9 : 1.1; const c = GOLDF.clone().multiplyScalar(tick); col.push(c.r, c.g, c.b); }
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); m.rotation.x = Math.PI / 2; m.position.y = y; cortex.add(m); hoops.push({ m, dirn });
+  });
+  const heart = new THREE.Mesh(new THREE.SphereGeometry(0.04, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff0d0).multiplyScalar(3), toneMapped: false }));
   heart.position.y = HEART; cortex.add(heart);
-  const heartGlow = sprite(COL[1], 0.55, 0.9); heartGlow.position.y = HEART; cortex.add(heartGlow);
+  const heartGlow = sprite(GOLDF, 0.55, 0.9); heartGlow.position.y = HEART; cortex.add(heartGlow);
   // the beam: from the heart up through the tip, then fading out above it
-  const beam = tube(new THREE.Vector3(0, HEART, 0), tip, new THREE.Color(0xbfe0ff), TIPC, 0.005, 1.5); rig.add(beam);
+  const beam = tube(new THREE.Vector3(0, HEART, 0), tip, GOLDF.clone().lerp(TIPC, 0.4), TIPC, 0.005, 1.5); rig.add(beam);
   const beamUp = tube(tip, new THREE.Vector3(0, HT + 0.5, 0), TIPC, TIPC, 0.0045, 1.3, true);
   beamUp.material.transparent = true; beamUp.material.blending = THREE.AdditiveBlending; beamUp.material.depthWrite = false;
   rig.add(beamUp);
   // the floor
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.7), new THREE.MeshBasicMaterial({ map: floorTex(), toneMapped: false }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.7), new THREE.MeshBasicMaterial({ map: floorTex(), toneMapped: false, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.006; rig.add(floor);
+  // the corner panels: set in from each corner, low on the pyramid, always facing us; the back ones dim
+  const PN = LOOK.panels, panels = corner.map((c, k) => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: panelTex(k), transparent: true, depthWrite: false, toneMapped: false, opacity: 0 }));
+    s.scale.setScalar(PN.size); s.position.copy(c).multiplyScalar(1 - PN.inset).setY(PN.height); turn.add(s); return s;
+  });
+  // the energy (owner, 2026-10-20: "not the smoke… light or energy"): a few faint, thin streaks of light rising either
+  // side of the pyramid (streaks, not dots: owner, 2026-10-20, "the dots make it look messy"), a hint of the bots' blue on the left and the chart scripts' violet on the right, fading as they rise
+  const motes = [];
+  for (let n = 0; n < LOOK.energy; n++) {
+    const left = n % 2 === 0, s = sprite(left ? COL[1] : COL[2], 1, 0); s.scale.set(0.025, 0.3 + Math.random() * 0.25, 1);
+    rig.add(s); motes.push({ s, x: (left ? -1 : 1) * (0.75 + Math.random() * 0.55), z: (Math.random() - 0.5) * 0.8, off: Math.random(), sp: 0.05 + Math.random() * 0.06, sw: Math.random() * 6.28 });
+  }
+  // the reflection: the gold edges, the seam and the gems mirrored under the floor, faint (cheap: only the lines)
+  const refl = new THREE.Group(); refl.scale.y = -0.38; // squashed, so it reads as a glint on a glossy floor, not a second pyramid refl.visible = false; rig.add(refl);
+  if (LOOK.reflection > 0) for (const m of edges) {
+    if (m.userData.solid) continue;
+    const mm = m.material.clone(); mm.transparent = true; mm.blending = THREE.AdditiveBlending; mm.depthWrite = false; mm.side = THREE.DoubleSide; mm.opacity = 0;
+    const r = new THREE.Mesh(m.geometry, mm); r.position.copy(m.position); r.quaternion.copy(m.quaternion); refl.add(r);
+  }
 
   // the light flow (owner, 2026-10-20: "dots of light go in from the corners toward the centre of the base and out
   // the top like the Luxor light"): small lights run from each corner across the floor to the heart, rise up the
@@ -219,9 +295,9 @@ export function start({ hero, labels, stageAt, onGo }) {
     return out.set(0, HT + ((u - 0.8) / 0.2) * 0.75, 0);
   }
   const flow = [];
-  for (let k = 0; k < 3; k++) for (let n = 0; n < 3; n++) { const s = sprite(COL[k], 0.1, 0.6); turn.add(s); flow.push({ s, k, off: n / 3 + k * 0.137 + Math.random() * 0.05 }); }
+  for (let k = 0; k < 3; k++) for (let n = 0; n < 3; n++) { const s = sprite(HC[k], 0.1, 0.6); turn.add(s); flow.push({ s, k, off: n / 3 + k * 0.137 + Math.random() * 0.05 }); }
   const SYN = LOOK.synergyEvery; let synAt = 3.4; // when the next synergy starts
-  const big = [0, 1, 2].map(k => { const s = sprite(COL[k], 0.26, 1); s.visible = false; turn.add(s); return s; });
+  const big = [0, 1, 2].map(k => { const s = sprite(HC[k], 0.26, 1); s.visible = false; turn.add(s); return s; });
   // the charge (owner, 2026-10-20: "hold the mouse down and it charges up the centre; let go and it shoots a pulse up
   // and out"): while held, the heart swells and brightens, the rings spin up, the lights rush in from the corners and
   // the pyramid trembles; on release a bolt shoots up the beam, hits the Capstone and blasts out of the top, bigger
@@ -298,13 +374,14 @@ export function start({ hero, labels, stageAt, onGo }) {
     rings[0].tumble.rotation.x = (ringT / 14) * T; rings[0].spin.rotation.z = (ringT / 30) * T;
     rings[1].tumble.rotation.y = (ringT / 11) * T; rings[1].spin.rotation.z = -(ringT / 16) * T;
     rings[2].tumble.rotation.x = -(ringT / 8) * T; rings[2].spin.rotation.z = (ringT / 10) * T;
+    for (const H of hoops) H.m.rotation.z = H.dirn * (ringT / 50) * T;
     const beat = 0.5 + 0.5 * Math.sin((clock / 2.4) * T);
     heart.scale.setScalar(1 + beat * 0.25); heartGlow.material.opacity = 0.55 + beat * 0.4;
     // the gems breathe; the one under the pointer swells
     gems.forEach((G, k) => { const on = k === hot, s = G.base * (on ? 1.9 : 1 + 0.08 * Math.sin(clock * 2 + k * 2)); G.halo.scale.x += (s - G.halo.scale.x) * 0.15; G.halo.scale.y = G.halo.scale.x; G.stone.rotation.y = clock * 0.8 + k; });
     // the light flow
     flowT += dt * LOOK.flowSpeed * (1 + 4 * charge);
-    for (const f of flow) { const u = (flowT + f.off) % 1; along(f.k, u, f.s.position); f.s.material.color.copy(COL[f.k]).lerp(TIPC, Math.max(0, (u - 0.42) / 0.4)); f.s.material.opacity = 0.65 * Math.min(1, u * 12) * (u > 0.8 ? 1 - (u - 0.8) / 0.2 : 1); }
+    for (const f of flow) { const u = (flowT + f.off) % 1; along(f.k, u, f.s.position); f.s.material.color.copy(HC[f.k]).lerp(TIPC, Math.max(0, (u - 0.42) / 0.4)); f.s.material.opacity = 0.65 * Math.min(1, u * 12) * (u > 0.8 ? 1 - (u - 0.8) / 0.2 : 1); }
     // the synergy: 0..1 s the three run in to the heart; 1..1.7 s the merged light rises; at 1.7 s it hits the Capstone
     if (clock >= synAt + SYN) synAt += SYN * Math.ceil((clock - synAt - SYN) / SYN + 1e-9);
     const tau = clock - synAt;
@@ -341,7 +418,13 @@ export function start({ hero, labels, stageAt, onGo }) {
     }
     // the edges at the back read dimmer, as if seen through the glass
     rig.updateMatrixWorld();
-    for (const m of edges) { tmp.copy(m.userData.mid).applyMatrix4(turn.matrixWorld).applyMatrix4(camera.matrixWorldInverse); m.material.opacity = THREE.MathUtils.clamp(0.95 + (tmp.z + camDist) * 0.9, 0.35, 1); }
+    for (const m of edges) { if (m.userData.solid) continue; tmp.copy(m.userData.mid).applyMatrix4(turn.matrixWorld).applyMatrix4(camera.matrixWorldInverse); m.material.opacity = THREE.MathUtils.clamp(0.95 + (tmp.z + camDist) * 0.9, 0.35, 1); }
+    // the panels fade in after the frame, the ones at the back dimmer; the reflection follows the turn
+    const pin = ss(2.0, 0.6);
+    for (const P of panels) { tmp.copy(P.position).applyMatrix4(turn.matrixWorld).applyMatrix4(camera.matrixWorldInverse); P.material.opacity = pin * THREE.MathUtils.clamp(0.95 + (tmp.z + camDist) * 0.9, 0.3, 1); }
+    for (const M of motes) { const u = (clock * M.sp + M.off) % 1; M.s.position.set(M.x + Math.sin(clock * 0.6 + M.sw) * 0.06, u * HT * 1.1, M.z); M.s.material.opacity = 0.32 * Math.sin(u * Math.PI) * ss(2.4, 1); }
+    refl.visible = LOOK.reflection > 0 && clock > 2.2; refl.rotation.y = turn.rotation.y;
+    if (refl.visible) { const ro = LOOK.reflection * ss(2.2, 0.8); refl.children.forEach(r => (r.material.opacity = ro)); }
     canvas.style.opacity = String(Math.min(1, clock / 0.4));
     composer.render(dt);
 
