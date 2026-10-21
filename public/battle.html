@@ -27,6 +27,7 @@
   <div class="bt-view" id="view">
     <div class="bt-stage" id="stage">
       <video class="bt-bg" id="bg" muted loop playsinline preload="auto" poster="media/cockpit.jpg" aria-hidden="true"></video>
+      <!-- the intro (media/intro.mp4) plays here, over the cockpit, and lands exactly on it -->
       <section class="bt-scr bt-flat" id="ticker" data-slot="ticker" data-size="strip"></section>
       <section class="bt-scr bt-flat" id="mainScr" data-slot="main" data-size="big"></section>
       <div class="bt-quad" id="qLeft" data-quad="left">
@@ -41,12 +42,25 @@
         <section class="bt-scr" data-slot="console" data-size="desk"></section>
       </div>
     </div>
+    <!-- first visit: the way in. The click is what lets the intro play with its sound -->
+    <div class="bt-gate" id="gate" hidden>
+      <div class="bt-gate-in">
+        <p class="bt-kick">HardSmoke presents</p>
+        <p class="bt-gate-title">Battle of the Bots</p>
+        <button type="button" class="bt-enter" id="enterBtn">Enter the battle <span aria-hidden="true">▶</span></button>
+        <p class="bt-gate-note">Sound on for the intro</p>
+        <button type="button" class="bt-skiplink" id="skipGate">Skip the intro</button>
+      </div>
+    </div>
   </div>
+  <button type="button" class="bt-skip" id="skipIntro" hidden>Skip intro</button>
+  <div class="bt-film" id="film" hidden></div>
 
   <!-- under the cockpit: the battle's name and state, and HardSmoke's controls -->
   <div class="bt-strip">
     <p class="bt-title"><span class="bt-dot" id="liveDot" aria-hidden="true"></span><b id="bTitle">Battle of the Bots</b><span id="bState"></span></p>
     <div class="bt-acts">
+      <button type="button" class="bt-btn" id="introBtn" hidden>▶ Intro</button>
       <button type="button" class="bt-btn" id="wallBtn">Stream Wall</button>
       <button type="button" class="bt-btn" id="soundBtn" aria-pressed="false" hidden>Sound off</button>
       <button type="button" class="bt-btn bt-gold" id="ctlBtn" hidden>HardSmoke's controls</button>
