@@ -65,6 +65,12 @@ export function loadConfig(overrides = {}) {
     discordApi: (env.D3MON_DISCORD_API || "https://discord.com/api/v10").replace(/\/+$/, ""), // tests point this at a stand-in
     discordPoll: flag(env.D3MON_DISCORD_POLL, true),
     ytThumbUrl: (env.D3MON_YT_THUMB_URL || "").replace(/\/+$/, ""), // YouTube's thumbnail host; tests point this at a stand-in
+    // Payments (server/arena/billing.js, docs/BUSINESS.md): Stripe's secret key and webhook signing secret live in
+    // .env, never in the repo. A sk_test_ key is Stripe's test mode: no real money moves. Unset: payments are off.
+    stripeKey: (env.D3MON_STRIPE_SECRET_KEY || "").trim(),
+    stripeWebhookSecret: (env.D3MON_STRIPE_WEBHOOK_SECRET || "").trim(),
+    stripeApi: (env.D3MON_STRIPE_API || "https://api.stripe.com").replace(/\/+$/, ""), // tests point this at a stand-in
+    siteUrl: (env.D3MON_SITE_URL || "").replace(/\/+$/, ""), // where Stripe sends people back, e.g. https://d3mon.co
     saveDelayMs: 1000,
   };
   return { ...cfg, ...overrides };

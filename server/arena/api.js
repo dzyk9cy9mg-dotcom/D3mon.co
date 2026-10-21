@@ -21,6 +21,7 @@ import { Tournaments } from "./tournaments.js";
 import { Vip } from "./vip.js";
 import { Votes } from "./votes.js";
 import { Portraits } from "./portraits.js";
+import { Billing } from "./billing.js";
 import { BattleResults } from "./results.js";
 import { Hall } from "./hall.js";
 import { HallChat } from "./hallchat.js";
@@ -77,6 +78,7 @@ export function createArena({ store, accounts, cfg }) {
   const vip = new Vip({ ledger, registry, calls, feed, accounts });
   const results = new BattleResults({ registry, calls, metrics });
   const votes = new Votes({ ledger, metrics, prices, registry, vip, feed, accounts, userName });
+  const billing = new Billing({ ledger, registry, vip, feed, accounts, key: cfg.stripeKey, webhookSecret: cfg.stripeWebhookSecret, api: cfg.stripeApi, siteUrl: cfg.siteUrl });
   const portraits = new Portraits({ ledger, registry, feed, dir: path.join(cfg.dataDir, "portraits") });
   const hallChat = new HallChat({ store, feed, userName });
   // The hall chat and one D3MON Discord channel as one conversation, when the bot's settings are in .env.
@@ -127,6 +129,21 @@ export function createArena({ store, accounts, cfg }) {
       } else if (missing.has(r)) rounds.push({ round: r, endsAt: r + ROUND_MS, result: null, missingKalshi: true });
     }
     return { market: MARKET, from, to, rounds };
+  }
+
+  // The page's own address, for Stripe to send people back to (only when the browser's Origin matches this host).
+  function sameOrigin(req) {
+    const o = String(req.headers.origin || ""), h = String(req.headers.host || "");
+    return /^https?:\/\/[^/]+$/.test(o) && o.split("//")[1] === h ? o : "";
+  }
+  // A request body as raw bytes (Stripe signs the exact bytes it sent).
+  function readRaw(req, limit) {
+    return new Promise((resolve, reject) => {
+      const chunks = []; let size = 0, big = false;
+      req.on("data", c => { size += c.length; if (size > limit) big = true; else chunks.push(c); });
+      req.on("end", () => (big ? reject(new ApiError(413, "quota_exceeded", "Too large.")) : resolve(Buffer.concat(chunks))));
+      req.on("error", reject);
+    });
   }
 
   // Returns true when it handled the request.
@@ -218,6 +235,21 @@ export function createArena({ store, accounts, cfg }) {
     if ((m = route.match(/^GET \/votes\/members\/([A-Za-z0-9_.-]{1,40})$/))) return ok(votes.recordView(ctx, votes.byUsername(m[1])));
     if (route === "GET /votes/badges") return ok(votes.badgeList(ctx));
     if ((m = route.match(/^GET \/votes\/entrant\/([a-z0-9-]{1,40})$/))) return ok(votes.entrantRecord(ctx, m[1]));
+    // Payments (docs/BUSINESS.md): Stripe Checkout, Stripe's billing page, and Stripe's webhook (raw body, signed)
+    if (route === "GET /billing/plans") return ok(billing.publicPlans());
+    if (route === "GET /billing/spotlights") return ok(billing.spotlights());
+    if (route === "GET /billing/me") return ok(billing.mine(ctx));
+    if (route === "POST /billing/checkout") { writer(); return ok(await billing.checkout(ctx, await body(), sameOrigin(req))); }
+    if (route === "POST /billing/portal") { writer(); return ok(await billing.portal(ctx, sameOrigin(req))); }
+    if (route === "POST /billing/webhook") return ok(billing.webhook(await readRaw(req, 1024 * 1024), req.headers["stripe-signature"]));
+    if (route === "GET /billing") return ok(billing.adminView(ctx));
+    if (route === "PUT /billing/plans") { writer(); return ok(billing.setPlans(ctx, await body())); }
+    if (route === "GET /billing/payments.csv") {
+      const text = billing.csv(ctx);
+      res.writeHead(200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="d3mon-payments-${new Date().toISOString().slice(0, 10)}.csv"`, "cache-control": "no-store" });
+      res.end(text);
+      return true;
+    }
     // Moving profile pictures: owners upload 1 to 3 stills, admins approve them
     if ((m = route.match(/^POST \/entrants\/([A-Za-z0-9]{8,40})\/portrait$/))) { writer(); return ok(portraits.submit(ctx, m[1], await readJson(req, 7 * 1024 * 1024)), 201); }
     if ((m = route.match(/^GET \/entrants\/([A-Za-z0-9]{8,40})\/portrait$/))) return ok(portraits.status(ctx, m[1]));
@@ -295,5 +327,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, results, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, billing, results, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }

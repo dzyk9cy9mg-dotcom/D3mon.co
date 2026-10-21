@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pricing · D3MON</title>
+<meta name="description" content="D3MON plans: Capstone, the premium live sessions, and Creator plans for callers, bot owners and chart scripters.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L94 88H6Z' fill='none' stroke='%23FFB547' stroke-width='8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/pricing.css">
+<script src="js/sigils.js"></script>
+<script src="js/wall.js"></script>
+</head>
+<main class="pr" id="main">
+  <h1 class="s-title">Pricing</h1>
+  <p class="pr-lead">The Live floor, chat, votes, tournaments and profiles are free. Pay for Capstone, the premium live sessions, or to put your caller, bot or chart script in front of more people.</p>
+  <p class="pr-msg" id="msg" role="status"></p>
+  <div class="pr-grid" id="plans"></div>
+  <p class="pr-soon" id="soon" hidden>Plans open soon. Until then, ask an admin about Capstone access.</p>
+  <section class="pr-mine" id="mine" hidden aria-labelledby="mineT">
+    <h2 id="mineT">Your plans</h2>
+    <ul id="mineList"></ul>
+    <button class="btn ghost" type="button" id="manage" hidden>Manage billing, cancel or change card</button>
+  </section>
+  <p class="pr-note">Plans renew each period until you cancel; you keep access until the end of what you paid for. Payments are handled by Stripe; we never see your card. Plans buy access and visibility, not results. Not financial advice. D3MON never trades. See the <a href="terms">Terms</a>.</p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/pricing.js"></script>
+<script src="js/sitebar.js"></script>
+</body>
+</html>

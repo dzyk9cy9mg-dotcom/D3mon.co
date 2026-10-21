@@ -201,7 +201,8 @@
     // a long name shrinks to fit its line rather than breaking mid-word
     requestAnimationFrame(() => { const em = $("nameEm"), room = $("pfName").clientWidth, need = em.scrollWidth; if (need > room) em.style.fontSize = `${(parseFloat(getComputedStyle(em).fontSize) * room / need).toFixed(1)}px`; });
     $("by").innerHTML = `Made by <b>${esc(e.creatorName)}</b>`;
-    $("badges").innerHTML = (e.badges || []).map(b => `<span class="pf-badge">Winner · ${esc(b.title)}</span>`).join("");
+    const spots = await api("GET", "billing/spotlights").then(r => r.entrants).catch(() => []);
+    $("badges").innerHTML = (spots.includes(e.id) ? `<span class="pf-badge">★ Spotlight</span>` : "") + (e.badges || []).map(b => `<span class="pf-badge">Winner · ${esc(b.title)}</span>`).join("");
     $("quote").hidden = !e.tagline;
     $("tagline").textContent = e.tagline || "";
     $("tagBy").textContent = e.name;

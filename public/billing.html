@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Payments · D3MON</title>
+<meta name="description" content="Admin: Stripe, prices, who's paying and the money in.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L94 88H6Z' fill='none' stroke='%23FFB547' stroke-width='8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/pricing.css">
+<script src="js/sigils.js"></script>
+<script src="js/wall.js"></script>
+</head>
+<main class="pr" id="main">
+  <h1 class="s-title">Payments</h1>
+  <p class="pr-msg" id="msg" role="status"></p>
+  <section class="pr-box" id="status"></section>
+  <section class="pr-box" aria-labelledby="pricesT">
+    <h2 id="pricesT">Plans and prices</h2>
+    <p class="pr-help">Names and descriptions are what members see on the Pricing page; leave them empty to use the default. Prices are in US dollars; leave a price empty to not offer it. A plan only shows on the Pricing page when it's switched on and has a price.</p>
+    <form id="prices" autocomplete="off"></form>
+  </section>
+  <section class="pr-box" aria-labelledby="moneyT">
+    <h2 id="moneyT">Money in</h2>
+    <div id="months"></div>
+    <h3>Latest payments</h3>
+    <ol class="pr-rows" id="recent"></ol>
+    <a class="btn ghost" href="api/v1/billing/payments.csv" download>Download every payment (CSV)</a>
+  </section>
+  <section class="pr-box" aria-labelledby="whoT">
+    <h2 id="whoT">Who's paying</h2>
+    <h3>Subscriptions</h3>
+    <ol class="pr-rows" id="subs"></ol>
+    <h3>Capstone access now</h3>
+    <ol class="pr-rows" id="cap"></ol>
+  </section>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/billing-admin.js"></script>
+<script src="js/sitebar.js"></script>
+</body>
+</html>
