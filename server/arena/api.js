@@ -19,6 +19,7 @@ import { Kalshi } from "./kalshi.js";
 import { Prices } from "./prices.js";
 import { Tournaments } from "./tournaments.js";
 import { Vip } from "./vip.js";
+import { Votes } from "./votes.js";
 import { BattleResults } from "./results.js";
 import { Hall } from "./hall.js";
 import { HallChat } from "./hallchat.js";
@@ -41,7 +42,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": case "tournaments": case "vip": case "hall": return id === undefined;
+      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "admin": return (id === "applications" || id === "monitor") && isAdmin(ctx);
@@ -74,6 +75,7 @@ export function createArena({ store, accounts, cfg }) {
   if (cfg.kalshi !== false) tournaments.start(); // no Kalshi, no results to save
   const vip = new Vip({ ledger, registry, calls, feed, accounts });
   const results = new BattleResults({ registry, calls, metrics });
+  const votes = new Votes({ ledger, metrics, prices, registry, vip, feed, accounts, userName });
   const hallChat = new HallChat({ store, feed, userName });
   // The hall chat and one D3MON Discord channel as one conversation, when the bot's settings are in .env.
   const discord = DiscordBridge.configured(cfg)
@@ -188,6 +190,18 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "POST /vip/sessions") { writer(); return ok({ session: vip.addSession(ctx, await body()) }, 201); }
     if ((m = route.match(/^DELETE \/vip\/sessions\/([A-Za-z0-9_-]{8,40})$/))) { writer(); return ok(vip.cancelSession(ctx, m[1])); }
     if (route === "GET /presence") return ok(feed.presence());
+    // Member votes (docs/VOTES.md)
+    if (route === "GET /votes/round") return ok(votes.roundView(ctx, url.searchParams.get("session") || "live"));
+    if (route === "POST /votes") { writer(); return ok(await votes.enter(ctx, await body()), 201); }
+    if (route === "POST /votes/exit") { writer(); return ok(await votes.exit(ctx, await body())); }
+    if (route === "POST /votes/change") { writer(); return ok(await votes.change(ctx, await body())); }
+    if (route === "GET /votes/me") { if (!ctx.uid) throw new ApiError(401, "unauthenticated", "Sign in first."); return ok(votes.recordView(ctx, ctx.uid)); }
+    if (route === "PUT /votes/settings") { writer(); return ok(votes.setPrivacy(ctx, await body())); }
+    if ((m = route.match(/^GET \/votes\/members\/([A-Za-z0-9_.-]{1,40})$/))) return ok(votes.recordView(ctx, votes.byUsername(m[1])));
+    if (route === "GET /votes/badges") return ok(votes.badgeList(ctx));
+    if (route === "POST /votes/badges") { writer(); return ok(votes.setBadge(ctx, await body())); }
+    if ((m = route.match(/^GET \/votes\/sessions\/(live|battle:[A-Za-z0-9_-]{6,40}|capstone:[A-Za-z0-9_-]{6,40})$/))) return ok(votes.sessionView(m[1]));
+    if ((m = route.match(/^PUT \/votes\/sessions\/([^/]{1,60})$/))) { writer(); return ok(votes.setSession(ctx, decodeURIComponent(m[1]), await body())); }
     if (route === "PUT /vip/featured") { writer(); return ok(vip.setFeatured(ctx, await body())); }
     if (route === "GET /tournaments") return ok(tournaments.current());
     if (route === "GET /tournaments/admin") return ok(tournaments.adminView(ctx));
@@ -250,5 +264,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, results, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, results, hall, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }
