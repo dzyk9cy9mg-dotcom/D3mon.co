@@ -1,0 +1,18 @@
+/* The founder waitlist panel (js/waitlist.js). Bottom right (over Last round, clear of Your call), under the intro and the Stream Wall, over the cockpit. */
+[data-waitlist]{position:fixed;right:20px;bottom:20px;z-index:60;display:flex;flex-direction:column;gap:10px;align-items:flex-end;max-width:min(360px,calc(100vw - 40px));font-family:var(--body,Manrope,sans-serif);color:var(--ink,#EEF3F8)}
+.wl-admin{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px 6px 12px;background:rgba(5,7,11,.82);border:1px solid var(--s-edge,rgba(170,200,240,.14));font:500 13px var(--mono,"IBM Plex Mono",monospace);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.wl-admin button{min-height:36px;padding:0 12px;background:transparent;border:1px solid var(--s-edge2,rgba(170,200,240,.26));color:inherit;font:600 13px var(--body,Manrope,sans-serif);cursor:pointer}
+.wl-admin button:disabled{opacity:.4;cursor:default}
+.wl-card{position:relative;width:100%;box-sizing:border-box;padding:18px 18px 14px;background:rgba(10,13,19,.86);border:1px solid rgba(233,194,122,.35);clip-path:var(--s-cut,polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.wl-x{position:absolute;top:4px;right:4px;width:44px;height:44px;background:none;border:0;color:var(--ink-3,#8494A8);font-size:22px;cursor:pointer}
+.wl-kick{margin:0 0 6px;font:500 12px var(--mono,"IBM Plex Mono",monospace);letter-spacing:.12em;text-transform:uppercase;color:#E9C27A}
+.wl-title{margin:0 40px 6px 0;font:700 17px/1.25 var(--display,Syncopate,sans-serif);text-transform:uppercase;background:var(--s-goldfx,linear-gradient(180deg,#FFF1CF,#E9C27A 50%,#9C7333));-webkit-background-clip:text;background-clip:text;color:transparent}
+.wl-sub,.wl-done{margin:0 0 12px;font-size:14px;line-height:1.45;color:var(--ink-2,#B4C1D0)}
+.wl-form{display:flex;gap:8px}
+.wl-form input{flex:1;min-width:0;min-height:44px;padding:0 12px;background:rgba(255,255,255,.04);border:1px solid var(--s-edge2,rgba(170,200,240,.26));color:inherit;font:16px var(--body,Manrope,sans-serif)}
+.wl-form button{min-height:44px;padding:0 18px;border:0;background:#E9C27A;color:#140c02;font:700 14px var(--body,Manrope,sans-serif);cursor:pointer;clip-path:polygon(0 0,100% 0,100% 64%,calc(100% - 10px) 100%,0 100%)}
+.wl-form button:disabled{opacity:.6}
+.wl-err{margin:6px 0 0;min-height:0;font-size:13px;color:#FF8A8A}
+.wl-err:empty,.wl-count:empty{display:none}
+.wl-count{margin:10px 0 0;font:500 13px var(--mono,"IBM Plex Mono",monospace);color:var(--ink-3,#8494A8)}
+@media (max-width:520px){[data-waitlist]{left:12px;right:12px;bottom:12px;max-width:none}}
