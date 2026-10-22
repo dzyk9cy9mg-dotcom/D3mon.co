@@ -10,7 +10,7 @@ import { NOTICE } from "./tournaments.js";
 import { paper } from "./prices.js";
 
 const FINAL_GRACE_MS = 30 * 60000; // as the tournaments
-const SCORING = "Most correct calls, then accuracy, then the earlier average call. Only rounds Kalshi settled count.";
+const SCORING = "Most correct calls, then accuracy, then the earlier average call. Only settled rounds count.";
 
 export class BattleResults {
   constructor({ registry, calls, metrics, now = () => Date.now() }) {

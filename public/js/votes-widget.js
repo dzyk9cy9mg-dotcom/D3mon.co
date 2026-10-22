@@ -48,7 +48,7 @@
       <p class="vw-mine" aria-live="polite"></p><p class="vw-msg" hidden></p><p class="vw-err" role="alert"></p>
       <ol class="vw-feed"></ol>
       <form class="vw-guests" hidden autocomplete="off"><label>Guest callers this session (usernames, comma separated)</label><div><input maxlength="300" placeholder="e.g. freya, rook"><button class="btn" type="submit">Save</button></div><p class="vw-gmsg" role="status"></p></form>
-      <p class="vw-note">Paper votes at Kalshi's prices, for fun and bragging rights. Not financial advice. D3MON never trades.</p>`;
+      <p class="vw-note">Paper calls at live market prices. Played for pride, never for money. Not financial advice. D3MON never trades.</p>`;
     const $ = sel => root.querySelector(sel);
 
     function render() {
@@ -76,7 +76,7 @@
         const done = (d.mine || []).filter(t => t.status === "cashed");
         $(".vw-mine").innerHTML = done.length ? `This round: ${done.map(t => t.profit == null ? "cashed out" : `<span class="${t.profit >= 0 ? "up" : "dn"}">${signed(t.profit)}</span>`).join(" · ")}` : blocked ? "" : "Call it: Up or Down by the end of the round.";
       }
-      $(".vw-feed").innerHTML = d.actions.slice(-6).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}>${a.username ? `<a href="profile?u=${encodeURIComponent(a.username)}"><b>${esc(a.name)}</b></a>` : `<b>${esc(a.name)}</b>`}${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}<time>${mmss(a.at - d.round)} in</time></li>`).join("") || `<li class="vw-empty">No votes yet this round.</li>`;
+      $(".vw-feed").innerHTML = d.actions.slice(-6).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}>${a.username ? `<a href="profile?u=${encodeURIComponent(a.username)}"><b>${esc(a.name)}</b></a>` : `<b>${esc(a.name)}</b>`}${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}<time>${mmss(a.at - d.round)} in</time></li>`).join("") || `<li class="vw-empty">No calls from the floor yet. Be the first.</li>`;
       $(".vw-guests").hidden = !(kind === "capstone" && st.s.admin);
     }
 

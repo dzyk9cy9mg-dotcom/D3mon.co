@@ -44,7 +44,7 @@ const TITLES = { hourly: "Hourly", daily: "Daily", weekly: "Weekly", monthly: "M
 const HOUR = 3600000;
 const FINAL_GRACE_MS = 30 * 60000; // matches the Kalshi poller's "still unsettled" flag
 const LOOKBACK = { hourly: 48, daily: 14, weekly: 6, monthly: 3 }; // past tournaments checked for saving
-const SCORING = "Most correct calls, then accuracy, then the earlier average call. Only rounds Kalshi settled count.";
+const SCORING = "Most correct calls, then accuracy, then the earlier average call. Only settled rounds count.";
 
 // ---------- Eastern time ----------
 const fmt = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short" });

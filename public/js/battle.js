@@ -245,7 +245,7 @@
 
   function mFighters(size, kind, title) {
     const all = fighters(kind), noun = { bot: "bots", caller: "callers", script: "chart scripts" }[kind] || "fighters";
-    if (!S.b) return `<h3>${esc(title)}</h3><p class="bt-empty">No battle announced yet. <a href="next#battle">See what's coming</a></p>`;
+    if (!S.b) return `<h3>${esc(title)}</h3><p class="bt-empty">The next battle is announced here. <a href="next#battle">See what's coming</a></p>`;
     if (!all.length) return `<h3>${esc(title)}</h3><p class="bt-empty">No ${noun} in this battle yet.${S.b.over ? "" : ` <a href="apply?battle=${encodeURIComponent(S.b.id)}">Apply to battle</a>`}</p>`;
     if (size === "strip") return `<div class="bt-run">${all.map(({ e, call }) => `<span class="k-${esc(e.kind)}"><b>${esc(e.name)}</b> ${callTag(call)}</span>`).join("")}</div>`;
     if (size === "big") {
@@ -261,9 +261,9 @@
 
   function mStandings(size, title) {
     const r = S.results;
-    if (!S.b || !r) return `<h3>${esc(title)}</h3><p class="bt-empty">Standings show once the battle starts.</p>`;
+    if (!S.b || !r) return `<h3>${esc(title)}</h3><p class="bt-empty">Standings appear at the first bell.</p>`;
     const rows = r.standings;
-    if (!rows.length) return `<h3>${esc(title)}</h3><p class="bt-empty">No one in this battle yet.</p>`;
+    if (!rows.length) return `<h3>${esc(title)}</h3><p class="bt-empty">The lineup is still being chosen.</p>`;
     const n = size === "big" ? 8 : size === "strip" ? 6 : size === "low" ? 3 : 5;
     if (size === "strip") return `<div class="bt-run">${rows.slice(0, n).map(x => `<span><b>#${x.rank} ${esc(x.entrant.name)}</b> ${x.correct} right</span>`).join("")}</div>`;
     return `<h3>${esc(title)}<small>${r.status === "final" ? "Final" : `${r.settledRounds} of ${r.rounds} rounds settled`}</small></h3>
@@ -321,7 +321,7 @@
 
   function mLastRound(size, title) {
     const prev = S.prev;
-    if (!prev || !prev.result) return `<h3>${esc(title)}</h3><p class="bt-empty">Waiting for Kalshi's result.</p>`;
+    if (!prev || !prev.result) return `<h3>${esc(title)}</h3><p class="bt-empty">Awaiting settlement.</p>`;
     const right = prev.calls.filter(c => c.correct === true).length, wrong = prev.calls.filter(c => c.correct === false).length;
     const best = prev.calls.filter(c => c.paperPerContract != null).sort((a, b) => b.paperPerContract - a.paperPerContract)[0];
     const up = prev.result === "up";
@@ -357,7 +357,7 @@
   }
   function mStream(size, title) {
     const st = featured(), all = streams();
-    if (!st) return `<h3>${esc(title)}</h3><p class="bt-empty">No streams yet. HardSmoke adds them to the battle.</p>`;
+    if (!st) return `<h3>${esc(title)}</h3><p class="bt-empty">Streams go live with the battle.</p>`;
     return `<h3>${esc(title || st.label)}<small>${all.length > 1 ? `${all.length} streams` : "Live"}</small></h3>
       <div class="bt-frame">${!$("wall").hidden ? "" : frame(st, !S.sound)}<button type="button" class="bt-open" data-wall aria-label="Open the Stream Wall"><span>${all.length > 1 ? `All ${all.length} streams` : "Full screen"} ⤢</span></button></div>`;
   }
@@ -378,7 +378,7 @@
     const line = total ? `${Math.round(up * 100)}% Up · ${total} in` : "Be the first to call it";
     if (size === "strip") return `<div class="bt-run"><span>The crowd: <b>${line}</b></span>${d.actions.slice(-4).reverse().map(a => `<span><b>${esc(a.name)}</b> ${a.action === "exit" ? "cashed out" : `<span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲" : "▼"}</span>`}</span>`).join("")}</div>`;
     return `<h3>${esc(title)}<small>${line}</small></h3><div class="bt-split" aria-hidden="true"><i class="up" style="width:${up * 100}%"></i><i class="dn" style="width:${(1 - up) * 100}%"></i></div>
-      <ol class="bt-feed">${d.actions.slice(size === "big" ? -10 : size === "low" ? -3 : -5).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}><b>${esc(a.name)}</b>${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}</li>`).join("") || `<li class="bt-empty">No votes yet this round.</li>`}</ol>`;
+      <ol class="bt-feed">${d.actions.slice(size === "big" ? -10 : size === "low" ? -3 : -5).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}><b>${esc(a.name)}</b>${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}</li>`).join("") || `<li class="bt-empty">The crowd hasn't called it yet.</li>`}</ol>`;
   }
 
   // ---------- vote and chat: built once per screen, then updated in place (so typing isn't interrupted) ----------
@@ -406,7 +406,7 @@
   function fillChat(root) {
     const list = root.querySelector(".bt-msgs"); if (!list) return;
     const n = root.dataset.size === "low" ? 3 : root.dataset.size === "desk" ? 4 : root.dataset.size === "big" ? 12 : 7;
-    const html = S.chat.slice(-n).map(m => `<li${m.as ? ` class="as-${esc(m.as)}"` : ""}><b>${esc(m.name)}</b>${m.from === "discord" ? '<span class="bt-via">Discord</span>' : ""} ${esc(m.text)}</li>`).join("") || `<li class="bt-empty">Quiet so far. Say hello.</li>`;
+    const html = S.chat.slice(-n).map(m => `<li${m.as ? ` class="as-${esc(m.as)}"` : ""}><b>${esc(m.name)}</b>${m.from === "discord" ? '<span class="bt-via">Discord</span>' : ""} ${esc(m.text)}</li>`).join("") || `<li class="bt-empty">Quiet, for now. Open the conversation.</li>`;
     if (list.innerHTML !== html) list.innerHTML = html;
   }
 

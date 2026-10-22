@@ -160,7 +160,7 @@
   }
   // the close: say so, and watch for Kalshi's result to flood the battle
   function roundOver(r) {
-    $("say").textContent = "Calls closed. Waiting for Kalshi's result.";
+    $("say").textContent = "Calls are closed. Awaiting settlement.";
     let tries = 0;
     const look = async () => {
       const prev = await get(`rounds/${r}/calls`).catch(() => null);
@@ -182,16 +182,16 @@
   }
   function renderPrev(prev) {
     const right = prev.calls.filter(c => c.correct === true).length, wrong = prev.calls.filter(c => c.correct === false).length;
-    $("prev").innerHTML = prev.result ? `Bitcoin went <b class="${prev.result === "up" ? "up" : "dn"}">${prev.result === "up" ? "▲ Up" : "▼ Down"}</b><span>${right} right · ${wrong} wrong · ${time(prev.round)}–${time(prev.round + Q)}</span>` : "Waiting for Kalshi.";
+    $("prev").innerHTML = prev.result ? `Bitcoin went <b class="${prev.result === "up" ? "up" : "dn"}">${prev.result === "up" ? "▲ Up" : "▼ Down"}</b><span>${right} right · ${wrong} wrong · ${time(prev.round)}–${time(prev.round + Q)}</span>` : "Awaiting settlement.";
   }
   async function loadMarket() {
     const m = await get("market").catch(() => null), pr = m && m.price;
-    if (!pr || pr.up == null || pr.down == null) { S.p = null; S.price = null; battle.set(null); $("upPct").textContent = "–"; $("dnPct").textContent = "–"; $("target").textContent = "Waiting for Kalshi's odds"; return; }
+    if (!pr || pr.up == null || pr.down == null) { S.p = null; S.price = null; battle.set(null); $("upPct").textContent = "–"; $("dnPct").textContent = "–"; $("target").textContent = "Reading the market"; return; }
     const p = pr.up / (pr.up + pr.down);
     S.p = p; S.price = pr; battle.set(p); if (V.data) renderVotes();
     $("upPct").textContent = `${Math.round(p * 100)}%`; $("dnPct").textContent = `${100 - Math.round(p * 100)}%`;
-    $("target").textContent = pr.target ? `Above or below ${money(pr.target)}` : "Kalshi's odds";
-    $("stage").setAttribute("aria-label", `Kalshi gives Above ${Math.round(p * 100)} percent, Below ${100 - Math.round(p * 100)} percent`);
+    $("target").textContent = pr.target ? `Above or below ${money(pr.target)}` : "The market's odds";
+    $("stage").setAttribute("aria-label", `The market gives Above ${Math.round(p * 100)} percent, Below ${100 - Math.round(p * 100)} percent`);
   }
 
   // ---------- the calls, as they land ----------
@@ -262,7 +262,7 @@
       const done = (d.mine || []).filter(t => t.status === "cashed");
       $("vMine").innerHTML = done.length ? `This round: ${done.map(t => t.profit == null ? "cashed out" : `<span class="${t.profit >= 0 ? "up" : "dn"}">${signed(t.profit)}</span>`).join(" · ")}` : signedIn ? "Call it: Up or Down by the end of the round." : "";
     }
-    $("vFeed").innerHTML = d.actions.slice(-8).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}>${a.username ? `<a href="profile?u=${encodeURIComponent(a.username)}"><b>${esc(a.name)}</b></a>` : `<b>${esc(a.name)}</b>`}${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}<time>${mmss(a.at - d.round)} in</time></li>`).join("") || `<li class="lv-empty">No votes yet this round.</li>`;
+    $("vFeed").innerHTML = d.actions.slice(-8).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}>${a.username ? `<a href="profile?u=${encodeURIComponent(a.username)}"><b>${esc(a.name)}</b></a>` : `<b>${esc(a.name)}</b>`}${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}<time>${mmss(a.at - d.round)} in</time></li>`).join("") || `<li class="lv-empty">No calls from the floor yet. Be the first.</li>`;
   }
   async function loadVotes() {
     const d = await get("votes/round").catch(() => null);

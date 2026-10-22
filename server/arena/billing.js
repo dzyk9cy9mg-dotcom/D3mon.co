@@ -25,9 +25,9 @@ import { isAdmin } from "../rules.js";
 const PLAN_IDS = ["capstone", "creator", "spotlight"];
 const NAMES = { capstone: "Capstone", creator: "Creator", spotlight: "Creator Spotlight" };
 const BLURBS = {
-  capstone: "The premium live trading sessions. Featured callers lead, and you see their calls the moment they're made.",
-  creator: "List your caller, bot or chart script: a shop window with its record checked against Kalshi.",
-  spotlight: "Everything in Creator, plus featured spots on the front page and the Live floor.",
+  capstone: "The private live sessions. Our finest callers lead, and you see every call the moment it's made.",
+  creator: "Your caller, bot or chart script, listed with a shop window and a settled, public record.",
+  spotlight: "Everything in Creator, plus top billing on the front page and the Live floor.",
 };
 const DEFAULT_PLANS = Object.fromEntries(PLAN_IDS.map(id => [id, { on: false, month: null, year: null, ...(id === "capstone" ? { pass: null, passHours: 24 } : {}) }]));
 const GRACE_MS = 24 * 3600 * 1000; // a day's grace after a paid period, so a late renewal doesn't cut anyone off
