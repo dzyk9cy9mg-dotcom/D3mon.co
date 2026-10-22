@@ -94,7 +94,7 @@
   const small = () => innerWidth * (devicePixelRatio || 1) < 1500;
   // The cockpit loop behind the displays: media/<LOOP>.mp4 (and <LOOP>-720.mp4). Until the owner's loop for the curved
   // cockpit is made, LOOP is null and the still (media/cockpit2.jpg, the intro's last frame) stands in.
-  const LOOP = null;
+  const LOOP = "cockpit2"; // the owner's loop (2026-10-21), its end blended into its start so it repeats smoothly
   function video() {
     if (phone.matches || reduce || !LOOP) { bg.pause(); if (bg.getAttribute("src")) { bg.removeAttribute("src"); bg.load(); } return; }
     const want = `media/${small() ? `${LOOP}-720` : LOOP}.mp4`;
