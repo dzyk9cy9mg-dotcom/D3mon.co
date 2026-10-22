@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Connect your bot · D3MON</title>
+<meta name="description" content="Connect your trading bot or chart script to D3MON: get a key, send a call every 15-minute round, and share your stats. Ready-to-copy code.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L94 88H6Z' fill='none' stroke='%23FFB547' stroke-width='8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/connect.css">
+<script src="js/sigils.js"></script>
+<script src="js/wall.js"></script>
+</head>
+<!-- Connect your bot (owner, 2026-10-21): BOT-GUIDE.md as a page, so a bot maker can connect without being sent a
+     file. Every example is written for this site's own address, and a key pasted into the box fills the examples
+     in this browser only (never sent, never stored). The stat list is read live from /api/v1/stat-catalog. -->
+<body>
+<main class="cn" id="main">
+  <h1 class="s-title">Connect your bot</h1>
+  <p class="cn-lede">Bring your bot or chart script onto the floor. It sends one call, Up or Down, every fifteen-minute Bitcoin round, and every result is settled and scored on its public record. Five minutes to set up.</p>
+
+  <aside class="cn-safe" aria-label="Your safety">
+    <b>Your key only sends calls and stats.</b> It can't sign in, see anything private or touch money. D3MON never asks for your exchange or Kalshi keys, passwords or wallet phrases, and refuses anything that looks like one.
+  </aside>
+
+  <ol class="cn-steps">
+    <li class="cn-step">
+      <h2>Join D3MON</h2>
+      <p>Apply with your bot's name. An admin approves it, usually within a day.</p>
+      <p><a class="s-amber" href="apply">Apply with your bot</a></p>
+    </li>
+    <li class="cn-step">
+      <h2>Make a key</h2>
+      <p>On <a href="my">My bots</a>, under your bot's name, type a label (for example <code>my server</code>) and click <b>Make a new key</b>. It starts with <code>d3b_</code> and is shown once, so save it in your bot's settings. Each bot can have up to 3 keys; revoke one any time on My bots.</p>
+      <label class="cn-key">Paste your key to fill in the examples below <span>(stays in this browser, never sent or saved)</span>
+        <input id="key" autocomplete="off" spellcheck="false" placeholder="d3b_…"></label>
+    </li>
+    <li class="cn-step">
+      <h2>Check it works</h2>
+      <p>Run this in a terminal. You'll see your bot's name, the round open now and when its calls close.</p>
+      <div class="cn-code" data-code="me"></div>
+    </li>
+    <li class="cn-step">
+      <h2>Send a call every round</h2>
+      <p>Rounds start at :00, :15, :30 and :45. Call any time while the round is open, until it ends. One call per round, and the first one is final. Bots' calls are public the moment they land.</p>
+      <div class="cn-tabs" role="tablist" aria-label="Language">
+        <button type="button" role="tab" aria-selected="true" data-lang="py">Python</button>
+        <button type="button" role="tab" aria-selected="false" data-lang="js">JavaScript</button>
+        <button type="button" role="tab" aria-selected="false" data-lang="sh">curl</button>
+      </div>
+      <div class="cn-code" data-code="call"></div>
+      <p class="cn-note">Put your own signal in <code>decide()</code>. The rest runs as it is: it waits for each round, sends one call, and keeps going if a round is missed.</p>
+    </li>
+    <li class="cn-step">
+      <h2>Share your stats <span class="cn-opt">optional</span></h2>
+      <p>Your <b>verified</b> stats (win rate, streaks, paper profit at the price you called) are worked out by D3MON from your calls. Nothing to send. You can add <b>self-reported</b> numbers too, labelled as yours. Every stat starts hidden; you choose who sees each one on My bots. No code? Type them in on My bots instead.</p>
+      <div class="cn-code" data-code="stats"></div>
+      <details class="cn-list"><summary>Every standard stat</summary><div id="catalog"><p class="cn-note">Loading…</p></div></details>
+    </li>
+    <li class="cn-step">
+      <h2>Enter the tournaments</h2>
+      <p>On My bots, switch on <b>Join tournaments</b>. Your bot is ranked hourly, daily, weekly and monthly from the next round on. Watch it live on the <a href="live">floor</a>.</p>
+    </li>
+  </ol>
+
+  <section class="cn-sec" aria-labelledby="errT">
+    <h2 id="errT">If something goes wrong</h2>
+    <dl class="cn-errs">
+      <div><dt>bad_key</dt><dd>The key was mistyped or revoked.</dd></div>
+      <div><dt>round_locked</dt><dd>That round's calls have closed. The message says when the next one starts.</dd></div>
+      <div><dt>already_called</dt><dd>Your bot already called this round. The first call counts.</dd></div>
+      <div><dt>entrant_suspended</dt><dd>Your bot is paused. Ask an admin.</dd></div>
+      <div><dt>looks_like_secret</dt><dd>Something looked like a password or key. Take it out.</dd></div>
+      <div><dt>invalid_argument</dt><dd>A field is missing or wrong. The message names it.</dd></div>
+      <div><dt>not_defined</dt><dd>That stat isn't a standard one, or a custom one you've added on My bots.</dd></div>
+      <div><dt>resource_exhausted</dt><dd>Too many requests. One call a round is all it takes.</dd></div>
+    </dl>
+  </section>
+  <p class="cn-fine">Paper calls at market prices. D3MON never trades, and nothing here is financial advice.</p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/connect.js"></script>
+<script src="js/sitebar.js"></script>
+</body>
+</html>
