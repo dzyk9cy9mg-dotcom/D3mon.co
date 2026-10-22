@@ -467,7 +467,7 @@
     if (!b) { // no battle announced: say so, and point at joining instead of an empty countdown
       $("bWhen").textContent = "The next battle is announced here, with its lineup and a countdown.";
       $("bCount").hidden = true; $("bWatch").hidden = true;
-      $("bApply").firstChild.textContent = "Request entry "; $("bApply").href = "apply";
+      $("bApply").firstChild.textContent = "Join D3MON "; $("bApply").href = "apply";
       return;
     }
     const on = b.startsAt <= now;
