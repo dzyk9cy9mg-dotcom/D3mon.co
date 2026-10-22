@@ -1,0 +1,22 @@
+/* D3MON's voice and video room (js/voice.js): a tile per person, a gold ring round whoever is speaking */
+.vc-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.vc-head h2{margin:0}
+.vc-count{font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#9aa3b2)}
+.vc-lede{margin:8px 0 16px;color:var(--muted,#9aa3b2)}
+.vc-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.vc-tile{position:relative;aspect-ratio:16/10;background:linear-gradient(160deg,#141821,#0b0d11);border:1px solid rgba(255,255,255,.1);overflow:hidden;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%);transition:box-shadow .15s,border-color .15s}
+.vc-tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+.vc-tile.has-video video{opacity:1}
+.vc-av{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
+  font:700 22px Syncopate,sans-serif;color:#0b0d11;background:linear-gradient(160deg,#FFF1CF,#E9C27A 55%,#9C7333);transition:box-shadow .15s}
+.vc-tile.has-video .vc-av{display:none}
+.vc-tile.speaking{border-color:#E9C27A;box-shadow:inset 0 0 0 2px #E9C27A}
+.vc-tile.speaking .vc-av{box-shadow:0 0 0 4px rgba(233,194,122,.35),0 0 24px rgba(233,194,122,.5)}
+.vc-name{position:absolute;left:10px;bottom:8px;right:40px;font-size:14px;font-weight:600;color:#fff;text-shadow:0 1px 4px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vc-tile.muted .vc-name::after{content:"  · muted";color:#FF4F7A;font-weight:500}
+.vc-kick{position:absolute;top:6px;right:6px;width:32px;height:32px;min-height:0;padding:0;border:1px solid rgba(255,255,255,.2);background:rgba(11,13,17,.7);color:#fff;cursor:pointer}
+.vc-empty{grid-column:1/-1;color:var(--muted,#9aa3b2);margin:0}
+.vc-acts{display:flex;flex-wrap:wrap;gap:10px}
+.vc-err{color:#FF4F7A;margin:10px 0 0;min-height:1em}
+@media (prefers-reduced-motion:reduce){.vc-tile,.vc-tile video,.vc-av{transition:none}}
