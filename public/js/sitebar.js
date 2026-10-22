@@ -37,7 +37,7 @@
     if (!document.querySelector(".n-foot, .s-foot")) {
       const foot = document.createElement("footer");
       foot.className = "s-foot";
-      foot.innerHTML = `<span>Paper trades only. Not financial advice. D3MON never trades.</span><nav aria-label="The small print"><a href="pricing">Pricing</a><a href="privacy">Privacy</a><a href="terms">Terms</a></nav>`;
+      foot.innerHTML = `<span>Paper trades only. Not financial advice. D3MON never trades.</span><nav aria-label="The small print"><a href="connect">Connect your bot</a><a href="pricing">Pricing</a><a href="privacy">Privacy</a><a href="terms">Terms</a></nav>`;
       document.body.append(foot);
     }
     // a real page title, taken from the document title ("Tournaments · D3MON.CO" → "Tournaments"), unless the page has one
