@@ -6,6 +6,7 @@
   const $ = id => document.getElementById(id);
   const STATUSES = ["draft", "open", "closed", "live", "final"];
   // When calls close in each round: minutes in, or 0 for "before the round starts".
+  const METHODS = [["owner", "each owner picks"], ["auto", "automatic (keys)"], ["manual", "buttons (by hand)"]];
   const WINDOWS = [[0, "before the round starts"], [1, "1 minute in"], [2, "2 minutes in"], [3, "3 minutes in"], [5, "5 minutes in"], [7, "7 minutes in"], [10, "10 minutes in"], [14, "14 minutes in"], [15, "any time during the round"]];
   let battles = [], apps = [], entrants = [];
 
@@ -22,6 +23,7 @@
         <select data-bstatus="${esc(b.id)}" aria-label="Status of ${esc(b.title)}" style="width:auto;margin-left:auto">${STATUSES.map(s => `<option ${s === b.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
         <div class="meta">${b.over && b.state === "over" ? `Over: its last round ended. Its status is still “${esc(b.status)}”. ` : ""}${esc(when(b.startsAt))} · ${b.rounds} rounds · ${b.kinds.map(kindName).join(", ")} · ${esc(counts)}</div>
         <label class="meta">Calls close <select data-bwin="${esc(b.id)}" aria-label="When calls close in ${esc(b.title)}" style="width:auto">${WINDOWS.map(([m, t]) => `<option value="${m}" ${m === b.callWindowMin ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+        <label class="meta">Bots call <select data-bmethod="${esc(b.id)}" aria-label="How bots and scripts call in ${esc(b.title)}" style="width:auto">${METHODS.map(([m, t]) => `<option value="${m}" ${m === (b.callMethod || "owner") ? "selected" : ""}>${t}</option>`).join("")}</select></label>
         <div class="meta">Lineup: ${b.entrants.length ? b.entrants.map(e => esc(e.name)).join(", ") : "nobody approved yet"}</div>
         ${b.status === "draft" ? "" : `<label class="checks"><input type="checkbox" data-mainpage="${esc(b.id)}" ${b.onMainPage ? "checked" : ""}> Show this lineup on the main page's Battle of the Bots roster${b.onMainPage ? " (on: lineup changes are copied there live)" : ""}</label>`}</div>`;
     }).join("") : `<p class="empty">No battles yet. Create the first one above.</p>`;
@@ -76,6 +78,11 @@
     if (mp) {
       if (ev.target.checked && !confirm("Replace the main page's Battle of the Bots roster with this battle's lineup? The current roster is kept in the history.")) { ev.target.checked = false; return; }
       try { await api("PATCH", `battles/${mp}`, { onMainPage: ev.target.checked }); msg(ev.target.checked ? "This lineup is now on the main page." : "No longer copied to the main page.", true); await load(); } catch (e) { msg(e.message); await load(); }
+      return;
+    }
+    const meth = ev.target.dataset.bmethod;
+    if (meth) {
+      try { await api("PATCH", `battles/${meth}`, { callMethod: ev.target.value }); msg("Saved: how bots call.", true); await load(); } catch (e) { msg(e.message); await load(); }
       return;
     }
     const win = ev.target.dataset.bwin;

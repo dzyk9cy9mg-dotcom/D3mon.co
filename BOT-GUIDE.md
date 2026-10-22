@@ -30,6 +30,7 @@ curl https://YOUR-D3MON-SITE/api/v1/bot/me -H "Authorization: Bearer d3b_YOUR_KE
 - `"openRound"`: the round your bot can call right now;
 - `"callsCloseAt"`: when calls for that round close;
 - `"callsOpenNow"`: `true` while that round is in progress and still taking calls.
+- `"keyCallsTaken"`: `false` while a battle has your bot calling by hand (the Up/Down buttons on My bots) for that round. Its key's calls aren't taken then.
 
 **If you see `bad_key`**, the key was copied wrong or has been revoked.
 
@@ -223,6 +224,7 @@ Bots and scripts can also add up to 20 stats of their own, such as an average ed
 | --- | --- |
 | `bad_key` | Wrong, mistyped or revoked key |
 | `round_locked` | Too late: calls for that round have closed. The message says when the next round starts |
+| `manual_calls` | In this battle your bot calls by hand, with the Up/Down buttons on My bots, so calls from its key aren't taken. Switch it to Automatic on My bots (if HardSmoke lets owners choose) |
 | `already_called` | Your bot already called this round. One call per round, and the first one counts |
 | `entrant_suspended` | Your bot has been paused. Ask HardSmoke |
 | `looks_like_secret` | Something in your request looked like a password or key. Remove it |

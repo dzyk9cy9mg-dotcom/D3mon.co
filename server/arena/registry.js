@@ -19,6 +19,10 @@ export const DEFAULT_CALL_WINDOW_MIN = 15;
 // choice); views show "over" in its place, except for drafts and final battles.
 export const battleOver = (b, now = Date.now()) => now >= b.startsAt + b.rounds * b.roundMs;
 export const battleState = (b, now = Date.now()) => (b.status !== "draft" && b.status !== "final" && battleOver(b, now) ? "over" : b.status);
+// How an entrant calls in a battle: "manual" (buttons) or "auto" (its key). Callers always use the buttons.
+export const callMethodOf = (b, e) => e.kind === "caller" ? "manual"
+  : b.callMethod === "auto" || b.callMethod === "manual" ? b.callMethod
+  : (b.methods && b.methods[e.id]) || "auto";
 export const callWindowMs = b => (b && Number.isInteger(b.callWindowMin) ? b.callWindowMin : DEFAULT_CALL_WINDOW_MIN) * 60000;
 const BATTLE_STATUS = ["draft", "open", "closed", "live", "final"];
 const LIVE_APP = new Set(["pending", "approved"]);
@@ -33,6 +37,9 @@ const BATTLE_FIELDS = {
   status: { type: "enum", values: BATTLE_STATUS, default: "draft" },
   onMainPage: { type: "boolean" }, // show this battle's lineup on the current main page (one battle at a time)
   callWindowMin: { type: "integer", min: 0, max: 15, default: DEFAULT_CALL_WINDOW_MIN }, // calls close this many minutes into each round (15 = at its end)
+  // How bots and scripts call in this battle (owner, 2026-10-22): "owner" lets each owner pick automatic (their key) or
+  // manual (Up/Down buttons on /my); "auto" or "manual" sets it for everyone. Callers always use the buttons.
+  callMethod: { type: "enum", values: ["owner", "auto", "manual"], default: "owner" },
   // Where to watch it: HardSmoke's and the owners' streams and the D3MON Discord (owner, 2026-10-19: several per battle)
   streams: { type: "array", max: 12, of: { type: "object", fields: { label: { type: "string", required: true, min: 1, max: 40 }, url: { type: "string", required: true, max: 300 } } } },
 };
@@ -115,9 +122,9 @@ export class Registry {
 
   // ---------- views: what each reader is allowed to see ----------
   battleView(b, ctx) {
-    const entrants = (b.entrants || []).map(id => this.#get(ENTRANTS, id)).filter(Boolean).map(e => this.entrantView(e, ctx));
+    const entrants = (b.entrants || []).map(id => this.#get(ENTRANTS, id)).filter(Boolean).map(e => ({ ...this.entrantView(e, ctx), callMethod: callMethodOf(b, e) }));
     const out = { id: b.id, title: b.title, market: b.market, startsAt: b.startsAt, rounds: b.rounds, roundMs: b.roundMs,
-      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, streams: b.streams || [], status: b.status, state: battleState(b), over: battleOver(b), onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
+      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, streams: b.streams || [], status: b.status, state: battleState(b), over: battleOver(b), onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, callMethod: b.callMethod || "owner", entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
     if (isAdmin(ctx)) {
       out.applications = {};
       for (const a of this.#all(APPS, [["battleId", "==", b.id]])) out.applications[a.status] = (out.applications[a.status] || 0) + 1;
@@ -165,6 +172,25 @@ export class Registry {
     if (b.status === "final" && f.status === undefined) throw new ApiError(409, "battle_final", "This battle is final. Reopen it (change its status) before editing.");
     const next = { ...b, ...f, updatedAt: Date.now() };
     this.#mainPage(next, ctx.uid);
+    this.#save(BATTLES, next, ctx.uid);
+    this.#battleChanged(next);
+    return next;
+  }
+
+  // PUT /battles/:id/entrants/:entrantId/call-method { method }: a bot or script's owner picks "auto" (its key) or
+  // "manual" (Up/Down buttons) for this battle, while HardSmoke leaves it to the owners. Admins can set it any time.
+  // A call already made stays; the choice counts for calls from now on.
+  setCallMethod(ctx, battleId, entrantId, body = {}) {
+    this.#requireMember(ctx);
+    if (!ctx.canWrite) throw new ApiError(403, "not_granted", "Your account can't do that right now.");
+    const b = this.battleFor(ctx, battleId), e = this.#get(ENTRANTS, entrantId);
+    if (!e || !(b.entrants || []).includes(e.id) || !(e.ownerId === ctx.uid || isAdmin(ctx))) throw new ApiError(404, "not_found", "That isn't one of your entrants in this battle.");
+    if (e.kind === "caller") throw new ApiError(409, "callers_use_buttons", "Callers always call with the Up/Down buttons.");
+    const f = check(body, { method: { type: "enum", values: ["auto", "manual"], required: true } });
+    if (battleOver(b)) throw new ApiError(409, "battle_over", "This battle is over.");
+    if ((b.callMethod || "owner") !== "owner" && !isAdmin(ctx))
+      throw new ApiError(409, "set_by_host", `HardSmoke set every entrant in this battle to ${b.callMethod === "auto" ? "automatic calls" : "the Up/Down buttons"}.`);
+    const next = { ...b, methods: { ...(b.methods || {}), [e.id]: f.method }, updatedAt: Date.now() };
     this.#save(BATTLES, next, ctx.uid);
     this.#battleChanged(next);
     return next;

@@ -30,7 +30,7 @@ import { Cockpit } from "./cockpit.js";
 import { HallChat } from "./hallchat.js";
 import { DiscordBridge } from "./discord.js";
 import { Waitlist } from "./waitlist.js";
-import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
+import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN, callMethodOf } from "./registry.js";
 import path from "node:path";
 
 const MAX_BODY = 16 * 1024;
@@ -180,7 +180,9 @@ export function createArena({ store, accounts, cfg }) {
         const now = calls.now(), cur = nextRound(now) - ROUND_MS, curCloses = calls.closesAt(auth.entrant.id, cur);
         const round = now < curCloses ? cur : cur + ROUND_MS, closesAt = round === cur ? curCloses : calls.closesAt(auth.entrant.id, round);
         return ok({ entrant: registry.entrantView(auth.entrant, {}), key: keys.view(auth.key), nextRound: new Date(nextRound(now)).toISOString(),
-          openRound: new Date(round).toISOString(), callsCloseAt: new Date(closesAt).toISOString(), callsOpenNow: round === cur });
+          openRound: new Date(round).toISOString(), callsCloseAt: new Date(closesAt).toISOString(), callsOpenNow: round === cur,
+          // false while a battle has this bot on the Up/Down buttons for the open round: its key's calls aren't taken then
+          keyCallsTaken: !registry.battlesFor(auth.entrant.id, round).some(b => callMethodOf(b, auth.entrant) === "manual") });
       }
       // Refused pushes are noted for the monitor (the error only, never what was sent).
       let sent;
@@ -310,6 +312,7 @@ export function createArena({ store, accounts, cfg }) {
       if (ctx.uid) take(limits.apply, ctx.uid);
       return ok({ application: registry.appView(registry.apply(ctx, m[1], await body()), ctx) }, 201);
     }
+    if ((m = route.match(/^PUT \/battles\/([A-Za-z0-9]+)\/entrants\/([A-Za-z0-9]+)\/call-method$/))) { writer(); return ok({ battle: registry.battleView(registry.setCallMethod(ctx, m[1], m[2], await body()), ctx) }); }
     if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)\/results$/))) return ok(results.results(ctx, m[1]));
     if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)\/metrics$/))) return ok(metrics.view(ctx, m[1], { history: url.searchParams.get("history") === "1" }));
     if ((m = route.match(/^PUT \/battles\/([A-Za-z0-9]+)\/rounds\/(\d{1,16})\/metrics$/))) { writer(); return ok({ round: metrics.record(ctx, m[1], m[2], await body()) }); }

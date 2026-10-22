@@ -37,6 +37,22 @@
     </div>`;
   }
 
+  // Battles this bot or script is in (not over): how it calls in each, and the Up/Down buttons while one has it on them.
+  function battleCallsBox(e) {
+    const mine = (S.battles || []).filter(b => !b.over && (b.entrants || []).some(x => x.id === e.id));
+    if (!mine.length) return "";
+    const now = serverNow();
+    const rows = mine.map(b => {
+      const m = (b.entrants.find(x => x.id === e.id) || {}).callMethod || "auto";
+      const pick = (b.callMethod || "owner") === "owner"
+        ? `<select data-cmethod="${esc(b.id)}|${esc(e.id)}" aria-label="How ${esc(e.name)} calls in ${esc(b.title)}" style="width:auto"><option value="auto" ${m === "auto" ? "selected" : ""}>Automatic (its key)</option><option value="manual" ${m === "manual" ? "selected" : ""}>By hand (Up/Down here)</option></select>`
+        : `<b>${m === "manual" ? "By hand (Up/Down here)" : "Automatic (its key)"}</b> <span class="tag">set by HardSmoke</span>`;
+      return `<div class="item"><b>${esc(b.title)}</b> <span class="meta">${esc(when(b.startsAt))}</span><div class="meta">Calls: ${pick}</div></div>`;
+    }).join("");
+    const live = mine.some(b => now >= b.startsAt && now < b.endsAt && (b.entrants.find(x => x.id === e.id) || {}).callMethod === "manual");
+    return `<h3 class="sub">Battle calls</h3><p class="tag">Choose how ${esc(e.name)} calls in each battle. By hand, you press Up or Down here each round, and calls from its key aren't taken during that battle.</p>${rows}${live ? callerBox(e) : ""}`;
+  }
+
   function keysBox(e) {
     const ks = S.keys[e.id] || [], base = new URL("api/v1/bot/calls", location.href).href;
     const fresh = S.token && S.token.entrantId === e.id ? `<div class="item keynew"><b>Your new key. Copy it now: it won't be shown again.</b>
@@ -181,7 +197,7 @@
     $("none").hidden = S.entrants.length > 0;
     $("entrants").innerHTML = S.entrants.map(e => `<section class="panel" data-ent="${esc(e.id)}">
       <h2>${esc(e.name)} <span class="st">${esc(kindName(e.kind))}</span>${e.status !== "active" ? ` <span class="st rejected">${esc(e.status)}</span>` : ""}</h2>
-      ${e.kind === "caller" ? callerBox(e) : keysBox(e)}
+      ${e.kind === "caller" ? callerBox(e) : battleCallsBox(e) + keysBox(e)}
       ${tourBox(e)}
       ${profileBox(e)}
       <h3 class="sub">Recent calls</h3>${callsTable(e)}
@@ -202,6 +218,7 @@
 
   async function load() {
     S.entrants = (await api("GET", "entrants?mine=1")).entrants;
+    S.battles = (await api("GET", "battles").catch(() => ({ battles: [] }))).battles;
     await Promise.all(S.entrants.map(loadEntrant));
     render();
   }
@@ -349,6 +366,18 @@
     document.querySelectorAll(`[data-st^="${CSS.escape(id)}|"][data-group]`).forEach(el => { if (el.dataset.group === name) el.value = ev.target.value; });
     ev.target.value = "";
     S.statsDirty = true;
+  });
+  // How a bot or script calls in a battle (owner picks while HardSmoke leaves it to the owners).
+  document.addEventListener("change", async ev => {
+    const c = ev.target.dataset && ev.target.dataset.cmethod;
+    if (!c) return;
+    const [bid, eid] = c.split("|");
+    try {
+      await api("PUT", `battles/${bid}/entrants/${eid}/call-method`, { method: ev.target.value });
+      msg(ev.target.value === "manual" ? "Saved. Press Up or Down here each round of that battle." : "Saved. Its key makes the calls in that battle.", true);
+    } catch (e) { msg(e.message); }
+    S.battles = (await api("GET", "battles").catch(() => ({ battles: S.battles }))).battles;
+    render();
   });
   document.addEventListener("input", markDirty);
   document.addEventListener("change", markDirty);

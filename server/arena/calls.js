@@ -18,7 +18,7 @@
 //                closesAt: when calls for that round closed for this entrant (older lines: the round start) }
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
-import { ROUND_MS, callWindowMs, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
+import { ROUND_MS, callWindowMs, callMethodOf, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import { paper } from "./prices.js";
 
 export const MARKET = "KXBTC15M";
@@ -199,6 +199,11 @@ export class Calls {
   // #target has checked the clock just before this, and nothing here waits, so no call can slip past it.
   #place(e, { raw, dir, via, keyId }, by) {
     const now = this.now(), { round, closesAt } = this.#target(e, raw, now);
+    if (e.kind !== "caller") { // a battle may have this bot or script on the buttons instead of its key
+      const manual = this.registry.battlesFor(e.id, round).find(b => callMethodOf(b, e) === "manual");
+      if (via === "bot-key" && manual) throw new ApiError(409, "manual_calls", `In "${manual.title}" ${e.name} calls with the Up/Down buttons on My bots, so calls from its key aren't taken this round.`, "round");
+      if (via === "button" && !manual) throw new ApiError(409, "use_bot_key", `${e.name} calls with its API key. The buttons work in a battle where it's set to call by hand.`, "round");
+    }
     const prev = this.latest(e.id, MARKET, round);
     if (prev && prev.dir === dir) return { line: prev, unchanged: true }; // a retry, or the same call again
     if (prev) throw new ApiError(409, "already_called", `Already called ${prev.dir} for the round that started at ${iso(round)}, at ${iso(prev.at)}. One call per round, and it's final.`, "direction");
@@ -223,7 +228,6 @@ export class Calls {
     if (!ctx.canWrite) throw new ApiError(403, "not_granted", "Your account can't do that right now.");
     const e = this.registry.entrantById(entrantId);
     if (!e || e.ownerId !== ctx.uid) throw new ApiError(404, "not_found", "That isn't one of your entrants.");
-    if (e.kind !== "caller") throw new ApiError(409, "use_bot_key", "Bots and scripts send their calls with their API key. The buttons are for callers.");
     if (e.status !== "active") throw new ApiError(409, "entrant_suspended", `${e.name} is suspended.`);
     const f = check(body, BUTTON_CALL);
     const { line, unchanged } = this.#place(e, { raw: f.round, dir: f.direction, via: "button" }, ctx.uid);
