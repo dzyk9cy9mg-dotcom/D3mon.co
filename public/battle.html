@@ -17,7 +17,7 @@
 <script src="js/sigils.js"></script>
 <script src="js/wall.js"></script>
 </head>
-<!-- HardSmoke's Battle of the Bots, live (owner, 2026-10-20). A looping cockpit video (made in Higgsfield, media/cockpit.mp4)
+<!-- HardSmoke's Battle of the Bots, live (owner, 2026-10-20). The owner's curved cockpit from Higgsfield (media/cockpit2.jpg; a loop to come)
      with the battle's displays fitted onto its seven screens, each in the screen's own perspective. Admins choose what
      every screen shows (GET/PUT /api/v1/cockpit). The stream screen opens the full-screen Stream Wall. On phones the
      screens stack as cards over a still of the cockpit. A thin client over /api/v1 (js/battle.js). -->
@@ -26,21 +26,25 @@
   <h1 class="bt-visually">Battle of the Bots</h1>
   <div class="bt-view" id="view">
     <div class="bt-stage" id="stage">
-      <video class="bt-bg" id="bg" muted loop playsinline preload="auto" poster="media/cockpit.jpg" aria-hidden="true"></video>
-      <!-- the intro (media/intro.mp4) plays here, over the cockpit, and lands exactly on it -->
-      <section class="bt-scr bt-flat" id="ticker" data-slot="ticker" data-size="strip"></section>
-      <section class="bt-scr bt-flat" id="mainScr" data-slot="main" data-size="big"></section>
-      <div class="bt-quad" id="qLeft" data-quad="left">
+      <video class="bt-bg" id="bg" muted loop playsinline preload="auto" poster="media/cockpit2.jpg" aria-hidden="true"></video>
+      <!-- the intro (media/intro.mp4) plays here, over the cockpit, and lands exactly on it. The curved cockpit (2026-10-21):
+           one big curved screen (left, centre and right columns, the ticker over the centre) and a lower curved screen
+           in three parts; js/battle.js cuts each display from between the screens' measured edges -->
+      <div class="bt-quad" data-quad="left">
         <section class="bt-scr" data-slot="leftTop" data-size="wing"></section>
         <section class="bt-scr" data-slot="leftBottom" data-size="wing"></section>
       </div>
-      <div class="bt-quad" id="qRight" data-quad="right">
+      <div class="bt-quad" data-quad="center">
+        <section class="bt-scr" id="ticker" data-slot="ticker" data-size="strip"></section>
+        <section class="bt-scr" id="mainScr" data-slot="main" data-size="big"></section>
+      </div>
+      <div class="bt-quad" data-quad="right">
         <section class="bt-scr" data-slot="rightTop" data-size="wing"></section>
         <section class="bt-scr" data-slot="rightBottom" data-size="wing"></section>
       </div>
-      <div class="bt-quad" id="qConsole" data-quad="console">
-        <section class="bt-scr" data-slot="console" data-size="desk"></section>
-      </div>
+      <div class="bt-quad" data-quad="lowLeft"><section class="bt-scr" data-slot="lowerLeft" data-size="low"></section></div>
+      <div class="bt-quad" data-quad="lowCenter"><section class="bt-scr" data-slot="console" data-size="low"></section></div>
+      <div class="bt-quad" data-quad="lowRight"><section class="bt-scr" data-slot="lowerRight" data-size="low"></section></div>
     </div>
     <!-- first visit: the way in. The click is what lets the intro play with its sound -->
     <div class="bt-gate" id="gate" hidden>
