@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Live · D3MON</title>
-<meta name="description" content="The D3MON trading floor: this 15-minute Bitcoin round live, Kalshi's odds as a battle of light, every call as it lands, and the chat.">
+<meta name="description" content="The D3MON floor: Bitcoin's 15-minute round, live. The market's odds in light, every call as it lands, and the conversation around it.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L94 88H6Z' fill='none' stroke='%23FFB547' stroke-width='8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +25,7 @@
 <main class="lv" id="main">
   <header class="lv-head">
     <h1 class="s-title">Live</h1>
-    <p class="lv-sub"><span class="lv-dot" id="liveDot" aria-hidden="true"></span><span id="roundLine">Bitcoin, this 15-minute round</span><span class="lv-here" id="here"></span></p>
+    <p class="lv-sub"><span class="lv-dot" id="liveDot" aria-hidden="true"></span><span id="roundLine">Bitcoin, fifteen minutes at a time</span><span class="lv-here" id="here"></span></p>
   </header>
 
   <div class="lv-tabs" role="tablist" aria-label="The trading floor">
@@ -38,18 +38,18 @@
     <div class="lv-main" id="pRound" role="tabpanel" aria-labelledby="tRound">
       <!-- the battle of light: Kalshi's Above and Below odds pushing against each other -->
       <section class="lv-battle" aria-labelledby="battleT">
-        <h2 class="lv-visually" id="battleT">Kalshi's odds this round</h2>
+        <h2 class="lv-visually" id="battleT">The market's odds this round</h2>
         <div class="lv-stage" id="stage">
           <canvas id="lvLight" aria-hidden="true"></canvas>
           <div class="lv-side lv-up"><span class="lv-word">Above</span><b class="lv-pct" id="upPct">–</b></div>
           <div class="lv-side lv-dn"><span class="lv-word">Below</span><b class="lv-pct" id="dnPct">–</b></div>
-          <div class="lv-mid"><span class="lv-clock" id="clock">–:––</span><span class="lv-target" id="target">Waiting for Kalshi's odds</span></div>
+          <div class="lv-mid"><span class="lv-clock" id="clock">–:––</span><span class="lv-target" id="target">Reading the market</span></div>
           <div class="lv-lock" id="lock" aria-hidden="true"><span>Calls close</span><b id="lockN">10</b></div>
           <div class="lv-result" id="result" aria-hidden="true"></div>
         </div>
         <p class="lv-say" id="say" role="status" aria-live="polite"></p>
         <div class="lv-bar" aria-hidden="true"><i id="bar"></i></div>
-        <p class="lv-note">Kalshi's market prices for this round, for information. Not financial advice. D3MON never trades.</p>
+        <p class="lv-note">Live market odds for this round, for information only. Not financial advice. D3MON never trades.</p>
       </section>
 
       <!-- the members' own calls: Up or Down at Kalshi's price, cash out and go again (docs/VOTES.md) -->
@@ -62,8 +62,8 @@
           <button class="lv-vb out" id="vOut" type="button" hidden>Cash out</button>
         </div>
         <p class="lv-mine" id="vMine" aria-live="polite"></p>
-        <p class="lv-signin" id="vSignin" hidden>Sign in to make your call. <a href="login">Sign in</a></p>
-        <p class="lv-signin" id="vOff" hidden>Voting is off for you in this session.</p>
+        <p class="lv-signin" id="vSignin" hidden>Members make the call. <a href="login">Sign in</a></p>
+        <p class="lv-signin" id="vOff" hidden>Calls are closed to you this session.</p>
         <p class="lv-err" id="vErr" role="alert"></p>
         <ol class="lv-vfeed" id="vFeed"></ol>
         <div class="lv-rec" id="vRec" hidden></div>
@@ -84,23 +84,23 @@
             <p class="lv-err" id="aErr" role="alert"></p>
           </div>
         </details>
-        <p class="lv-note">Paper votes at Kalshi's prices, for fun and bragging rights. Not financial advice. D3MON never trades.</p>
+        <p class="lv-note">Paper calls at live market prices. Played for pride, never for money. Not financial advice. D3MON never trades.</p>
       </section>
 
       <!-- the calls, as they land -->
       <section class="lv-calls" aria-labelledby="callsT">
         <div class="lv-row"><h2 id="callsT">Calls this round</h2><span class="lv-count" id="count">0</span></div>
-        <ol class="lv-list" id="calls"><li class="lv-empty">No calls yet this round. Bots and chart scripts show theirs at once; callers' stay sealed until the close.</li></ol>
+        <ol class="lv-list" id="calls"><li class="lv-empty">The round is open. Bots and scripts reveal their calls at once; callers stay sealed until the close.</li></ol>
       </section>
 
       <div class="lv-pair">
         <section class="lv-card" aria-labelledby="prevT">
           <h2 id="prevT">Last round</h2>
-          <p class="lv-prev" id="prev">Waiting for Kalshi.</p>
+          <p class="lv-prev" id="prev">Awaiting settlement.</p>
         </section>
         <section class="lv-card" aria-labelledby="hourT">
           <h2 id="hourT">This hour's tournament</h2>
-          <ol class="lv-mini" id="hour"><li class="lv-empty">No bots in this one yet.</li></ol>
+          <ol class="lv-mini" id="hour"><li class="lv-empty">The field is still forming.</li></ol>
           <a class="lv-more" href="tournaments">All tournaments</a>
         </section>
       </div>
@@ -112,14 +112,14 @@
         <div class="lv-video" id="video"></div>
       </section>
       <section class="lv-chat" id="pChat" role="tabpanel" aria-labelledby="tChat">
-        <div class="lv-row"><h2>The chat</h2><span class="lv-disc" id="disc" hidden>Linked with the D3MON Discord</span></div>
-        <ol class="lv-msgs" id="msgs" aria-live="polite"><li class="lv-empty">Quiet so far. Say hello.</li></ol>
+        <div class="lv-row"><h2>The chat</h2><span class="lv-disc" id="disc" hidden>One conversation with the D3MON Discord</span></div>
+        <ol class="lv-msgs" id="msgs" aria-live="polite"><li class="lv-empty">Quiet, for now. Open the conversation.</li></ol>
         <form class="lv-say-form" id="chatForm" autocomplete="off" hidden>
           <label class="lv-visually" for="chatText">Message</label>
-          <input id="chatText" maxlength="400" placeholder="Say something to the floor" required>
+          <input id="chatText" maxlength="400" placeholder="Speak to the floor" required>
           <button class="btn" type="submit">Send</button>
         </form>
-        <p class="lv-signin" id="chatSignin">Sign in to chat. <a href="login">Sign in</a></p>
+        <p class="lv-signin" id="chatSignin">Members speak on the floor. <a href="login">Sign in</a></p>
         <p class="lv-err" id="chatErr" role="alert"></p>
       </section>
     </aside>

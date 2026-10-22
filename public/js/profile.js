@@ -217,11 +217,11 @@
     $("selfH").hidden = !self.length; $("self").innerHTML = self.map(statCard).join("");
     $("noStats").hidden = !!shown.length;
     $("calls").innerHTML = calls.length ? calls.map(c => `<li><time>${esc(time(c.round))}</time><span>${c.sealed ? '<span class="pf-k">Sealed until the close</span>' : c.direction === "up" ? '<b class="up">▲ Up</b>' : '<b class="dn">▼ Down</b>'}${c.price ? ` <span class="pf-k">@${Math.round(c.price.paid * 100)}¢</span>` : ""}</span>
-        <span>${c.correct === true ? '<b class="up">Right</b>' : c.correct === false ? '<b class="dn">Wrong</b>' : '<span class="pf-k">Waiting for Kalshi</span>'}</span></li>`).join("")
+        <span>${c.correct === true ? '<b class="up">Right</b>' : c.correct === false ? '<b class="dn">Wrong</b>' : '<span class="pf-k">Settling</span>'}</span></li>`).join("")
       : `<li class="pf-empty">No calls yet.</li>`;
     // the shop window
     $("shopName").textContent = e.name;
-    $("shopLede").textContent = e.shopUrl ? `${e.name} is made by ${e.creatorName}. Its record above is kept by Kalshi, so you can check it before you buy.` : `${e.name} is made by ${e.creatorName}. Watch it on the floor and follow its record.`;
+    $("shopLede").textContent = e.shopUrl ? `Made by ${e.creatorName}. Every result above is settled by the market, so study the record before you buy.` : `Made by ${e.creatorName}. Watch it on the floor and follow the record.`;
     $("actions").innerHTML = [
       e.shopUrl ? `<a class="s-amber" href="${esc(e.shopUrl)}" target="_blank" rel="sponsored noopener">Get ${esc(e.name)}</a>` : "",
       `<a class="btn ghost" href="live">Watch it on the floor</a>`,
@@ -287,7 +287,7 @@
     $("mRecSec").hidden = !r && !m.mine; // a private record shows nothing to others (the HUD already says so)
     const c = x => (x == null ? "" : `${Math.round(x * 100)}¢`);
     $("mCalls").innerHTML = r && m.recent.length ? m.recent.map(t => `<li><time>${esc(time(t.at))}</time><span>${t.dir === "up" ? '<b class="up">▲ Up</b>' : '<b class="dn">▼ Down</b>'}${t.paid != null ? ` <span class="pf-k">@${c(t.paid)}</span>` : ""}</span>
-        <span>${t.status === "cashed" ? `<span class="pf-k">Cashed out${t.got != null ? ` @${c(t.got)}` : ""}</span>${t.profit != null ? ` <b class="${t.profit >= 0 ? "up" : "dn"}">${t.profit >= 0 ? "+" : "−"}${Math.abs(Math.round(t.profit * 100))}¢</b>` : ""}` : t.status === "settled" ? (t.correct ? '<b class="up">Right</b>' : '<b class="dn">Wrong</b>') : t.status === "settling" ? '<span class="pf-k">Waiting for Kalshi</span>' : '<span class="pf-k">Open</span>'}</span></li>`).join("")
+        <span>${t.status === "cashed" ? `<span class="pf-k">Cashed out${t.got != null ? ` @${c(t.got)}` : ""}</span>${t.profit != null ? ` <b class="${t.profit >= 0 ? "up" : "dn"}">${t.profit >= 0 ? "+" : "−"}${Math.abs(Math.round(t.profit * 100))}¢</b>` : ""}` : t.status === "settled" ? (t.correct ? '<b class="up">Right</b>' : '<b class="dn">Wrong</b>') : t.status === "settling" ? '<span class="pf-k">Settling</span>' : '<span class="pf-k">Open</span>'}</span></li>`).join("")
       : `<li class="pf-empty">${r ? "No floor calls yet. Make one on the Live page." : "Hidden."}</li>`;
     $("mCallsSec").hidden = !r;
     // their callers, bots and scripts
@@ -343,7 +343,7 @@
     const { entrants } = await api("GET", "entrants");
     const list = entrants.filter(e => e.status === "active");
     $("list").innerHTML = list.length ? list.map(e => `<li class="k-${esc(e.kind)}"><a href="profile?e=${encodeURIComponent(e.slug)}"><canvas width="80" height="80" aria-hidden="true" data-kind="${esc(e.kind)}"></canvas><span><b>${esc(e.name)}</b><small>${esc(KIND[e.kind] || kindName(e.kind))} · ${esc(e.creatorName)}</small></span></a></li>`).join("")
-      : `<li class="pf-empty">No one has joined yet. <a href="apply">Be the first</a>.</li>`;
+      : `<li class="pf-empty">The first names are still to come. <a href="apply">Apply to be one</a>.</li>`;
     if (window.D3Sigils) for (const c of $("list").querySelectorAll("canvas")) window.D3Sigils.draw(c.getContext("2d"), c.dataset.kind, 40, 40, 60, { t: 1, a: 1, lit: 0.5 });
   }
 

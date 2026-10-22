@@ -435,7 +435,7 @@
       <span>${c.sealed ? '<span class="sealed">sealed</span>' : c.direction === "up" ? '<b class="up">▲ Up</b>' : '<b class="dn">▼ Down</b>'}${c.price ? ` <span class="sealed">@${Math.round(c.price.paid * 100)}¢</span>` : ""}</span><time>${esc(time(c.receivedAt))}</time></li>`).join("")
       : `<li class="n-empty">No calls yet this round.</li>`;
     const right = prev.calls.filter(x => x.correct === true).length, wrong = prev.calls.filter(x => x.correct === false).length;
-    $("lPrev").innerHTML = prev.result ? `Last round Bitcoin went <b class="${prev.result === "up" ? "up" : "dn"}">${prev.result}</b> · ${right} right, ${wrong} wrong` : "Last round: waiting for Kalshi";
+    $("lPrev").innerHTML = prev.result ? `Last round Bitcoin went <b class="${prev.result === "up" ? "up" : "dn"}">${prev.result}</b> · ${right} right, ${wrong} wrong` : "Last round: awaiting settlement";
   }
   async function loadChat() {
     const c = await api("GET", "hall/chat?limit=6").catch(() => null);
@@ -465,7 +465,7 @@
     const b = live.find(x => x.startsAt <= now && now < x.endsAt) || live.filter(x => x.startsAt > now).sort((a, c) => a.startsAt - c.startsAt)[0] || null;
     S.battle = b;
     if (!b) { // no battle announced: say so, and point at joining instead of an empty countdown
-      $("bWhen").textContent = "HardSmoke's next battle is announced here, with its lineup and a countdown.";
+      $("bWhen").textContent = "The next battle is announced here, with its lineup and a countdown.";
       $("bCount").hidden = true; $("bWatch").hidden = true;
       $("bApply").firstChild.textContent = "Join D3MON "; $("bApply").href = "apply";
       return;
@@ -493,8 +493,8 @@
     $("shop").innerHTML = list.length ? list.map(e => `<a class="n-item tilt k-${esc(e.kind)}${spot.has(e.id) ? " spot" : ""}" href="profile?e=${encodeURIComponent(e.slug)}"><i class="glow" aria-hidden="true"></i>
         <small>${spot.has(e.id) ? '<b class="n-spot">★ Spotlight</b> · ' : ""}${esc(KIND[e.kind] || e.kind)}${(e.badges || []).length ? " · battle winner" : ""}</small><h3>${esc(e.name)}</h3>
         <p>by ${esc(e.creatorName)}</p>${e.tagline ? `<p class="tag">“${esc(e.tagline)}”</p>` : ""}
-        <span class="go">${e.shopUrl ? `Get ${esc(e.name)} →` : "See the record →"}</span></a>`).join("")
-      : `<p class="n-empty">Nobody here yet. <a href="apply">Be the first.</a></p>`;
+        <span class="go">${e.shopUrl ? `Get ${esc(e.name)} →` : "View the record →"}</span></a>`).join("")
+      : `<p class="n-empty">None listed yet. <a href="apply">Be the first.</a></p>`;
   }
   async function loadShop() {
     const [all, sp] = await Promise.all([api("GET", "entrants"), api("GET", "billing/spotlights").catch(() => ({ entrants: [] }))]);
@@ -507,7 +507,7 @@
     const cur = await api("GET", "tournaments");
     $("tTabs").innerHTML = cur.tournaments.map(t => `<button type="button" role="tab" data-kind="${esc(t.kind)}" aria-selected="${t.kind === S.kind}">${esc(t.title.replace(" tournament", ""))}</button>`).join("");
     const id = cur.tournaments.find(t => t.kind === S.kind).id, t = (await api("GET", `tournaments/${id}`)).tournament;
-    $("tWhen").textContent = `${t.title}: ${t.settledRounds} of ${t.rounds} rounds scored by Kalshi.`;
+    $("tWhen").textContent = `${t.title}: ${t.settledRounds} of ${t.rounds} rounds settled.`;
     $("tRows").innerHTML = t.standings.length ? t.standings.slice(0, 10).map(r => `<li><span class="r">${r.rank}</span><a href="profile?e=${encodeURIComponent(r.entrant.slug)}">${esc(r.entrant.name)}</a><span class="s">${r.correct} right · ${pct(r.accuracy)}</span></li>`).join("")
       : `<li><span class="r">–</span><span>No bots in this one yet.</span><a class="s" href="my">Join from My bots →</a></li>`;
   }

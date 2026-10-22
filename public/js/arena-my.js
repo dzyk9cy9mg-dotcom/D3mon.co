@@ -64,7 +64,7 @@
     const state = t.on ? (pending ? `Joined. Counts from the round at <b>${esc(fmtTime(t.from))}</b>.` : "<b>In the tournaments.</b> Your bot's calls count every round.")
       : (pending ? `Leaving at <b>${esc(fmtTime(t.from))}</b>. Rounds already played still count.` : "Not in the tournaments.");
     return `<h3 class="sub">Tournaments</h3>
-      <div class="callbox"><div class="meta">Hourly, daily, weekly and monthly tournaments run all the time, scored by Kalshi. ${state}</div>
+      <div class="callbox"><div class="meta">Hourly, daily, weekly and monthly tournaments run all the time, scored on settled results. ${state}</div>
       <div class="actions"><button class="btn${t.on ? " ghost" : ""} sm" type="button" data-tour="${esc(e.id)}|${t.on ? "off" : "on"}">${t.on ? "Leave tournaments" : "Join tournaments"}</button></div>
       <div class="meta">For entertainment. Not financial advice. D3MON never trades.</div></div>`;
   }
@@ -94,7 +94,7 @@
         ${caller ? "" : `<td>${x.source === "verified" ? `<span class="tag">from your calls</span>` : valueInput(e, x)}</td>`}</tr>`;
     const cols = caller ? 4 : 5;
     return `<h3 class="sub">Stats card</h3>
-      <p class="tag">${caller ? `Your stats are worked out by D3MON.CO from your calls and Kalshi's results, so they're "verified".` : `"Verified" stats are worked out by D3MON.CO from your calls. The rest are self-reported: your bot sends them with its key, or you type them in below and click Save values.`} Every stat starts hidden: choose who sees each one, and only stats with a value appear. Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>${noCalls ? `<p class="tag">Verified stats, worked out from this entrant's own calls, appear here once it makes some.</p>` : ""}
+      <p class="tag">${caller ? `Your stats are worked out by D3MON from your calls and settled results, so they're "verified".` : `"Verified" stats are worked out by D3MON.CO from your calls. The rest are self-reported: your bot sends them with its key, or you type them in below and click Save values.`} Every stat starts hidden: choose who sees each one, and only stats with a value appear. Hiding a stat never deletes anything. <a href="card?e=${encodeURIComponent(e.slug)}">View your card →</a></p>${noCalls ? `<p class="tag">Verified stats, worked out from this entrant's own calls, appear here once it makes some.</p>` : ""}
       <div class="tablewrap"><table class="mgrid stats"><thead><tr><th>Stat</th><th>Who sees it</th><th>Order</th><th>Latest value</th>${caller ? "" : "<th>New value</th>"}</tr></thead><tbody>${groups.map(g => `<tr><th colspan="${cols}" class="catgroup">${esc(g.name)}
           <select data-groupset="${esc(e.id)}|${esc(g.name)}" aria-label="Set everything in ${esc(g.name)}" style="width:auto;margin-left:10px"><option value="">Set all to…</option>${Object.entries(SHOWS).map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></th></tr>${g.list.map(row).join("")}`).join("")}</tbody></table></div>
       <div class="actions" style="margin-top:10px"><button class="btn" type="button" data-savestats="${esc(e.id)}">Save stats card</button>${caller ? "" : `<button class="btn" type="button" data-savevals="${esc(e.id)}">Save values</button>`}</div>

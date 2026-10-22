@@ -18,7 +18,7 @@
     $("sessions").innerHTML = S.sessions.upcoming.length ? S.sessions.upcoming.map(s => `<div class="item"><div class="top"><span class="st ${s.startsAt <= now ? "approved" : "pending"}">${s.startsAt <= now ? "on now" : "upcoming"}</span><b>${esc(s.title)}</b>
         <span class="meta">${esc(new Date(s.startsAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }))} · ${s.minutes} min${s.leads ? ` · ${esc(s.leads)}` : ""}</span>
         ${i.admin ? `<button class="btn ghost sm" type="button" data-cancel="${esc(s.id)}" style="margin-left:auto">Cancel</button>` : ""}</div></div>`).join("")
-      : `<p class="empty">No sessions scheduled yet.</p>`;
+      : `<p class="empty">The next session is announced here.</p>`;
     $("door").hidden = i.access;
     $("room").hidden = !i.access;
     $("teaser").innerHTML = i.featured.length ? `<p class="tag">Featured now:</p><div class="vipcards">${i.featured.map(card).join("")}</div>` : "";
@@ -92,7 +92,7 @@
     try {
       await syncClock();
       await load();
-      if (!me) $("doorText").innerHTML = 'The VIP Room needs access. <a href="login">Sign in</a>, then ask an admin to get in.';
+      if (!me) $("doorText").innerHTML = 'The Capstone is open to members with access. <a href="login">Sign in</a>, then request yours.';
     } catch (e) { msg(e.message); }
     let round = Math.floor(serverNow() / Q) * Q;
     setInterval(() => {
