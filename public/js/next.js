@@ -25,6 +25,20 @@
     let W, H, S, F, vx, vy, tiles = [], mx = -1e4, my = -1e4, lx = 0, ly = 0, sx = 0, sy = 0, seen = true, waves = [], t0 = performance.now();
     const BACK = -170, COLS = [[255, 181, 71], [77, 163, 255], [185, 140, 255]];
     const EVERY = 5.2, SPEED = 900, PISTON = 46; // a piston wave every 5.2 s, travelling 900 px/s, 46 deep
+    // The metal (owner's Higgsfield still, 2026-10-21): brushed gunmetal faces, the grain running a different way on
+    // each block, gold light along the bevels, and here and there an edge lit blue or violet with a light sliding
+    // along it. A fixed hash keeps the same blocks lit through a resize.
+    const hash = (a, b) => { let h = Math.imul(a * 374761393 + b * 668265263, 1274126177); h ^= h >>> 13; return ((Math.imul(h, 1103515245) >>> 0) % 10000) / 10000; };
+    const grain = (() => {
+      const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
+      for (let i = 0; i < 1600; i++) {
+        const y = Math.random() * 256, a = Math.random() * 0.32, l = 40 + Math.random() * 216, x0 = Math.random() * 256;
+        x.fillStyle = Math.random() < 0.55 ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${a})`; x.fillRect(x0, y, l, 0.5);
+        if (x0 + l > 256) x.fillRect(x0 - 256, y, l, 0.5); // wrap so the grain tiles without a seam
+      }
+      return g.createPattern(c, "repeat");
+    })();
+    const EDGE = [[77, 163, 255], [150, 120, 255], [185, 140, 255]];
     function size() {
       W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
       const wide = W > 900;
@@ -38,8 +52,11 @@
         const ins = pts.map(([px, py]) => [px + (cx - px) * 0.035, py + (cy - py) * 0.035]); // a fine seam between blocks
         const k = Math.min(1, Math.max(0, (Math.hypot(cx - vx, cy - vy) - open) / (open * 1.3)));
         // calm behind the words: the blocks there sit back and stay dark so the text reads
-        const calm = wide ? Math.max(0, 1 - Math.hypot((cx - W * 0.22) / (W * 0.26), (cy - H * 0.5) / (H * 0.42))) : 0;
-        tiles.push({ pts: ins, cx, cy, up, calm, k, base: (30 + 55 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, d0: Math.hypot(cx - vx, cy - vy) });
+        const calm = wide ? Math.max(0, 1 - Math.hypot((cx - W * 0.22) / (W * 0.26), (cy - H * 0.5) / (H * 0.42))) : 0.85 * Math.min(1, Math.max(0, (cy - innerHeight * 0.48) / (innerHeight * 0.18))); // on phones the words sit under the pyramid
+        const r1 = hash(r + 50, c + 50), r2 = hash(c + 90, r + 7);
+        tiles.push({ pts: ins, cx, cy, up, calm, k, base: (30 + 55 * k * k * (3 - 2 * k)) * (1 - 0.7 * calm), z: 0, v: 0, d0: Math.hypot(cx - vx, cy - vy),
+          grainAt: [0, 60, 120][Math.floor(r1 * 3)] + (r2 - 0.5) * 16, // the grain's direction on this block
+          lit: calm < 0.25 && r2 < 0.075 ? { m: Math.floor(r1 * 3), col: EDGE[Math.floor(hash(r, c) * 3)], ph: r1 * 6.28, run: 0.12 + r2 * 2 } : null });
       }
     }
     // one piston stroke, 0..1.1 s: a quick snap out with a small overshoot, a hold, then an easy return
@@ -70,6 +87,7 @@
       const ox = vx + sx, oy = vy + sy;
       for (const t of [...tiles].sort((a, b) => (a.z + a.pz) - (b.z + b.pz))) { // far blocks first
         const z = t.z + t.pz, front = t.pts.map(([x, y]) => proj(x, y, z)), back = t.pts.map(([x, y]) => proj(x, y, BACK));
+        t.front = front;
         const dim = (1 - 0.55 * t.calm) * (0.72 + 0.28 * t.k), lamp = Math.max(0, 1 - Math.hypot(t.cx - lx, t.cy - ly) / (W > 900 ? 700 : 420));
         // the sides that face the opening: brushed metal, lit from above, fading darker toward the back (never to black)
         for (let m = 0; m < 3; m++) {
@@ -86,16 +104,22 @@
         const [fx0, fy0] = front[0], cxp = (front[0][0] + front[1][0] + front[2][0]) / 3, cyp = (front[0][1] + front[1][1] + front[2][1]) / 3;
         const ang = Math.atan2(ly - cyp, lx - cxp), rr2 = Math.hypot(front[1][0] - fx0, front[1][1] - fy0) * 0.6;
         const fg = g.createLinearGradient(cxp - Math.cos(ang) * rr2, cyp - Math.sin(ang) * rr2, cxp + Math.cos(ang) * rr2, cyp + Math.sin(ang) * rr2);
-        const base = (24 + 10 * Math.min(1, Math.max(0, z / 200))) * dim, hi = base + (14 + 34 * lamp) * dim;
-        const c = v => `rgb(${v | 0},${(v + 2) | 0},${(v + 6) | 0})`;
-        fg.addColorStop(0, c(base * 0.7)); fg.addColorStop(0.55, c(base)); fg.addColorStop(0.8, c(hi)); fg.addColorStop(1, c(base * 1.05));
+        const base = (34 + 12 * Math.min(1, Math.max(0, z / 200))) * dim, hi = base + (22 + 52 * lamp) * dim;
+        const c = v => `rgb(${v | 0},${(v + 1) | 0},${(v + 4) | 0})`;
+        fg.addColorStop(0, c(base * 0.62)); fg.addColorStop(0.5, c(base)); fg.addColorStop(0.78, c(hi)); fg.addColorStop(1, c(base * 0.95));
         g.fillStyle = fg; g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.fill();
+        // the brushed grain over it, catching more of the lamp
+        if (grain) {
+          grain.setTransform(new DOMMatrix().translateSelf(cxp, cyp).rotateSelf(t.grainAt));
+          g.globalAlpha = (0.09 + 0.16 * lamp) * dim * (1 - 0.8 * t.calm); g.fillStyle = grain; g.fill(); g.globalAlpha = 1;
+        }
         // the bevel: the upper edges catch the light, the lower ones fall into shade; gold near the pointer, the
         // wave's colour as the piston fires
         for (let m = 0; m < 3; m++) {
           const A = front[m], B = front[(m + 1) % 3], top = (A[1] + B[1]) / 2 < cyp;
-          g.strokeStyle = top ? `rgba(215,225,240,${((0.1 + 0.18 * lamp) * dim).toFixed(3)})` : `rgba(0,0,0,${(0.35 * dim).toFixed(3)})`;
-          g.lineWidth = 1; g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.stroke();
+          // the upper bevels hold a thin line of gold, brighter toward the lamp; the lower ones fall into shade
+          g.strokeStyle = top ? `rgba(240,200,130,${((0.32 + 0.5 * lamp) * dim * (1 - 0.6 * t.calm)).toFixed(3)})` : `rgba(0,0,0,${(0.4 * dim).toFixed(3)})`;
+          g.lineWidth = top ? 1.3 : 1; g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.stroke();
         }
         const glow = Math.max(t.near * 0.45, t.glow * 0.7);
         if (glow > 0.02) {
@@ -104,6 +128,23 @@
           g.beginPath(); g.moveTo(...front[0]); g.lineTo(...front[1]); g.lineTo(...front[2]); g.closePath(); g.stroke();
         }
       }
+      // the lit edges, drawn last so their glow lies over the blocks around them: blue or violet, breathing slowly,
+      // with a light sliding along each
+      g.save(); g.globalCompositeOperation = "lighter";
+      for (const t of tiles) {
+        if (!t.lit || !t.front) continue;
+        const L = t.lit, A = t.front[L.m], B = t.front[(L.m + 1) % 3], b = reduce ? 0.8 : 0.55 + 0.45 * Math.sin(tt * 0.7 + L.ph), [r, gg, bb] = L.col;
+        g.shadowColor = `rgba(${r},${gg},${bb},0.9)`; g.shadowBlur = 14;
+        g.strokeStyle = `rgba(${r},${gg},${bb},${(0.75 * b * io).toFixed(3)})`; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.stroke();
+        if (!reduce) {
+          const u = (tt * L.run * 0.25 + L.ph) % 1, px = A[0] + (B[0] - A[0]) * u, py = A[1] + (B[1] - A[1]) * u;
+          const sp = g.createRadialGradient(px, py, 0, px, py, 16);
+          sp.addColorStop(0, `rgba(255,255,255,${(0.8 * io).toFixed(3)})`); sp.addColorStop(0.3, `rgba(${r},${gg},${bb},${(0.5 * io).toFixed(3)})`); sp.addColorStop(1, `rgba(${r},${gg},${bb},0)`);
+          g.shadowBlur = 0; g.fillStyle = sp; g.beginPath(); g.arc(px, py, 16, 0, 6.283); g.fill();
+        }
+      }
+      g.restore();
       if (seen && !reduce && !document.hidden) requestAnimationFrame(draw);
     }
     new IntersectionObserver(([en]) => { const was = seen; seen = en.isIntersecting; if (seen && !was && !reduce) requestAnimationFrame(draw); }).observe(cv); // the wall rests while scrolled away
