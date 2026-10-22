@@ -21,6 +21,7 @@ import { Tournaments } from "./tournaments.js";
 import { Vip } from "./vip.js";
 import { Votes } from "./votes.js";
 import { Portraits } from "./portraits.js";
+import { Members } from "./members.js";
 import { Billing } from "./billing.js";
 import { BattleResults } from "./results.js";
 import { Hall } from "./hall.js";
@@ -80,7 +81,8 @@ export function createArena({ store, accounts, cfg }) {
   const results = new BattleResults({ registry, calls, metrics });
   const votes = new Votes({ ledger, metrics, prices, registry, vip, feed, accounts, userName });
   const billing = new Billing({ ledger, registry, vip, feed, accounts, key: cfg.stripeKey, webhookSecret: cfg.stripeWebhookSecret, api: cfg.stripeApi, siteUrl: cfg.siteUrl });
-  const portraits = new Portraits({ ledger, registry, feed, dir: path.join(cfg.dataDir, "portraits") });
+  const members = new Members({ ledger, accounts });
+  const portraits = new Portraits({ ledger, registry, accounts, feed, dir: path.join(cfg.dataDir, "portraits") });
   const hallChat = new HallChat({ store, feed, userName });
   // The hall chat and one D3MON Discord channel as one conversation, when the bot's settings are in .env.
   const discord = DiscordBridge.configured(cfg)
@@ -220,7 +222,15 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "POST /votes/change") { writer(); return ok(await votes.change(ctx, await body())); }
     if (route === "GET /votes/me") { if (!ctx.uid) throw new ApiError(401, "unauthenticated", "Sign in first."); return ok(votes.recordView(ctx, ctx.uid)); }
     if (route === "PUT /votes/settings") { writer(); return ok(votes.setPrivacy(ctx, await body())); }
-    if ((m = route.match(/^GET \/members\/([A-Za-z0-9_.-]{1,40})$/))) return ok(votes.memberView(ctx, m[1]));
+    // a member's own profile fields and moving picture (owner, 2026-10-21)
+    if (route === "PUT /members/me/profile") { writer(); return ok(members.set(ctx, await body())); }
+    if (route === "POST /members/me/portrait") { writer(); return ok(portraits.submitMember(ctx, await readJson(req, 7 * 1024 * 1024)), 201); }
+    if (route === "GET /members/me/portrait") return ok(portraits.memberStatus(ctx));
+    if ((m = route.match(/^PUT \/members\/([A-Za-z0-9_.-]{1,40})\/host$/))) { writer(); return ok(members.setHost(ctx, votes.byUsername(m[1]), await body())); }
+    if ((m = route.match(/^GET \/members\/([A-Za-z0-9_.-]{1,40})$/))) {
+      const v = votes.memberView(ctx, m[1]), uid = votes.byUsername(m[1]);
+      return ok({ ...v, ...members.view(uid), portrait: portraits.approvedForMember(uid) });
+    }
     // An admin deletes a member's account (privacy page: "ask an admin"). Not the owner, not yourself. Their
     // callers, bots and scripts are removed, their pictures deleted; the ledger keeps their calls and votes, which
     // then show no name. A ledger line records that it happened (no name in it).
@@ -231,7 +241,7 @@ export function createArena({ store, accounts, cfg }) {
       if (accounts.role(uid) === "owner") throw new ApiError(409, "is_owner", "The owner's account can't be deleted.");
       if (uid === ctx.uid) throw new ApiError(409, "is_you", "Ask another admin to delete your own account.");
       const gone = registry.removeOwner(uid);
-      portraits.removeFor(gone);
+      portraits.removeFor(gone, uid);
       ledger.append([{ t: "member_deleted", uid, entrants: gone }], ctx.uid);
       accounts.removeUser(uid);
       return ok({ deleted: true, entrantsRemoved: gone.length });
@@ -331,5 +341,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }

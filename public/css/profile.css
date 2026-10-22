@@ -111,6 +111,18 @@ body{--kc:var(--bots)}
 @keyframes pf-fade3{0%{opacity:0}15%,35%{opacity:1}50%,100%{opacity:0}}
 @media (max-width:900px){.pf-portrait{right:50%;top:30%;width:min(78vw,420px);transform:translate(50%,-50%) scale(calc(1.08 - .08 * var(--p,0)))}}
 @media (prefers-reduced-motion:reduce){.pf-portrait img{animation:none}.pf-portrait img:first-child{opacity:1}}
+/* a person's picture is taller than wide: keep their face (the top third) in the frame */
+.pf-portrait img{object-position:50% 22%}
+body[data-kind="member"] .pf-portrait{aspect-ratio:3/4}
+body[data-kind="member"] .pf-portrait img{object-position:50% 6%}
+
+/* your own profile: your words, links and picture */
+.pf-edit{display:grid;gap:14px;margin-top:28px;max-width:640px}
+.pf-edit label{display:grid;gap:6px;font-weight:600}
+.pf-edit input:not([type=file]),.pf-edit textarea{font:inherit;font-size:16px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.16);color:inherit;border-radius:2px}
+.pf-edit textarea{font-family:"IBM Plex Mono",monospace;font-size:14px}
+.pf-thumbs{display:flex;gap:8px;margin:6px 0 4px}
+.pf-thumbs img{width:72px;height:96px;object-fit:cover;object-position:50% 22%;border:1px solid rgba(255,255,255,.16)}
 
 /* a member's own profile */
 .pf-av{width:28px;height:28px;border-radius:50%}

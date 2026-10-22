@@ -10,7 +10,7 @@
     if (!r) return; // not an admin
     box.hidden = false;
     list.innerHTML = r.queue.length ? r.queue.map(q => `<div class="pq" data-set="${esc(q.set)}">
-        <p><b>${esc(q.entrant ? q.entrant.name : "Unknown")}</b> <span class="st">${esc(q.entrant ? A.kindName(q.entrant.kind) : "")}</span> <span class="meta">${esc(A.when(q.at))}</span></p>
+        <p><b>${esc(q.entrant ? q.entrant.name : q.member ? q.member.name : "Unknown")}</b> <span class="st">${esc(q.entrant ? A.kindName(q.entrant.kind) : q.member ? `Member · @${q.member.username}` : "")}</span> <span class="meta">${esc(A.when(q.at))}</span></p>
         <div class="pthumbs">${q.frames.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Frame" width="120" height="120"></a>`).join("")}</div>
         <div class="row"><input class="pnote" maxlength="200" placeholder="Note to the owner if you reject (optional)"><button class="btn sm" data-d="approve" type="button">Approve</button><button class="btn sm ghost" data-d="reject" type="button">Reject</button></div>
       </div>`).join("") : `<p class="meta">Nothing waiting.</p>`;
