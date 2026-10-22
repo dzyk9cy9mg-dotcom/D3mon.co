@@ -21,9 +21,10 @@ describe("battle cockpit", () => {
 
   test("every screen has a default, and the page follows the battle running now", async () => {
     const r = (await guest.get("/api/v1/cockpit")).json;
-    assert.deepEqual(r.slots, ["ticker", "main", "leftTop", "leftBottom", "rightTop", "rightBottom", "console"]);
+    assert.deepEqual(r.slots, ["ticker", "main", "leftTop", "leftBottom", "rightTop", "rightBottom", "lowerLeft", "console", "lowerRight"]);
     assert.equal(r.screens.main.show, "bots");
-    assert.equal(r.screens.console.show, "desk");
+    assert.equal(r.screens.console.show, "chat");
+    assert.equal(r.screens.lowerLeft.show, "vote");
     assert.equal(r.battle.id, live.id);
     assert.equal(r.battleId, null);
     assert.ok(r.modules.promo);
@@ -51,7 +52,7 @@ describe("battle cockpit", () => {
     assert.equal(r.screens.leftTop.video, undefined, "a message keeps no video");
     assert.equal(r.screens.rightBottom.promo.embed, "https://www.youtube-nocookie.com/embed/UukZOLdzhZE");
     assert.ok(!JSON.stringify(r).includes("OHpa"), "the share link's tracking is never kept");
-    assert.equal(r.screens.console.show, "desk", "screens left out keep what they had");
+    assert.equal(r.screens.console.show, "chat", "screens left out keep what they had");
 
     // null puts a screen back to its default
     await hs.req("PUT", "/api/v1/cockpit", { screens: { main: null } });
@@ -83,17 +84,17 @@ describe("battle cockpit", () => {
 
   test("the cockpit page and its video are served, the video in byte ranges", async () => {
     assert.equal((await fetch(srv.base + "/battle")).status, 200);
-    const full = await fetch(srv.base + "/media/cockpit.mp4");
+    const full = await fetch(srv.base + "/media/intro.mp4");
     assert.equal(full.status, 200);
     assert.equal(full.headers.get("content-type"), "video/mp4");
     assert.equal(full.headers.get("accept-ranges"), "bytes");
     const size = (await full.arrayBuffer()).byteLength;
-    const part = await fetch(srv.base + "/media/cockpit.mp4", { headers: { range: "bytes=0-99" } });
+    const part = await fetch(srv.base + "/media/intro.mp4", { headers: { range: "bytes=0-99" } });
     assert.equal(part.status, 206);
     assert.equal(part.headers.get("content-range"), `bytes 0-99/${size}`);
     assert.equal((await part.arrayBuffer()).byteLength, 100);
-    const tail = await fetch(srv.base + "/media/cockpit.mp4", { headers: { range: "bytes=-10" } });
+    const tail = await fetch(srv.base + "/media/intro.mp4", { headers: { range: "bytes=-10" } });
     assert.equal(tail.headers.get("content-range"), `bytes ${size - 10}-${size - 1}/${size}`);
-    assert.equal((await fetch(srv.base + "/media/cockpit.mp4", { headers: { range: `bytes=${size}-` } })).status, 416);
+    assert.equal((await fetch(srv.base + "/media/intro.mp4", { headers: { range: `bytes=${size}-` } })).status, 416);
   });
 });

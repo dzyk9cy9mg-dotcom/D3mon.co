@@ -10,9 +10,10 @@ import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
 import { parseVideoUrl } from "./hall.js";
 
-// The seven screens, as they sit in the video: the ticker on top, the big main screen, the two halves of each wing,
-// and the console in front.
-export const SLOTS = ["ticker", "main", "leftTop", "leftBottom", "rightTop", "rightBottom", "console"];
+// The nine displays on the curved cockpit (2026-10-21): on the big curved screen, the ticker over the centre, the
+// centre (main), and the left and right columns in two halves each; on the lower curved screen, left, centre (still
+// called console) and right.
+export const SLOTS = ["ticker", "main", "leftTop", "leftBottom", "rightTop", "rightBottom", "lowerLeft", "console", "lowerRight"];
 // What a screen can show. Every module fits every screen; the page lays it out for the screen's size.
 export const MODULES = {
   odds: "Round clock and Kalshi's odds",
@@ -33,7 +34,7 @@ export const MODULES = {
 };
 export const DEFAULT_SCREENS = {
   ticker: { show: "odds" }, main: { show: "bots" }, leftTop: { show: "callers" }, leftBottom: { show: "scripts" },
-  rightTop: { show: "stream" }, rightBottom: { show: "crowd" }, console: { show: "desk" },
+  rightTop: { show: "stream" }, rightBottom: { show: "crowd" }, lowerLeft: { show: "vote" }, console: { show: "chat" }, lowerRight: { show: "lastRound" },
 };
 const SCREEN = {
   show: { type: "enum", values: Object.keys(MODULES), required: true },

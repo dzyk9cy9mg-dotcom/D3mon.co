@@ -1,6 +1,6 @@
 // HardSmoke's Battle of the Bots, live (/battle): a thin client over /api/v1.
 //
-// The cockpit: a looping video (media/cockpit.mp4) with seven screens in it. Each screen gets one module, chosen by
+// The cockpit: the owner's curved cockpit (media/cockpit2.jpg, a loop to come) with nine displays on its two curved screens. Each one gets a module, chosen by
 // HardSmoke or any admin in "HardSmoke's controls" (GET/PUT /api/v1/cockpit): the bots, callers, chart scripts,
 // standings, the round clock and Kalshi's odds, the stream, the crowd's votes, vote, chat, last round, a message, a
 // promo video, or nothing. The displays are fitted onto the video's screens with a CSS perspective transform, using
@@ -17,7 +17,7 @@
   const Q = 15 * 60000, LOCK = 10000;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const KIND = { caller: "Caller", bot: "Bot", script: "Chart script" };
-  const SLOT_NAME = { ticker: "Top strip", main: "Main screen", leftTop: "Left wing, top", leftBottom: "Left wing, bottom", rightTop: "Right wing, top", rightBottom: "Right wing, bottom", console: "Console" };
+  const SLOT_NAME = { ticker: "Top strip (centre)", main: "Main screen, centre", leftTop: "Main screen, left top", leftBottom: "Main screen, left bottom", rightTop: "Main screen, right top", rightBottom: "Main screen, right bottom", lowerLeft: "Lower screen, left", console: "Lower screen, centre", lowerRight: "Lower screen, right" };
   const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
   const cents = x => (x == null ? "" : `${Math.round(x * 100)}¢`);
   const signed = x => (x == null ? "" : `${x >= 0 ? "+" : "−"}${Math.abs(Math.round(x * 100))}¢`);
@@ -25,13 +25,31 @@
   const day = ms => new Date(ms).toLocaleString(undefined, { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   // ---------- the cockpit's geometry ----------
-  // The screens' corners in the video (1912 × 1080 as made; the stage is 1920 × 1080), just inside each glowing bezel.
-  const VX = 1920 / 1912;
-  const RECTS = { ticker: [566, 78, 1356, 124], mainScr: [562, 158, 1351, 622] };
-  const QUADS = { // top-left, top-right, bottom-right, bottom-left
-    left: { w: 400, h: 620, p: [[90, 94], [489, 184], [489, 634], [84, 708]] },
-    right: { w: 400, h: 620, p: [[1428, 184], [1820, 95], [1828, 707], [1432, 634]] },
-    console: { w: 1120, h: 260, p: [[548, 713], [1366, 713], [1688, 940], [228, 940]] },
+  // The curved cockpit (owner, 2026-10-21): one big curved screen and a lower curved screen under it, measured from the
+  // last frame of media/intro.mp4 (saved as media/cockpit2.jpg). Each glass edge is a parabola,
+  // y = yc + (ye − yc)·((x − CX) / HW)², and each display is a four-cornered piece cut from between two edges, kept just
+  // inside the glass and fitted with a perspective transform, so the pieces at the sides lean in as the screen wraps.
+  // Remeasure CURVE if the video changes.
+  const CX = 940;
+  const CURVE = { mainTop: [192, 55, 860], mainBot: [667, 725, 890], lowTop: [700, 757, 890], lowBot: [850, 962, 890] };
+  const edge = k => { const [yc, ye, hw] = CURVE[k]; return x => yc + (ye - yc) * ((x - CX) / hw) ** 2; };
+  // the piece between two edges from x0 to x1: its straight top and bottom are moved in until they clear the curve
+  function cut(top, bot, x0, x1, inset = 14) {
+    const T = edge(top), B = edge(bot);
+    let dt = 0, db = 0;
+    for (let i = 0; i <= 24; i++) {
+      const k = i / 24, x = x0 + (x1 - x0) * k;
+      dt = Math.max(dt, T(x) - (T(x0) + (T(x1) - T(x0)) * k));
+      db = Math.max(db, B(x0) + (B(x1) - B(x0)) * k - B(x));
+    }
+    const p = [[x0 + inset, T(x0) + dt + inset], [x1 - inset, T(x1) + dt + inset], [x1 - inset, B(x1) - db - inset], [x0 + inset, B(x0) - db - inset]];
+    const w = Math.round(Math.max(p[1][0] - p[0][0], p[2][0] - p[3][0])), h = Math.round(Math.max(p[3][1] - p[0][1], p[2][1] - p[1][1]));
+    return { w, h, p };
+  }
+  // symmetric about the screen's centre (CX): three columns on the main screen, three parts on the lower one
+  const QUADS = {
+    left: cut("mainTop", "mainBot", 76, 500), center: cut("mainTop", "mainBot", 512, 1368), right: cut("mainTop", "mainBot", 1380, 1804),
+    lowLeft: cut("lowTop", "lowBot", 150, 640, 20), lowCenter: cut("lowTop", "lowBot", 652, 1228, 12), lowRight: cut("lowTop", "lowBot", 1240, 1730, 20),
   };
   // The CSS matrix that takes a w × h box onto four corners (a projective transform, solved directly).
   function homography(w, h, p) {
@@ -53,13 +71,9 @@
   function place() {
     const flat = phone.matches;
     document.body.classList.toggle("bt-cards", flat);
-    for (const [id, [x0, y0, x1, y1]] of Object.entries(RECTS)) {
-      const el = $(id);
-      el.style.cssText = flat ? "" : `left:${x0 * VX}px;top:${y0}px;width:${(x1 - x0) * VX}px;height:${y1 - y0}px`;
-    }
     for (const [k, q] of Object.entries(QUADS)) {
       const el = document.querySelector(`[data-quad="${k}"]`);
-      el.style.cssText = flat ? "" : `width:${q.w}px;height:${q.h}px;transform:${homography(q.w, q.h, q.p.map(([x, y]) => [x * VX, y]))}`;
+      el.style.cssText = flat ? "" : `width:${q.w}px;height:${q.h}px;transform:${homography(q.w, q.h, q.p)}`;
     }
     fit();
   }
@@ -78,20 +92,22 @@
   // ---------- the background video: the small one on small screens, paused when nobody can see it ----------
   const bg = $("bg");
   const small = () => innerWidth * (devicePixelRatio || 1) < 1500;
+  // The cockpit loop behind the displays: media/<LOOP>.mp4 (and <LOOP>-720.mp4). Until the owner's loop for the curved
+  // cockpit is made, LOOP is null and the still (media/cockpit2.jpg, the intro's last frame) stands in.
+  const LOOP = null;
   function video() {
-    if (phone.matches || reduce) { bg.pause(); bg.removeAttribute("src"); bg.load(); return; }
-    const want = `media/${small() ? "cockpit-720" : "cockpit"}.mp4`;
+    if (phone.matches || reduce || !LOOP) { bg.pause(); if (bg.getAttribute("src")) { bg.removeAttribute("src"); bg.load(); } return; }
+    const want = `media/${small() ? `${LOOP}-720` : LOOP}.mp4`;
     if (!bg.src.endsWith(want)) bg.src = want;
     if (!document.hidden && $("wall").hidden && !document.body.classList.contains("bt-gated")) bg.play().catch(() => {});
   }
-
   // ---------- the intro: a cinematic flight that lands exactly on the cockpit ----------
   // media/intro.mp4 (made in Higgsfield, with sound) ends on the cockpit still the loop starts from. It plays once,
   // on a visitor's first visit, after they press "Enter the battle" (browsers only allow sound after a click); "▶ Intro"
   // under the cockpit plays it again. When its camera has settled (SETTLE s), the loop starts underneath, the intro is
   // nudged onto the cockpit's exact framing (FIX, measured from the two videos' main screens), its sound fades and it
   // fades out, and the screens light up one by one. Remeasure FIX if either video changes.
-  const INTRO = { SETTLE: 12.45, END: 13.05, FIX: [813 / 802, 486 / 471, (549 - (813 / 802) * 536) * 1920 / 1912, 147 - (486 / 471) * 143] };
+  const INTRO = { SETTLE: 14.7, END: 15.04, FIX: [1, 1, 0, 0] }; // third intro (2026-10-21): it ends on media/cockpit2.jpg itself, so nothing to nudge
   let film = null;
   const seen = () => { try { return localStorage.getItem("d3b.intro") === "1"; } catch { return false; } };
   // The intro starts loading as soon as the gate is up, so it plays through without stopping. On an unknown or slow
@@ -239,7 +255,7 @@
           <span class="bt-name">${esc(e.name)}<small>${esc(KIND[e.kind] || e.kind)}${e.creatorName ? ` · ${esc(e.creatorName)}` : ""}</small></span>
           <span class="bt-call">${callTag(call)}</span><span class="bt-rec">${record(s)}</span></a>`).join("")}</div>${dots(p)}`;
     }
-    const p = page(all, size === "desk" ? 4 : 5);
+    const p = page(all, size === "low" ? 3 : size === "desk" ? 4 : 5);
     return `<h3>${esc(title)}</h3><ol class="bt-rows">${p.list.map(({ e, s, call }) => `<li class="k-${esc(e.kind)}"><a href="profile?e=${encodeURIComponent(e.slug)}">${esc(e.name)}</a><span class="bt-call">${callTag(call)}</span><small>${record(s)}</small></li>`).join("")}</ol>${dots(p)}`;
   }
 
@@ -248,7 +264,7 @@
     if (!S.b || !r) return `<h3>${esc(title)}</h3><p class="bt-empty">Standings show once the battle starts.</p>`;
     const rows = r.standings;
     if (!rows.length) return `<h3>${esc(title)}</h3><p class="bt-empty">No one in this battle yet.</p>`;
-    const n = size === "big" ? 8 : size === "strip" ? 6 : 5;
+    const n = size === "big" ? 8 : size === "strip" ? 6 : size === "low" ? 3 : 5;
     if (size === "strip") return `<div class="bt-run">${rows.slice(0, n).map(x => `<span><b>#${x.rank} ${esc(x.entrant.name)}</b> ${x.correct} right</span>`).join("")}</div>`;
     return `<h3>${esc(title)}<small>${r.status === "final" ? "Final" : `${r.settledRounds} of ${r.rounds} rounds settled`}</small></h3>
       <ol class="bt-rank">${rows.slice(0, n).map(x => `<li class="k-${esc(x.entrant.kind)}"><span class="r">${x.rank}</span><a href="profile?e=${encodeURIComponent(x.entrant.slug)}">${esc(x.entrant.name)}</a><span class="s">${x.correct} right${x.accuracy != null ? ` · ${Math.round(x.accuracy * 100)}%` : ""}</span></li>`).join("")}</ol>
@@ -362,7 +378,7 @@
     const line = total ? `${Math.round(up * 100)}% Up · ${total} in` : "Be the first to call it";
     if (size === "strip") return `<div class="bt-run"><span>The crowd: <b>${line}</b></span>${d.actions.slice(-4).reverse().map(a => `<span><b>${esc(a.name)}</b> ${a.action === "exit" ? "cashed out" : `<span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲" : "▼"}</span>`}</span>`).join("")}</div>`;
     return `<h3>${esc(title)}<small>${line}</small></h3><div class="bt-split" aria-hidden="true"><i class="up" style="width:${up * 100}%"></i><i class="dn" style="width:${(1 - up) * 100}%"></i></div>
-      <ol class="bt-feed">${d.actions.slice(size === "big" ? -10 : -5).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}><b>${esc(a.name)}</b>${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}</li>`).join("") || `<li class="bt-empty">No votes yet this round.</li>`}</ol>`;
+      <ol class="bt-feed">${d.actions.slice(size === "big" ? -10 : size === "low" ? -3 : -5).reverse().map(a => `<li${a.badge ? ' class="b"' : ""}><b>${esc(a.name)}</b>${a.badge ? '<i aria-label="badge">★</i>' : ""} ${a.action === "exit" ? `cashed out${a.got != null ? ` @ ${cents(a.got)}` : ""}` : `${a.action === "switch" ? "switched to" : "called"} <span class="${a.dir === "up" ? "up" : "dn"}">${a.dir === "up" ? "▲ Up" : "▼ Down"}</span>${a.paid != null ? ` @ ${cents(a.paid)}` : ""}`}</li>`).join("") || `<li class="bt-empty">No votes yet this round.</li>`}</ol>`;
   }
 
   // ---------- vote and chat: built once per screen, then updated in place (so typing isn't interrupted) ----------
@@ -389,7 +405,7 @@
   }
   function fillChat(root) {
     const list = root.querySelector(".bt-msgs"); if (!list) return;
-    const n = root.dataset.size === "desk" ? 4 : root.dataset.size === "big" ? 12 : 7;
+    const n = root.dataset.size === "low" ? 3 : root.dataset.size === "desk" ? 4 : root.dataset.size === "big" ? 12 : 7;
     const html = S.chat.slice(-n).map(m => `<li${m.as ? ` class="as-${esc(m.as)}"` : ""}><b>${esc(m.name)}</b>${m.from === "discord" ? '<span class="bt-via">Discord</span>' : ""} ${esc(m.text)}</li>`).join("") || `<li class="bt-empty">Quiet so far. Say hello.</li>`;
     if (list.innerHTML !== html) list.innerHTML = html;
   }
@@ -605,9 +621,9 @@
     const entrants = names.map(([name, kind, creatorName], i) => ({ id: `e${i}`, name, kind, creatorName, slug: name.toLowerCase().replace(/\W+/g, "-"), streamUrl: "" }));
     const b = { id: "demo1", title: "Battle of the Bots · Saturday", startsAt: start, rounds: 8, roundMs: Q, endsAt: start + 8 * Q, status: "open", entrants,
       streams: [["HardSmoke live", "https://www.youtube.com/watch?v=jfKfPfyJRdk"], ["Valhalla's desk", "https://www.youtube.com/watch?v=5qap5aO4i9A"], ["Kronos charts", "https://www.twitch.tv/hardsmoke"], ["Odin's stream", "https://www.youtube.com/watch?v=DWcJFNfaw9c"], ["Maya calls", "https://kick.com/maya"], ["D3MON Discord", "https://discord.gg/d3mon"]].map(([label, url]) => ({ label, url })) };
-    const cp = { battleId: null, featured: 0, battle: b, slots: ["ticker", "main", "leftTop", "leftBottom", "rightTop", "rightBottom", "console"],
+    const cp = { battleId: null, featured: 0, battle: b, slots: ["ticker", "main", "leftTop", "leftBottom", "rightTop", "rightBottom", "lowerLeft", "console", "lowerRight"],
       modules: { odds: "Round clock and Kalshi's odds", bots: "Bots", callers: "Callers", scripts: "Chart scripts", lineup: "Everyone in the battle", standings: "Battle standings", stream: "Stream (opens the Stream Wall)", crowd: "The crowd's votes", desk: "Vote and chat", vote: "Vote", chat: "Chat", lastRound: "Last round", message: "A message", promo: "Promo video", off: "Nothing (screen off)" },
-      screens: { ticker: { show: "odds" }, main: { show: "bots" }, leftTop: { show: "callers" }, leftBottom: { show: "scripts" }, rightTop: { show: "stream" }, rightBottom: { show: "crowd" }, console: { show: "desk" } } };
+      screens: { ticker: { show: "odds" }, main: { show: "bots" }, leftTop: { show: "callers" }, leftBottom: { show: "scripts" }, rightTop: { show: "stream" }, rightBottom: { show: "crowd" }, lowerLeft: { show: "vote" }, console: { show: "chat" }, lowerRight: { show: "lastRound" } } };
     let up = 0.58;
     const call = (e, i, r) => e.kind === "caller" && Date.now() < r + Q ? { entrantId: e.id, sealed: true } : { entrantId: e.id, name: e.name, direction: (i * 7 + r / Q) % 3 < 2 ? "up" : "down", price: { paid: +(0.38 + ((i * 13) % 30) / 100).toFixed(2) } };
     const chat = [["Maya", "Morning floor. Leaning up this round."], ["Rook", "Funding flipped negative, careful."], ["Valhalla", "Called. Let's see it.", "bot"], ["Dex", "first time here, this is sick"], ["HardSmoke", "Welcome to the Battle of the Bots!"], ["Kronos", "Signal: momentum up, 0.71", "script"]];

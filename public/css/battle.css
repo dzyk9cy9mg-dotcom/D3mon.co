@@ -7,7 +7,7 @@ body.bt-body{padding:0}
 .bt-visually{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .bt-view{position:relative;overflow:hidden;width:100%;background:#020306}
 .bt-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
-.bt-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;background:#020306 url(../media/cockpit.jpg) center/100% 100% no-repeat}
+.bt-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;background:#020306 url(../media/cockpit2.jpg) center/100% 100% no-repeat}
 .bt-flat{position:absolute}
 .bt-quad{position:absolute;left:0;top:0;transform-origin:0 0;display:flex;flex-direction:column;gap:30px}
 .bt-quad>.bt-scr{flex:1;min-height:0}
@@ -190,7 +190,7 @@ b.up,b.dn{font-weight:800}
 
 /* ---------- phones: the screens as cards over a still of the cockpit ---------- */
 body.bt-cards{background:#020306 linear-gradient(rgba(2,3,6,.86),rgba(2,3,6,.94)) fixed}
-body.bt-cards::before{content:"";position:fixed;inset:0;z-index:-1;background:url(../media/cockpit.jpg) center/cover no-repeat;opacity:.35}
+body.bt-cards::before{content:"";position:fixed;inset:0;z-index:-1;background:url(../media/cockpit2.jpg) center/cover no-repeat;opacity:.35}
 body.bt-cards .bt-view{overflow:visible;background:none;height:auto!important;padding:12px 16px 0}
 body.bt-cards .bt-stage{position:static;width:auto;height:auto;transform:none!important;display:flex;flex-direction:column;gap:14px}
 body.bt-cards .bt-bg{display:none}
@@ -260,3 +260,24 @@ body.bt-cards .bt-gate{position:fixed;z-index:94}
 @media (prefers-reduced-motion:reduce){body.bt-arrive .bt-scr{animation:none}}
 .bt-loading{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:97;margin:0;padding:10px 18px;background:rgba(2,3,6,.72);border:1px solid rgba(255,197,106,.45);color:var(--ink);font:500 14px "IBM Plex Mono",monospace;backdrop-filter:blur(6px)}
 .bt-loading[hidden]{display:none}.bt-loading b{color:var(--gold);margin-left:6px}
+
+/* ---------- the curved cockpit (2026-10-21) ---------- */
+[data-quad="center"]{gap:12px}
+[data-quad="center"]>[data-slot="ticker"]{flex:0 0 74px;border-bottom:1px solid rgba(255,197,106,.18)}
+.bt-scr[data-size="low"]{font-size:20px;padding:10px 18px;gap:8px;justify-content:center}
+.bt-scr[data-size="low"] h3{font-size:.72em}
+.bt-scr[data-size="low"] .bt-vb{min-height:50px;padding:0 22px}
+.bt-scr[data-size="low"] .bt-say input{min-height:46px}
+.bt-scr[data-size="low"] .bt-desk{gap:18px}
+.bt-scr[data-size="low"] .bt-big{font-size:1.5em}
+.bt-scr[data-size="low"] .bt-rows li{padding:4px 0}
+.bt-scr[data-slot="lowerLeft"] h3,.bt-scr[data-slot="console"] h3,.bt-scr[data-slot="lowerRight"] h3{color:var(--up)}
+/* the bot tiles, sized to the curved screen's centre (two rows of three) */
+[data-quad="center"]>[data-slot="ticker"]{flex-basis:62px}
+.bt-scr[data-size="big"]{padding:10px 18px 12px;gap:8px}
+.bt-scr[data-size="big"] .bt-tiles{gap:10px;grid-auto-rows:minmax(0,1fr)}
+.bt-scr[data-size="big"] .bt-tile{grid-template-columns:40px minmax(0,1fr);gap:2px 10px;padding:8px 12px;overflow:hidden}
+.bt-scr[data-size="big"] .bt-sig{width:40px;height:40px}
+.bt-scr[data-size="big"] .bt-name{font-size:.95em}
+.bt-scr[data-size="big"] .bt-tile .bt-call{font-size:1.3em}
+.bt-scr[data-size="big"] .bt-rec{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
