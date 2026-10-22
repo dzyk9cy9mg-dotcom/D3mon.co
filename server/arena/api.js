@@ -29,6 +29,7 @@ import { Hall } from "./hall.js";
 import { Cockpit } from "./cockpit.js";
 import { HallChat } from "./hallchat.js";
 import { DiscordBridge } from "./discord.js";
+import { Waitlist } from "./waitlist.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
 
@@ -47,7 +48,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": return id === undefined;
+      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": case "waitlist": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "voice": return voice.allows(ctx, id);
@@ -95,6 +96,7 @@ export function createArena({ store, accounts, cfg }) {
   const voice = new Voice({ feed, vip, accounts, stun: cfg.voiceStun || [], turn: cfg.voiceTurn || [], turnSecret: cfg.voiceTurnSecret || "" });
   const hall = new Hall({ ledger, feed, ...(cfg.ytThumbUrl ? { thumbBase: cfg.ytThumbUrl } : {}) });
   const cockpit = new Cockpit({ ledger, feed, registry });
+  const waitlist = new Waitlist({ store, feed });
   const displays = new Displays({ store, registry, stats, catalog, feed });
   displays.seed();
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
@@ -103,6 +105,7 @@ export function createArena({ store, accounts, cfg }) {
     botStats: new RateLimiter({ capacity: 10, refillPerSec: 1 / 30 }), // per bot: stats change slowly
     apply: new RateLimiter({ capacity: 20, refillPerSec: 20 / 3600 }),
     writes: new RateLimiter({ capacity: 120, refillPerSec: 2 }),
+    waitlist: new RateLimiter({ capacity: 20, refillPerSec: 20 / 3600 }), // new emails per address an hour (phone networks share addresses)
   };
 
   const take = (limiter, key) => {
@@ -194,6 +197,11 @@ export function createArena({ store, accounts, cfg }) {
 
     if (route === "GET /rounds") return ok(roundsView(url));
     if (route === "GET /market") return ok(prices.market());
+    if (route === "GET /waitlist") return ok(waitlist.info());
+    if (route === "POST /waitlist") return ok(waitlist.join(ctx, await body(), () => take(limits.waitlist, clientIp(req, cfg.trustProxy))));
+    if (route === "PUT /waitlist") { writer(); return ok(waitlist.setOpen(ctx, await body())); }
+    if (route === "GET /waitlist/entries") return ok(waitlist.list(ctx));
+    if ((m = route.match(/^DELETE \/waitlist\/entries\/([a-f0-9]{20})$/))) { writer(); return ok(waitlist.remove(ctx, m[1])); }
     if ((m = route.match(/^GET \/rounds\/(\d{1,16})\/calls$/))) return ok(calls.roundCalls(ctx, m[1]));
     if (route === "GET /hall/chat") return ok({ ...hallChat.read(+url.searchParams.get("limit") || 30, url.searchParams.get("channel") || "main"), discord: !!discord, ...(isAdmin(ctx) && discord ? { link: discord.status() } : {}) });
     if (route === "POST /hall/chat") { writer(); return ok(hallChat.send(ctx, await body()), 201); }
@@ -347,5 +355,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, waitlist, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }
