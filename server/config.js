@@ -64,6 +64,11 @@ export function loadConfig(overrides = {}) {
     discordCategories: [env.D3MON_DISCORD_IDS, env.D3MON_DISCORD_CATEGORY_IDS].filter(Boolean).join(",").split(/[\s,]+/).map(x => x.trim()).filter(x => /^\d{5,25}$/.test(x)),
     discordApi: (env.D3MON_DISCORD_API || "https://discord.com/api/v10").replace(/\/+$/, ""), // tests point this at a stand-in
     discordPoll: flag(env.D3MON_DISCORD_POLL, true),
+    // Voice and video rooms (server/arena/voice.js): the browsers' STUN servers (to find their own public address),
+    // and TURN (a relay for strict networks: coturn on our server, its shared secret in .env). Space or comma separated.
+    voiceStun: (env.D3MON_STUN_URLS ?? "stun:stun.cloudflare.com:3478").split(/[\s,]+/).filter(u => /^stuns?:/.test(u)),
+    voiceTurn: (env.D3MON_TURN_URLS || "").split(/[\s,]+/).filter(u => /^turns?:/.test(u)),
+    voiceTurnSecret: (env.D3MON_TURN_SECRET || "").trim(),
     ytThumbUrl: (env.D3MON_YT_THUMB_URL || "").replace(/\/+$/, ""), // YouTube's thumbnail host; tests point this at a stand-in
     // Payments (server/arena/billing.js, docs/BUSINESS.md): Stripe's secret key and webhook signing secret live in
     // .env, never in the repo. A sk_test_ key is Stripe's test mode: no real money moves. Unset: payments are off.

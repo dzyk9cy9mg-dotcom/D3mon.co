@@ -22,6 +22,7 @@ import { Vip } from "./vip.js";
 import { Votes } from "./votes.js";
 import { Portraits } from "./portraits.js";
 import { Members } from "./members.js";
+import { Voice } from "./voice.js";
 import { Billing } from "./billing.js";
 import { BattleResults } from "./results.js";
 import { Hall } from "./hall.js";
@@ -49,6 +50,7 @@ export function createArena({ store, accounts, cfg }) {
       case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
+      case "voice": return voice.allows(ctx, id);
       case "admin": return (id === "applications" || id === "monitor") && isAdmin(ctx);
       default: return false;
     }
@@ -90,6 +92,7 @@ export function createArena({ store, accounts, cfg }) {
     : null;
   if (discord) hallChat.linked = () => discord.channels();
   if (discord && cfg.discordPoll) discord.start();
+  const voice = new Voice({ feed, vip, accounts, stun: cfg.voiceStun || [], turn: cfg.voiceTurn || [], turnSecret: cfg.voiceTurnSecret || "" });
   const hall = new Hall({ ledger, feed, ...(cfg.ytThumbUrl ? { thumbBase: cfg.ytThumbUrl } : {}) });
   const cockpit = new Cockpit({ ledger, feed, registry });
   const displays = new Displays({ store, registry, stats, catalog, feed });
@@ -215,6 +218,9 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "POST /vip/sessions") { writer(); return ok({ session: vip.addSession(ctx, await body()) }, 201); }
     if ((m = route.match(/^DELETE \/vip\/sessions\/([A-Za-z0-9_-]{8,40})$/))) { writer(); return ok(vip.cancelSession(ctx, m[1])); }
     if (route === "GET /presence") return ok(feed.presence());
+    // voice and video rooms: the server only introduces the browsers (server/arena/voice.js)
+    if ((m = route.match(/^GET \/voice\/([a-z]{1,20})$/))) return ok(voice.view(ctx, m[1]));
+    if ((m = route.match(/^POST \/voice\/([a-z]{1,20})\/(join|beat|leave|kick|signal)$/))) { if (!["beat", "signal"].includes(m[2])) writer(); return ok(voice[m[2]](ctx, m[1], await readJson(req, 64 * 1024))); } // signals have their own limit
     // Member votes (docs/VOTES.md)
     if (route === "GET /votes/round") return ok(votes.roundView(ctx, url.searchParams.get("session") || "live"));
     if (route === "POST /votes") { writer(); return ok(await votes.enter(ctx, await body()), 201); }
@@ -341,5 +347,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }
