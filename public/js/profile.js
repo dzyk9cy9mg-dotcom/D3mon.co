@@ -249,18 +249,33 @@
   // they've put on D3MON. On your own profile: the public/private switch and a link to your account.
   async function member() {
     const m = await api("GET", `members/${encodeURIComponent(uname)}`);
-    const hex = /^#[0-9a-f]{6}$/i.test(m.color) ? m.color : "#FFC56A", rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const hex = m.host ? "#FFC56A" : /^#[0-9a-f]{6}$/i.test(m.color) ? m.color : "#FFC56A", rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
     document.title = `${m.name} · Member · D3MON`;
     document.body.style.setProperty("--kc", hex); document.body.dataset.kind = "member";
     $("hero").hidden = false; $("mbody").hidden = false;
-    $("kind").innerHTML = `<img class="pf-av" src="${esc(m.avatarUrl)}" alt="" width="28" height="28"><span>Member${m.badge ? " · ★ Badge" : ""}</span>`;
+    const title = m.host ? "Host" : "Member";
+    $("kind").innerHTML = `<img class="pf-av" src="${esc(m.avatarUrl)}" alt="" width="28" height="28"><span>${title}${m.badge ? " · ★ Badge" : ""}</span>`;
     $("nameEm").textContent = `${m.name}.`;
     requestAnimationFrame(() => { const em = $("nameEm"), room = $("pfName").clientWidth, need = em.scrollWidth; if (need > room) em.style.fontSize = `${(parseFloat(getComputedStyle(em).fontSize) * room / need).toFixed(1)}px`; });
     $("by").innerHTML = `@${esc(m.username)}`;
-    $("badges").innerHTML = "";
-    $("quote").hidden = true;
+    $("badges").innerHTML = m.host ? `<span class="pf-badge">Host · Battle of the Bots</span>` : "";
+    $("quote").hidden = !m.tagline;
+    $("tagline").textContent = m.tagline || "";
+    $("tagBy").textContent = m.name;
+    // where to follow them
+    $("mLinksSec").hidden = !m.links.length;
+    $("mLinksName").textContent = m.name;
+    $("mLinks").innerHTML = m.links.map((l, i) => `<a class="${i ? "btn ghost" : "s-amber"}" href="${esc(l.url)}" target="_blank" rel="noopener me">${esc(l.label)}</a>`).join("");
+    // their moving picture, in the figure's place
+    const pic = m.portrait;
+    if (pic && pic.frames.length) {
+      const box = $("portrait");
+      box.hidden = false; box.dataset.n = String(pic.frames.length);
+      box.innerHTML = pic.frames.map((u, i) => `<img src="${esc(u)}" alt="" style="--i:${i}" decoding="async">`).join("");
+      $("hero").classList.add("has-pic");
+    }
     const r = m.record;
-    $("hudTL").innerHTML = `Member<br><b>${esc(m.name)}</b>`;
+    $("hudTL").innerHTML = `${title}<br><b>${esc(m.name)}</b>`;
     $("hudTR").innerHTML = `Member since<br><b>${esc(when(m.since))}</b>`;
     $("hudBL").innerHTML = r ? `<i class="on"></i>Floor record ${m.public ? "public" : "private (only you see it)"}` : "<i></i>Floor record private";
     $("hudBR").innerHTML = `Calls on the floor <b>${r ? r.calls : "–"}</b>`;
@@ -269,6 +284,7 @@
     $("mStats").innerHTML = r ? [stat("Calls on the floor", r.calls), stat("Right", r.successRate != null ? `${r.successRate}%` : "–"), stat("Average call", r.avgCallMin != null ? `${r.avgCallMin} min in` : "–"),
       stat("Average result", r.avgProfit != null ? `${r.avgProfit >= 0 ? "+" : "−"}${Math.abs(Math.round(r.avgProfit * 100))}¢ a call` : "–"), stat("Cash outs", r.cashOuts)].join("") : "";
     $("mPrivate").hidden = !!r;
+    $("mRecSec").hidden = !r && !m.mine; // a private record shows nothing to others (the HUD already says so)
     const c = x => (x == null ? "" : `${Math.round(x * 100)}¢`);
     $("mCalls").innerHTML = r && m.recent.length ? m.recent.map(t => `<li><time>${esc(time(t.at))}</time><span>${t.dir === "up" ? '<b class="up">▲ Up</b>' : '<b class="dn">▼ Down</b>'}${t.paid != null ? ` <span class="pf-k">@${c(t.paid)}</span>` : ""}</span>
         <span>${t.status === "cashed" ? `<span class="pf-k">Cashed out${t.got != null ? ` @${c(t.got)}` : ""}</span>${t.profit != null ? ` <b class="${t.profit >= 0 ? "up" : "dn"}">${t.profit >= 0 ? "+" : "−"}${Math.abs(Math.round(t.profit * 100))}¢</b>` : ""}` : t.status === "settled" ? (t.correct ? '<b class="up">Right</b>' : '<b class="dn">Wrong</b>') : t.status === "settling" ? '<span class="pf-k">Waiting for Kalshi</span>' : '<span class="pf-k">Open</span>'}</span></li>`).join("")
@@ -284,17 +300,41 @@
       $("mPub").textContent = m.public ? "Make my record private" : "Make my record public";
       $("mPubNote").textContent = m.public ? "Everyone can see your floor record and recent calls." : "Only you can see your floor record. Make it public to show it here.";
       $("mPub").onclick = async () => { try { await api("PUT", "votes/settings", { public: !m.public }); location.reload(); } catch (err) { $("msg").textContent = err.message; } };
+      const f = $("mEdit");
+      f.elements.tagline.value = m.tagline || "";
+      f.elements.links.value = m.links.map(l => l.url).join("\n");
+      f.onsubmit = async ev => {
+        ev.preventDefault();
+        const links = f.elements.links.value.split(/\s+/).filter(Boolean);
+        try { await api("PUT", "members/me/profile", { tagline: f.elements.tagline.value.trim(), links }); location.reload(); } catch (err) { $("msg").textContent = err.message; }
+      };
+      const thumbs = v => `<div class="pf-thumbs">${v.frames.map(u => `<img src="${esc(u)}" alt="" width="72" height="96" loading="lazy">`).join("")}</div>`;
+      const st = await api("GET", "members/me/portrait").catch(() => null);
+      if (st) $("mPicState").innerHTML = (st.approved ? `<p class="pf-k">Showing now:</p>${thumbs(st.approved)}` : "")
+        + (st.pending ? `<p class="pf-k">Waiting for an admin to approve:</p>${thumbs(st.pending)}` : st.rejected ? `<p class="pf-k">Not approved${st.rejected.note ? `: ${esc(st.rejected.note)}` : "."} Try different pictures.</p>` : "");
+      const pf = $("mPic");
+      pf.onsubmit = async ev => {
+        ev.preventDefault();
+        const files = [...pf.elements.pics.files];
+        if (!files.length || files.length > 3) { $("msg").textContent = "Choose 1 to 3 pictures."; return; }
+        if (files.some(x => x.size > 1.5 * 1024 * 1024)) { $("msg").textContent = "Each picture must be under 1.5 MB."; return; }
+        const read = x => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(x); });
+        try { await api("POST", "members/me/portrait", { frames: await Promise.all(files.map(read)) }); $("msg").textContent = "Sent. An admin will approve it soon."; location.reload(); }
+        catch (err) { $("msg").textContent = err.message; }
+      };
     }
     // admins: delete this account (privacy page: "ask an admin"); never the owner's or your own
     const me = await window.Arena.session().catch(() => null);
     if (me && (me.role === "admin" || me.role === "owner") && !m.mine) {
       $("mAdm").hidden = false;
+      $("mHost").textContent = m.host ? "Take away the Host title" : "Make them a Host";
+      $("mHost").onclick = async () => { try { await api("PUT", `members/${encodeURIComponent(m.username)}/host`, { on: !m.host }); location.reload(); } catch (err) { $("msg").textContent = err.message; } };
       $("mDel").onclick = async () => {
         if (!confirm(`Delete ${m.name}'s account? Their callers, bots and scripts come off the site and their pictures are deleted. Their calls and votes stay in the records without a name. This can't be undone.`)) return;
         try { await api("DELETE", `members/${encodeURIComponent(m.username)}`); location.href = "profile"; } catch (err) { $("msg").textContent = err.message; }
       };
     }
-    art("member", false, rgb);
+    art("member", !!(pic && pic.frames.length), rgb);
   }
 
   // ---------- no one chosen: every entrant to choose from ----------

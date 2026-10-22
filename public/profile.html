@@ -77,7 +77,11 @@
 
   <!-- a member's own profile (/profile?u=<username>) -->
   <div class="pf-body" id="mbody" hidden>
-    <section class="pf-sec" aria-labelledby="mRecT">
+    <section class="pf-sec" id="mLinksSec" aria-labelledby="mLinksT" hidden>
+      <h2 id="mLinksT">Follow <span id="mLinksName"></span></h2>
+      <div class="pf-actions" id="mLinks"></div>
+    </section>
+    <section class="pf-sec" id="mRecSec" aria-labelledby="mRecT">
       <h2 id="mRecT">On the floor</h2>
       <p class="pf-lede">Up and Down calls on the Live floor, as paper trades at Kalshi's prices.</p>
       <div class="pf-stats" id="mStats"></div>
@@ -95,11 +99,24 @@
       <h2 id="mOwnT">Your profile</h2>
       <p class="pf-lede" id="mPubNote"></p>
       <div class="pf-actions"><button class="s-amber" type="button" id="mPub">Make my record public</button><a class="btn ghost" href="my">My bots</a><a class="btn ghost" href="login">Account and sign out</a></div>
+      <form class="pf-edit" id="mEdit" autocomplete="off">
+        <h3 class="pf-group">Your words and links</h3>
+        <label>Tagline <span class="pf-k">(one line, up to 80 characters)</span><input name="tagline" maxlength="80"></label>
+        <label>Links <span class="pf-k">(one a line: YouTube, Twitch, Kick, X, Instagram, TikTok, Discord)</span><textarea name="links" rows="4" spellcheck="false"></textarea></label>
+        <div class="pf-actions"><button class="btn ghost" type="submit">Save</button></div>
+      </form>
+      <form class="pf-edit" id="mPic">
+        <h3 class="pf-group">Your moving picture</h3>
+        <p class="pf-lede">Upload 1 to 3 stills of the same scene, for example three frames from a short video of you. Your profile blends them into one picture that moves slightly. PNG, JPEG or WebP, under 1.5 MB each. An admin approves it before it shows.</p>
+        <div id="mPicState"></div>
+        <label>Pictures <span class="pf-k">(choose up to 3, in order)</span><input type="file" name="pics" accept="image/png,image/jpeg,image/webp" multiple required></label>
+        <div class="pf-actions"><button class="btn ghost" type="submit">Send for approval</button></div>
+      </form>
     </section>
     <section class="pf-sec" id="mAdm" aria-labelledby="mAdmT" hidden>
       <h2 id="mAdmT">Admin</h2>
-      <p class="pf-lede">If this member asks to leave D3MON, you can delete their account here. Their callers, bots and scripts come off the site and their pictures are deleted. Their calls and votes stay in the records, without a name.</p>
-      <div class="pf-actions"><button class="btn ghost" type="button" id="mDel">Delete this account</button></div>
+      <p class="pf-lede">A Host runs D3MON's live events, like HardSmoke's Battle of the Bots; the title shows on their profile. If this member asks to leave D3MON, you can delete their account here. Their callers, bots and scripts come off the site and their pictures are deleted. Their calls and votes stay in the records, without a name.</p>
+      <div class="pf-actions"><button class="btn ghost" type="button" id="mHost">Make them a Host</button><button class="btn ghost" type="button" id="mDel">Delete this account</button></div>
     </section>
   </div>
 
