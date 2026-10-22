@@ -29,7 +29,7 @@
         <details class="s-admin" hidden><summary>Admin</summary><div class="s-drop">${ADMIN.map(([g, ls]) => `<b>${esc(g)}</b>${ls.map(link).join("")}`).join("")}</div></details>
         <a class="s-phone" id="acctPhone" href="login">Sign in</a>
       </nav>
-      <div class="s-acts"><a class="s-link" id="acctBtn" href="login">Sign in</a><a class="s-amber" id="joinBtn" href="apply">Join D3MON</a></div>`;
+      <div class="s-acts"><a class="s-link" id="acctBtn" href="login">Sign in</a><a class="s-amber" id="joinBtn" href="apply">Request entry</a></div>`;
     const skip = document.createElement("a");
     skip.className = "s-skip"; skip.href = `#${main.id}`; skip.textContent = "Skip to the page";
     document.body.prepend(skip, bar);
