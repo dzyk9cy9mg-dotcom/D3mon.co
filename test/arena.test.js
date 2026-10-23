@@ -375,4 +375,12 @@ describe("Arena API", () => {
     for (const p of ["/apply", "/applications", "/js/arena.js", "/js/arena-apply.js", "/js/arena-admin.js"]) assert.equal((await guest.get(p)).status, 200, p);
     assert.match((await guest.get("/")).text, /href="apply"/);
   });
+
+  test("the front page is the new one; the original lives on at /classic", async () => {
+    const home = (await guest.get("/")).text, next = (await guest.get("/next")).text, classic = await guest.get("/classic");
+    assert.equal(home, next);
+    assert.equal(classic.status, 200);
+    assert.notEqual(classic.text, home);
+    assert.match(classic.text, /id="intro"/);
+  });
 });

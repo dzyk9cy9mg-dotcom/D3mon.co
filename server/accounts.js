@@ -62,10 +62,16 @@ export function readRoles(file) {
 
 export const writeRoles = (file, roles) => writeJsonAtomic(file, roles);
 
+const sha256hex = s => crypto.createHash("sha256").update(s).digest("hex");
+
 export class Accounts {
   constructor({ dir, owner = "", signups = "open" }) {
     this.file = path.join(dir, "accounts.json");
     this.rolesFile = path.join(dir, "roles.json");
+    // One-time invite links (owner, 2026-10-22): let one person sign up while sign-ups are closed.
+    // invites.json: [{ id, hash: sha256(code), label, createdAt, createdBy, expiresAt, usedAt?, usedBy?, revokedAt? }]
+    this.invitesFile = path.join(dir, "invites.json");
+    this.invites = [];
     this.ownerName = owner;
     this.signups = signups;
     this.users = new Map(); // id -> { id, username, name, pass, color, created }
@@ -90,6 +96,7 @@ export class Accounts {
     } catch (e) {
       if (e.code !== "ENOENT") throw e;
     }
+    try { this.invites = JSON.parse(fs.readFileSync(this.invitesFile, "utf8")).invites || []; } catch (e) { if (e.code !== "ENOENT") throw e; }
     this.#refreshRoles(true);
     // Unknown usernames still pay for one hash, so response time doesn't reveal which names exist.
     this.dummyHash = await hashPassword(crypto.randomBytes(12).toString("base64url"));
@@ -139,20 +146,53 @@ export class Accounts {
     writeJsonAtomic(this.file, { version: 1, users: [...this.users.values()], sessions: Object.fromEntries(this.sessions) });
   }
 
-  async register({ username, password, name }) {
+  // ---------- invite links ----------
+  #saveInvites() { writeJsonAtomic(this.invitesFile, { version: 1, invites: this.invites }); }
+  #inviteState(i, now = Date.now()) { return i.usedAt ? "used" : i.revokedAt ? "revoked" : now >= i.expiresAt ? "expired" : "open"; }
+  inviteView(i) { const { hash, ...rest } = i; return { ...rest, state: this.#inviteState(i), usedByName: i.usedBy ? this.users.get(i.usedBy)?.username || "" : "" }; }
+  listInvites() { return this.invites.slice().reverse().map(i => this.inviteView(i)); }
+  // The code is shown once, here; only its hash is kept.
+  createInvite(uid, { label, days } = {}) {
+    label = String(label ?? "").trim().slice(0, 40);
+    days = Number.isInteger(days) && days >= 1 && days <= 30 ? days : 7;
+    if (this.invites.filter(i => this.#inviteState(i) === "open").length >= 50) throw new AccountError("too_many_invites", "There are already 50 open invites. Revoke some first.", 409);
+    const code = crypto.randomBytes(18).toString("base64url"), now = Date.now();
+    const invite = { id: crypto.randomBytes(6).toString("hex"), hash: sha256hex(code), label, createdAt: now, createdBy: uid, expiresAt: now + days * 86400000 };
+    this.invites.push(invite);
+    this.#saveInvites();
+    return { code, invite: this.inviteView(invite) };
+  }
+  revokeInvite(id) {
+    const i = this.invites.find(x => x.id === id);
+    if (!i) throw new AccountError("not_found", "No such invite.", 404);
+    if (this.#inviteState(i) === "open") { i.revokedAt = Date.now(); this.#saveInvites(); }
+    return this.inviteView(i);
+  }
+  #openInvite(code) {
+    if (typeof code !== "string" || !code || code.length > 64) return null;
+    const h = sha256hex(code);
+    return this.invites.find(i => i.hash === h && this.#inviteState(i) === "open") || null;
+  }
+  checkInvite(code) { return !!this.#openInvite(code); }
+
+  async register({ username, password, name, invite }) {
     username = String(username ?? "").trim();
     const key = username.toLowerCase();
-    if (this.signups === "closed" && this.users.size && key !== this.ownerName) throw new AccountError("signups_closed", "New sign-ups are closed.", 403);
+    const inv = invite === undefined || invite === "" ? null : this.#openInvite(invite);
+    if (invite && !inv) throw new AccountError("bad_invite", "That invite link has been used, has expired or isn't valid. Ask for a new one.", 403);
+    if (this.signups === "closed" && this.users.size && key !== this.ownerName && !inv) throw new AccountError("signups_closed", "New sign-ups are closed.", 403);
     if (!USERNAME_RE.test(username)) throw new AccountError("bad_username", "Usernames are 3 to 24 letters, numbers, dots, dashes or underscores.");
     if (typeof password !== "string" || password.length < 8 || password.length > 200) throw new AccountError("bad_password", "Passwords need at least 8 characters.");
     const display = cleanName(name) || username;
     if (this.byName.has(key)) throw new AccountError("username_taken", "That username is taken.", 409);
     const pass = await hashPassword(password);
     if (this.byName.has(key)) throw new AccountError("username_taken", "That username is taken.", 409);
+    if (inv && this.#inviteState(inv) !== "open") throw new AccountError("bad_invite", "That invite link has just been used. Ask for a new one.", 403);
     const user = { id: crypto.randomBytes(12).toString("base64url"), username, name: display, pass, color: COLORS[crypto.randomInt(COLORS.length)], created: Date.now() };
     this.users.set(user.id, user);
     this.byName.set(key, user.id);
     this.#scheduleSave();
+    if (inv) { inv.usedAt = Date.now(); inv.usedBy = user.id; this.#saveInvites(); }
     // The site owner is the configured username, or the first account ever made when none is configured.
     this.#refreshRoles(true);
     if (!this.roles.owner && (this.ownerName ? key === this.ownerName : this.users.size === 1)) {

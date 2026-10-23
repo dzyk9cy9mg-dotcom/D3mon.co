@@ -311,6 +311,12 @@ export async function createApp(cfg = loadConfig()) {
     sendJson(res, 200, { ok: true }, { "set-cookie": sessionCookie(COOKIE, "", { maxAge: 0, secure: secureFor(req), path: `${cfg.basePath}/` }) });
   }
 
+  function requireAdmin(ctx) {
+    if (!ctx.uid) throw new HttpError(401, "not_granted", "Sign in first.");
+    if (!(ctx.role === "admin" || ctx.role === "owner")) throw new HttpError(403, "not_granted", "Only admins can do that.");
+  }
+  const originOf = req => `${isHttps(req, cfg.trustProxy) ? "https" : "http"}://${req.headers.host}`;
+
   function requireUser(ctx) {
     if (!ctx.uid) throw new HttpError(401, "not_granted", "Sign in first.");
   }
@@ -359,6 +365,8 @@ export async function createApp(cfg = loadConfig()) {
   async function api(req, res, pathname, url, ctx) {
     if (req.method !== "GET" && req.method !== "HEAD") checkSameOrigin(req);
     if (pathname.startsWith("/api/v1/")) return arena.handle(req, res, pathname, url, ctx);
+    const inv = req.method === "DELETE" && pathname.match(/^\/api\/auth\/invites\/([a-f0-9]{12})$/);
+    if (inv) { requireAdmin(ctx); return sendJson(res, 200, { invite: accounts.revokeInvite(inv[1]) }); }
     switch (`${req.method} ${pathname}`) {
       case "GET /api/session": return sendJson(res, 200, sessionInfo(ctx));
       case "GET /api/events": return openPage(req, res, ctx);
@@ -370,6 +378,14 @@ export async function createApp(cfg = loadConfig()) {
       case "GET /api/user/search": return sendJson(res, 200, search(ctx, url.searchParams.get("q") || ""));
       case "POST /api/sample": return sample(req, res, ctx);
       case "POST /api/auth/register": return register(req, res);
+      case "GET /api/auth/invite": return sendJson(res, 200, { valid: accounts.checkInvite(url.searchParams.get("code") || "") });
+      case "GET /api/auth/invites": requireAdmin(ctx); return sendJson(res, 200, { invites: accounts.listInvites() });
+      case "POST /api/auth/invites": {
+        requireAdmin(ctx);
+        const body = (await readJson(req, 4096)) || {};
+        const { code, invite } = accounts.createInvite(ctx.uid, body);
+        return sendJson(res, 201, { code, invite, url: `${originOf(req)}${cfg.basePath}/login?invite=${code}#new` });
+      }
       case "POST /api/auth/login": return login(req, res);
       case "POST /api/auth/logout": return logout(req, res, ctx);
       case "POST /api/auth/profile": {
@@ -393,7 +409,10 @@ export async function createApp(cfg = loadConfig()) {
 
   function page(req, res, pathname) {
     if (req.method !== "GET" && req.method !== "HEAD") throw new HttpError(405, "invalid_argument", "Method not allowed.");
-    if (pathname === "/") return serveFile(req, res, path.join(cfg.publicDir, "index.html"), PAGE_HEADERS);
+    // The front page (owner, 2026-10-22): "/" is the new front page (next.html, also at /next); the original
+    // page lives on at /classic for its admin control center, chat and streams until they move.
+    if (pathname === "/") return serveFile(req, res, path.join(cfg.publicDir, "next.html"), PAGE_HEADERS);
+    if (pathname === "/classic") return serveFile(req, res, path.join(cfg.publicDir, "index.html"), PAGE_HEADERS);
     if (pathname === "/login" || pathname === "/account") return serveFile(req, res, path.join(cfg.publicDir, "login.html"), PAGE_HEADERS);
     if (["/apply", "/applications", "/metrics", "/my", "/board", "/card", "/catalog", "/monitor", "/displays", "/tournaments", "/world", "/vip", "/profile", "/next", "/live", "/privacy", "/terms", "/pricing", "/billing", "/battle", "/connect"].includes(pathname)) return serveFile(req, res, path.join(cfg.publicDir, `${pathname.slice(1)}.html`), PAGE_HEADERS);
     let rel;
