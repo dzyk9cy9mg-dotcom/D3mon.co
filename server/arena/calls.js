@@ -18,7 +18,7 @@
 //                closesAt: when calls for that round closed for this entrant (older lines: the round start) }
 import { ApiError, check } from "./validate.js";
 import { isAdmin } from "../rules.js";
-import { ROUND_MS, callWindowMs, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
+import { ROUND_MS, callWindowMs, DEFAULT_CALL_WINDOW_MIN, methodFor } from "./registry.js";
 import { paper } from "./prices.js";
 
 export const MARKET = "KXBTC15M";
@@ -199,10 +199,16 @@ export class Calls {
   // #target has checked the clock just before this, and nothing here waits, so no call can slip past it.
   #place(e, { raw, dir, via, keyId }, by) {
     const now = this.now(), { round, closesAt } = this.#target(e, raw, now);
+    const battles = this.registry.battlesFor(e.id, round), methods = battles.map(b => methodFor(b, e));
+    // Bots and scripts call the way each battle they're in says: the button only where every one of them uses it.
+    if (e.kind !== "caller" && via === "button" && !(methods.length && methods.every(m => m === "manual")))
+      throw new ApiError(409, "use_bot_key", `${e.name} sends its calls with its bot key for the round that starts at ${iso(round)}. The call button is for battles set to manual calls.`, "direction");
+    if (via === "bot-key" && methods.includes("manual"))
+      throw new ApiError(409, "use_call_button", `${e.name} is set to manual calls in a battle for the round that starts at ${iso(round)}. Make that call with the call button on /my.`, "direction");
     const prev = this.latest(e.id, MARKET, round);
     if (prev && prev.dir === dir) return { line: prev, unchanged: true }; // a retry, or the same call again
     if (prev) throw new ApiError(409, "already_called", `Already called ${prev.dir} for the round that started at ${iso(round)}, at ${iso(prev.at)}. One call per round, and it's final.`, "direction");
-    const battleIds = this.registry.battlesFor(e.id, round).map(b => b.id);
+    const battleIds = battles.map(b => b.id);
     const line = { t: "call", entrantId: e.id, market: MARKET, round, dir, via, battleIds, closesAt };
     if (keyId) line.keyId = keyId;
     const [saved] = this.ledger.append([line], by, now); // stamped by the same clock that checked the window
@@ -217,13 +223,12 @@ export class Calls {
     return { ok: true, unchanged, call: { id: line.id, round: iso(line.round), direction: line.dir, receivedAt: iso(line.at), locksAt: iso(closesAtOf(line)) } };
   }
 
-  // POST /api/v1/entrants/:id/call, for a caller pressing Up or Down. Same lock as the bots.
+  // POST /api/v1/entrants/:id/call: a caller pressing Up or Down, or a bot's owner in a battle set to manual calls. Same lock as the bots.
   fromButton(ctx, entrantId, body) {
     if (!ctx.uid) throw new ApiError(401, "not_granted", "Sign in first.");
     if (!ctx.canWrite) throw new ApiError(403, "not_granted", "Your account can't do that right now.");
     const e = this.registry.entrantById(entrantId);
     if (!e || e.ownerId !== ctx.uid) throw new ApiError(404, "not_found", "That isn't one of your entrants.");
-    if (e.kind !== "caller") throw new ApiError(409, "use_bot_key", "Bots and scripts send their calls with their API key. The buttons are for callers.");
     if (e.status !== "active") throw new ApiError(409, "entrant_suspended", `${e.name} is suspended.`);
     const f = check(body, BUTTON_CALL);
     const { line, unchanged } = this.#place(e, { raw: f.round, dir: f.direction, via: "button" }, ctx.uid);

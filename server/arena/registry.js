@@ -19,6 +19,11 @@ export const DEFAULT_CALL_WINDOW_MIN = 15;
 // choice); views show "over" in its place, except for drafts and final battles.
 export const battleOver = (b, now = Date.now()) => now >= b.startsAt + b.rounds * b.roundMs;
 export const battleState = (b, now = Date.now()) => (b.status !== "draft" && b.status !== "final" && battleOver(b, now) ? "over" : b.status);
+// How a battle's bots and scripts make their calls (owner, 2026-10-22): "auto" sends them with the bot key,
+// "manual" uses the Up/Down call button on /my. The battle's callMethod is "owner" (each owner picks, automated
+// until they do), or "auto" / "manual" set by an admin for the whole lineup. Callers always use the button.
+export const CALL_METHODS = ["auto", "manual"];
+export const methodFor = (b, e) => (e && e.kind === "caller" ? "manual" : CALL_METHODS.includes(b.callMethod) ? b.callMethod : (b.methods || {})[e?.id ?? e] || "auto");
 export const callWindowMs = b => (b && Number.isInteger(b.callWindowMin) ? b.callWindowMin : DEFAULT_CALL_WINDOW_MIN) * 60000;
 const BATTLE_STATUS = ["draft", "open", "closed", "live", "final"];
 const LIVE_APP = new Set(["pending", "approved"]);
@@ -33,6 +38,7 @@ const BATTLE_FIELDS = {
   status: { type: "enum", values: BATTLE_STATUS, default: "draft" },
   onMainPage: { type: "boolean" }, // show this battle's lineup on the current main page (one battle at a time)
   callWindowMin: { type: "integer", min: 0, max: 15, default: DEFAULT_CALL_WINDOW_MIN }, // calls close this many minutes into each round (15 = at its end)
+  callMethod: { type: "enum", values: ["owner", ...CALL_METHODS], default: "owner" }, // how bots and scripts call: owners pick, or set for all
   // Where to watch it: HardSmoke's and the owners' streams and the D3MON Discord (owner, 2026-10-19: several per battle)
   streams: { type: "array", max: 12, of: { type: "object", fields: { label: { type: "string", required: true, min: 1, max: 40 }, url: { type: "string", required: true, max: 300 } } } },
 };
@@ -115,9 +121,9 @@ export class Registry {
 
   // ---------- views: what each reader is allowed to see ----------
   battleView(b, ctx) {
-    const entrants = (b.entrants || []).map(id => this.#get(ENTRANTS, id)).filter(Boolean).map(e => this.entrantView(e, ctx));
+    const entrants = (b.entrants || []).map(id => this.#get(ENTRANTS, id)).filter(Boolean).map(e => ({ ...this.entrantView(e, ctx), callMethod: methodFor(b, e) }));
     const out = { id: b.id, title: b.title, market: b.market, startsAt: b.startsAt, rounds: b.rounds, roundMs: b.roundMs,
-      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, streams: b.streams || [], status: b.status, state: battleState(b), over: battleOver(b), onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
+      endsAt: b.startsAt + b.rounds * b.roundMs, kinds: b.kinds, streams: b.streams || [], status: b.status, state: battleState(b), over: battleOver(b), onMainPage: !!b.onMainPage, callWindowMin: callWindowMs(b) / 60000, callMethod: b.callMethod || "owner", entrants, createdAt: b.createdAt, updatedAt: b.updatedAt };
     if (isAdmin(ctx)) {
       out.applications = {};
       for (const a of this.#all(APPS, [["battleId", "==", b.id]])) out.applications[a.status] = (out.applications[a.status] || 0) + 1;
@@ -165,6 +171,24 @@ export class Registry {
     if (b.status === "final" && f.status === undefined) throw new ApiError(409, "battle_final", "This battle is final. Reopen it (change its status) before editing.");
     const next = { ...b, ...f, updatedAt: Date.now() };
     this.#mainPage(next, ctx.uid);
+    this.#save(BATTLES, next, ctx.uid);
+    this.#battleChanged(next);
+    return next;
+  }
+
+  // PUT /battles/:id/entrants/:eid/call-method { method }: how one bot or script calls in this battle. Its owner
+  // chooses while the battle lets owners pick and hasn't started; admins can set it any time.
+  setCallMethod(ctx, battleId, entrantId, body) {
+    if (!ctx.uid) throw new ApiError(401, "not_granted", "Sign in first.");
+    const b = this.battleFor(ctx, battleId), e = this.#get(ENTRANTS, entrantId), admin = isAdmin(ctx);
+    if (!e || !(b.entrants || []).includes(e.id) || (!admin && e.ownerId !== ctx.uid)) throw new ApiError(404, "not_found", "That isn't one of your entrants in this battle.");
+    if (e.kind === "caller") throw new ApiError(409, "invalid_argument", "Callers always use the call button.", "method");
+    const { method } = check(body, { method: { type: "enum", values: CALL_METHODS, required: true } });
+    if (!admin) {
+      if (CALL_METHODS.includes(b.callMethod)) throw new ApiError(409, "method_locked", `In this battle every bot and script calls ${b.callMethod === "auto" ? "automatically with its bot key" : "with the call button"}. Ask HardSmoke to change it.`, "method");
+      if (b.status === "live" || b.status === "final" || Date.now() >= b.startsAt) throw new ApiError(409, "battle_started", "The battle has started, so the call method is locked. Ask HardSmoke.", "method");
+    }
+    const next = { ...b, methods: { ...(b.methods || {}), [e.id]: method }, updatedAt: Date.now() };
     this.#save(BATTLES, next, ctx.uid);
     this.#battleChanged(next);
     return next;
