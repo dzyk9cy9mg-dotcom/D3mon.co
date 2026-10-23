@@ -3106,7 +3106,7 @@ function applySiteConfig(){
   if(S.cortex) renderCxTop();
   const st = S.site || {};
   // tagline
-  const tg = document.querySelector(".brand .wm + small"); if(tg) tg.textContent = st.tagline ? "// " + st.tagline : "// live trade network";
+  const tg = document.querySelector(".brand .wm + small"); if(tg){ tg.textContent = st.tagline ? "// " + st.tagline : ""; tg.hidden = !st.tagline; }
   // demo button
   const db2 = $("demoBtn"); if(db2) db2.hidden = st.demoBtn === false && !isAdmin;
   // announcement
@@ -3568,7 +3568,7 @@ function renderMembersTab(){
       <div class="af" style="flex:0 1 180px"><label for="memG">Group by</label><select id="memG"><option value="type" ${S.memG === "type" ? "selected" : ""}>Account type</option><option value="cat" ${S.memG === "cat" ? "selected" : ""}>Category</option><option value="none" ${S.memG === "none" ? "selected" : ""}>No grouping</option></select></div>
       <div class="af" style="flex:0 1 180px"><label for="memSort">Sort</label><select id="memSort"><option value="name" ${S.memSort === "name" ? "selected" : ""}>Name A–Z</option><option value="recent" ${S.memSort === "recent" ? "selected" : ""}>Last seen</option><option value="active" ${S.memSort === "active" ? "selected" : ""}>Most chat activity</option></select></div></div>
     <div id="memBody" style="display:grid;gap:10px">${body}</div>
-    <p class="hint" style="margin:0">Account types are labels for organizing people. Who can actually edit the site is set from the page's Share menu on claude.ai (Editors are admins).</p></div>`;
+    <p class="hint" style="margin:0">Account types are labels for organizing people. Who can actually edit the site is set by member roles: the owner and admins.</p></div>`;
 }
 $("adminPage").addEventListener("input", e => { if(e.target.id === "memQ"){ S.memQ = e.target.value; const i = e.target, c = i.selectionStart; renderAdmin.lastTab = null; renderAdmin(); const n = $("memQ"); if(n){ n.focus(); try { n.setSelectionRange(c, c); } catch {} } } });
 $("adminPage").addEventListener("change", async e => {
@@ -4566,7 +4566,7 @@ function renderMe(){
   const pending = roles.filter(r => r[5] === "pending").length;
   $("mpNav").innerHTML = MP_TABS.filter(([k]) => k !== "console" || isCallerMe() || isAdmin).map(([k, l]) => `<button type="button" data-mptab="${k}" aria-current="${T === k}">${esc(l)}${k === "favorites" && favList.length ? `<span class="n ok">${favList.length}</span>` : k === "roles" && pending ? `<span class="n">${pending}</span>` : ""}</button>`).join("");
   let h = "";
-  if(!signed) h = `<div class="acard"><h3>Sign in to use My D3MON</h3><p class="hint">Open the published page while signed in to claude.ai to save your profile, favorites and settings.</p></div>`;
+  if(!signed) h = `<div class="acard"><h3>Sign in to use My D3MON</h3><p class="hint">Sign in to save your profile, favorites and settings.</p></div>`;
   else if(T === "home"){
     const todo = [];
     if(!pub.bio) todo.push(["md","Add a short bio so people know how you trade","profile"]);
@@ -4734,7 +4734,7 @@ S.bootAt = Date.now();
 // ---------- admin control center ----------
 const AP_TABS = [["overview","Overview"],["connect","Connect requests"],["listings","Listings"],["members","Members"],["site","Site & brand"],["announce","Announcements"],["callers","Callers"],["streaming","Streaming"],["voice","Voice rooms"],["cxall","Cortex controls"],["dchat","Discord chats"],["moderation","Moderation"],["social","Posts & business"],["reviews","Reviews & reviewers"],["boards","Message boards"],["dms","Messages"],["forum","Forum"],["registry","Bots & scripts"],["battle","Battle of the Bots"],["arena","Arena pages"],["legal","Legal pages"],["launch","Launch checklist"]];
 const LAUNCH = [
-  ["Foundation", [["domain","Custom domain","Buy d3mon.co (or similar) and point it at your host."],["hosting","Own hosting","Vercel, Netlify or Cloudflare Pages to serve the site outside claude.ai."],["dbauth","Database + sign-in","Supabase or Firebase for accounts, data and access rules."],["oauth","Discord login","Let members sign in with Discord so names and roles match."],["backups","Backups","Automatic daily database backups and an export you've tested."]]],
+  ["Foundation", [["domain","Custom domain","Buy d3mon.co (or similar) and point it at your host."],["hosting","Own hosting","Serve the site from your own server."],["dbauth","Database + sign-in","Supabase or Firebase for accounts, data and access rules."],["oauth","Discord login","Let members sign in with Discord so names and roles match."],["backups","Backups","Automatic daily database backups and an export you've tested."]]],
   ["Community", [["cxready","Cortex chat ready","The Cortex is the site's own chat: pin a welcome message in #main-floor and add voice room links."],["bridge","Discord ↔ message boards bridge (optional)","Only needed if a caller, bot or script board is set to Both, mirrored."],["mods","Moderator team","At least 2 trusted mods with clear roles."],["rulespub","Community rules published","Fill in Legal pages → Community rules."],["verifyproc","Caller verification process","Decide what a caller must show before you verify them."]]],
   ["Markets & data", [["feed","Live market data","Kalshi / Polymarket prices and round targets feeding the site."],["results","Automatic round results","Settled outcomes filled in without manual clicks."],["streams","Streaming accounts","Twitch / YouTube / Kick channels for callers, bots and scripts."],["botrules","Bot & script guidelines","What creators must disclose about their bots and scripts."]]],
   ["Legal & trust", [["terms","Terms of Service","Fill in Legal pages → Terms."],["privacy","Privacy Policy","Fill in Legal pages → Privacy."],["disclaimer","Risk disclaimer","Shown in the footer on every page."],["age","18+ age confirmation","Prediction markets are adults-only."],["juris","Where members can trade","Check where users are allowed to use Kalshi and Polymarket; talk to a lawyer before charging money."],["takedown","Takedown / contact route","An email for reports, copyright and support."]]],
@@ -4874,7 +4874,7 @@ function renderAdmin(){
   if(T === "site"){
     h += `<div class="acard"><h3>Brand & basics</h3><div class="aform">
       <div class="af"><label for="as_name">Site name</label><input id="as_name" value="${esc(st.name || "D3MON.CO")}" maxlength="40"></div>
-      <div class="af"><label for="as_tag">Header tagline</label><input id="as_tag" value="${esc(st.tagline || "live trade network")}" maxlength="60"><small>Shows next to the logo.</small></div>
+      <div class="af"><label for="as_tag">Header tagline</label><input id="as_tag" value="${esc(st.tagline || "")}" placeholder="Leave empty for none" maxlength="60"><small>Shows next to the logo.</small></div>
       <div class="af"><label for="as_email">Contact email</label><input id="as_email" type="email" value="${esc(st.email || "")}" placeholder="support@d3mon.co"></div>
       <div class="af"><label for="as_asset">Default market</label><select id="as_asset">${["BTC","ETH","SOL","XRP"].map(x => `<option ${ (st.asset || "BTC") === x ? "selected" : ""}>${x}</option>`).join("")}</select></div>
       <div class="af"><label for="as_tf">Default timeframe</label><select id="as_tf">${[["15m","15 minute"],["1h","Hourly"]].map(([x, l]) => `<option value="${x}" ${(st.tf || "15m") === x ? "selected" : ""}>${l}</option>`).join("")}</select></div>
@@ -6052,7 +6052,7 @@ async function nebAsk(q){
   NEB.turns.push({role:"user", content:q});
   const reply = {role:"assistant", content:"Thinking…", cls:"think"}; NEB.turns.push(reply);
   NEB.busy = true; NEB.mood = "think"; nebRender();
-  if(!NEB.sample){ reply.content = "I'm not available in this view. Open D3MON.CO inside Claude while signed in to chat with me."; reply.cls = "err"; NEB.busy = false; NEB.mood = "idle"; NEB.turns.pop(); NEB.turns.push(reply); nebRender(); return; }
+  if(!NEB.sample){ reply.content = "I'm not available right now."; reply.cls = "err"; NEB.busy = false; NEB.mood = "idle"; NEB.turns.pop(); NEB.turns.push(reply); nebRender(); return; }
   const hist = NEB.turns.slice(0,-1).filter(t => !t.cls).slice(-10).map(t => ({role:t.role, content:t.content}));
   const input = [{role:"user", content: NEB_RULES + "\n\nLIVE PAGE DATA (as of now):\n" + nebContext()}, {role:"assistant", content:"Got it. I'll answer from that data."}, ...hist];
   NEB.ctl = new AbortController();
@@ -6063,10 +6063,10 @@ async function nebAsk(q){
   } catch(e) {
     const code = e && e.code;
     if(code === "cancelled"){ reply.content = e.text || "Stopped."; reply.cls = e.text ? "" : "err"; }
-    else if(code === "not_granted" || code === "sampling_disabled" || code === "not_declared" || code === "capability_disabled" || code === "capability_removed"){ reply.content = "Cosmic needs your permission to use Claude on this page, or isn't available for your account."; reply.cls = "err"; }
+    else if(code === "not_granted" || code === "sampling_disabled" || code === "not_declared" || code === "capability_disabled" || code === "capability_removed"){ reply.content = "Cosmic isn't available for your account right now."; reply.cls = "err"; }
     else if(code === "rate_limited"){ reply.content = (e.text ? e.text + "\n\n" : "") + "I'm getting too many questions at once. Try again in a minute."; reply.cls = e.text ? "" : "err"; }
     else if(code === "refused"){ reply.content = "I can't help with that one. Try asking another way."; reply.cls = "err"; }
-    else { reply.content = (e && e.text) ? e.text + "\n\n(interrupted)" : "Something went wrong reaching Claude. Try again."; reply.cls = (e && e.text) ? "" : "err"; }
+    else { reply.content = (e && e.text) ? e.text + "\n\n(interrupted)" : "Something went wrong. Try again."; reply.cls = (e && e.text) ? "" : "err"; }
   }
   NEB.busy = false; NEB.mood = "idle"; NEB.ctl = null; nebRender(); $("nebIn").focus({preventScroll:true});
 }

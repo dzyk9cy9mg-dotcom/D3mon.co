@@ -13,7 +13,7 @@
     const s = d.stripe, nm = id => (d.plans[id] && d.plans[id].name) || NAMES[id] || id;
     $("status").innerHTML = `<h2>Stripe</h2>${s.mode === "off" ? `<p class="pr-bad">Not connected. Nothing can be sold yet.</p>` : `<p>Connected in <b>${s.mode === "live" ? "LIVE mode: real money" : "TEST mode: no real money"}</b>.</p>`}
       <ul class="pr-check"><li class="${s.key ? "ok" : ""}">Secret key ${s.key ? "set" : "missing"}</li><li class="${s.webhook ? "ok" : ""}">Webhook secret ${s.webhook ? "set" : "missing (payments won't switch access on)"}</li><li class="${s.site ? "ok" : ""}">Site address ${s.site ? esc(s.site) : "missing"}</li></ul>
-      ${s.mode === "live" && s.key && s.webhook ? "" : `<p class="pr-help">Setting up Stripe takes a few steps on the server; ask Claude to walk you through it.</p>`}`;
+      ${s.mode === "live" && s.key && s.webhook ? "" : `<p class="pr-help">Setting up Stripe takes a few steps on the server; the steps are in docs/PAYMENTS.md.</p>`}`;
     $("prices").innerHTML = Object.entries(d.plans).map(([id, p]) => `<fieldset data-id="${id}"><legend>${esc(p.name || p.defaultName)}</legend>
         <label class="pr-wide">Name <input name="name" maxlength="40" placeholder="${esc(p.defaultName)}" value="${esc(p.name || "")}"></label>
         <label class="pr-wide">Description <textarea name="blurb" maxlength="240" rows="2" placeholder="${esc(p.defaultBlurb)}">${esc(p.blurb || "")}</textarea></label>
