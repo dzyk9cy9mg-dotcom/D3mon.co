@@ -3,6 +3,8 @@
   "use strict";
   const $ = id => document.getElementById(id);
   let me = null;
+  // An invite link (/login?invite=CODE#new) lets one person sign up while sign-ups are closed.
+  const invite = new URLSearchParams(location.search).get("invite") || "";
 
   function msg(text, ok) {
     $("msg").textContent = text || "";
@@ -52,7 +54,7 @@
     location.href = "./";
   });
   onSubmit($("upForm"), async () => {
-    await call("api/auth/register", { username: $("upUser").value, name: $("upName").value, password: $("upPass").value });
+    await call("api/auth/register", { username: $("upUser").value, name: $("upName").value, password: $("upPass").value, ...(invite ? { invite } : {}) });
     location.href = "./";
   });
   onSubmit($("nameForm"), async () => {
@@ -71,7 +73,7 @@
 
   fetch("api/session", { credentials: "same-origin", cache: "no-store" })
     .then(r => r.json())
-    .then(s => {
+    .then(async s => {
       if (s.user) {
         document.title = "Account · D3MON.CO";
         $("member").hidden = false;
@@ -79,8 +81,15 @@
         return;
       }
       $("guest").hidden = false;
-      if (!s.signups) $("tabUp").hidden = true;
-      showTab(!!s.signups && location.hash === "#new");
+      let invited = false;
+      if (invite) {
+        try { invited = (await (await fetch(`api/auth/invite?code=${encodeURIComponent(invite)}`, { credentials: "same-origin" })).json()).valid === true; } catch (e) {}
+        if (invited) $("inviteNote").hidden = false;
+        else msg("This invite link has been used, has expired or isn't valid. Ask for a new one.");
+      }
+      const canJoin = !!s.signups || invited;
+      if (!canJoin) $("tabUp").hidden = true;
+      showTab(canJoin && (invited || location.hash === "#new"));
     })
     .catch(() => msg("Couldn't reach the server. Refresh to try again."));
 })();

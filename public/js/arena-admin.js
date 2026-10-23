@@ -61,6 +61,44 @@
     renderBattles(); renderLog(); renderEntrants();
   }
 
+  // ---------- invite links (accounts live outside /api/v1) ----------
+  async function auth(method, path, body) {
+    const res = await fetch(`api/auth/${path}`, { method, credentials: "same-origin", headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+    let json = {};
+    try { json = await res.json(); } catch (e) {}
+    if (!res.ok) throw new Error((json.error && json.error.message) || "Something went wrong. Try again.");
+    return json;
+  }
+  const INV_STATE = { open: "waiting", used: "used", expired: "expired", revoked: "revoked" };
+  async function loadInvites() {
+    try {
+      const { invites } = await auth("GET", "invites");
+      $("invites").innerHTML = invites.length ? invites.map(i => `<div class="item"><div class="top"><span class="st ${i.state === "open" ? "pending" : i.state === "used" ? "approved" : "rejected"}">${INV_STATE[i.state]}</span><b>${esc(i.label || "no label")}</b>
+        <span class="meta">made ${esc(when(i.createdAt))}${i.state === "used" ? ` · signed up as @${esc(i.usedByName)} ${esc(when(i.usedAt))}` : i.state === "open" ? ` · works until ${esc(when(i.expiresAt))}` : ""}</span>
+        ${i.state === "open" ? `<button class="btn ghost sm" type="button" data-invrevoke="${esc(i.id)}" style="margin-left:auto">Revoke</button>` : ""}</div></div>`).join("") : `<p class="empty">No invite links yet.</p>`;
+    } catch (e) { $("invites").innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+  }
+  $("invForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    try {
+      const r = await auth("POST", "invites", { label: $("invLabel").value, days: +$("invDays").value });
+      $("invNew").innerHTML = `<div class="item keynew"><b>Your invite link. Copy it now: it won't be shown again.</b><code id="invUrl" style="word-break:break-all">${esc(r.url)}</code>
+        <div class="actions"><button class="btn sm" type="button" data-invcopy>Copy link</button><button class="btn ghost sm" type="button" data-invhide>I've copied it</button></div></div>`;
+      ev.target.reset();
+      await loadInvites();
+    } catch (e) { msg(e.message); }
+  });
+  document.addEventListener("click", async ev => {
+    const b = ev.target.closest("button");
+    if (!b) return;
+    if ("invcopy" in b.dataset) { try { await navigator.clipboard.writeText($("invUrl").textContent); msg("Invite link copied.", true); } catch (e) { msg("Select the link and copy it by hand."); } }
+    if ("invhide" in b.dataset) $("invNew").innerHTML = "";
+    if (b.dataset.invrevoke) {
+      if (!confirm("Revoke this invite link? It stops working straight away.")) return;
+      try { await auth("DELETE", `invites/${b.dataset.invrevoke}`); msg("Invite revoked.", true); await loadInvites(); } catch (e) { msg(e.message); }
+    }
+  });
+
   $("newForm").addEventListener("submit", async ev => {
     ev.preventDefault();
     const startsAt = new Date($("bStart").value).getTime();
@@ -116,7 +154,8 @@
   (async () => {
     const me = await session();
     if (!me || (me.role !== "admin" && me.role !== "owner")) { $("denied").hidden = false; return; }
-    for (const id of ["newBox", "battleBox", "logBox", "entBox"]) $(id).hidden = false;
+    for (const id of ["newBox", "battleBox", "logBox", "entBox", "invBox"]) $(id).hidden = false;
+    loadInvites();
     try { await load(); } catch (e) { msg(e.message); }
     let t = null;
     follow(["battles", "admin:applications"], () => { clearTimeout(t); t = setTimeout(() => load().catch(() => {}), 150); },

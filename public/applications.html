@@ -60,6 +60,18 @@
     <div class="list" id="entrants"></div>
   </section>
 
+  <section class="panel" id="invBox" hidden>
+    <h2>Invite links</h2>
+    <p class="tag">One link, one new account, even while sign-ups are closed. Send it to one person; it stops working once they sign up. The link is shown only once, so copy it straight away.</p>
+    <form class="row" id="invForm" style="margin-top:10px">
+      <div class="field"><label for="invLabel">Who it's for (optional)</label><input id="invLabel" maxlength="40" placeholder="e.g. Ketonk"></div>
+      <div class="field"><label for="invDays">Works for</label><select id="invDays"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></div>
+      <button class="btn" type="submit">Make an invite link</button>
+    </form>
+    <div id="invNew"></div>
+    <div class="list" id="invites" style="margin-top:12px"></div>
+  </section>
+
   <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
   <section class="panel" id="portraitBox" hidden>
     <h2>Profile pictures to approve</h2>
