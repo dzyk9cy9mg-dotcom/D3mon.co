@@ -2,7 +2,11 @@
 // first when founding memberships open (Black Friday, with a 24-hour head start for the waitlist).
 // Closed and hidden until an admin opens it, so nothing is announced early.
 //
-//   arena_waitlist/<id>     { id, email, createdAt, uid }   id = first 20 of sha256(email), so a repeat is the same doc
+//   arena_waitlist/<id>     { id, email, list, createdAt, uid }   id = first 20 of sha256(email), so a repeat is the same doc
+//
+// Two lists (owner, 2026-10-22): "member" (founding members) and "pro" (callers, bot owners and scripters who want
+// the founding Pro add-on). Pro people are founding members too. Joining again with "pro" moves an email onto it;
+// joining again as a member never takes anyone off Pro.
 //   arena_waitlistcfg/main  { open, updatedAt, updatedBy }
 //
 // Emails are never in the ledger (it's permanent) so an admin can delete one when someone asks.
@@ -15,6 +19,7 @@ export const WAITLIST = "arena_waitlist";
 const CFG = "arena_waitlistcfg/main";
 const EMAIL_RE = /^[^\s@<>()",;:]{1,64}@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 const MAX = 50000;
+export const LISTS = ["member", "pro"];
 
 export class Waitlist {
   constructor({ store, feed, now = () => Date.now() }) {
@@ -35,17 +40,23 @@ export class Waitlist {
   join(ctx, body = {}, limit = () => {}) {
     if (!this.open) throw new ApiError(409, "waitlist_closed", "The founder waitlist isn't open yet.");
     const keys = body && typeof body === "object" && !Array.isArray(body) ? Object.keys(body) : null;
-    if (!keys || keys.some(k => k !== "email")) throw new ApiError(400, "invalid_argument", "Send { email }.");
+    if (!keys || keys.some(k => k !== "email" && k !== "list")) throw new ApiError(400, "invalid_argument", "Send { email, list? }.");
+    const list = body.list === undefined ? "member" : body.list;
+    if (!LISTS.includes(list)) throw new ApiError(400, "invalid_argument", `list is "member" or "pro".`, "list");
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     if (email.length > 254 || !EMAIL_RE.test(email)) throw new ApiError(400, "invalid_argument", "That doesn't look like an email address.", "email");
     const id = crypto.createHash("sha256").update(email).digest("hex").slice(0, 20);
-    if (!this.store.get(`${WAITLIST}/${id}`).data) {
+    const had = this.store.get(`${WAITLIST}/${id}`).data;
+    if (!had) {
       limit();
       if (this.#all().length >= MAX) throw new ApiError(503, "unavailable", "The waitlist is full. Try again later.");
-      this.store.set(`${WAITLIST}/${id}`, { id, email, createdAt: this.now(), uid: ctx.uid || null }, ctx.uid || "guest");
+      this.store.set(`${WAITLIST}/${id}`, { id, email, list, createdAt: this.now(), uid: ctx.uid || null }, ctx.uid || "guest");
+      this.#changed();
+    } else if (list === "pro" && had.list !== "pro") {
+      this.store.set(`${WAITLIST}/${id}`, { ...had, list: "pro", proAt: this.now() }, ctx.uid || "guest");
       this.#changed();
     }
-    return { joined: true, ...this.info() };
+    return { joined: true, list: had?.list === "pro" ? "pro" : list, ...this.info() };
   }
 
   // PUT /waitlist { open }: admins open or close it.
@@ -60,7 +71,8 @@ export class Waitlist {
   // GET /waitlist/entries: admins, newest first.
   list(ctx) {
     this.#admin(ctx);
-    return { ...this.info(), entries: this.#all().sort((a, b) => b.createdAt - a.createdAt) };
+    const entries = this.#all().map(e => ({ ...e, list: e.list || "member" })).sort((a, b) => b.createdAt - a.createdAt);
+    return { ...this.info(), pro: entries.filter(e => e.list === "pro").length, entries };
   }
 
   // DELETE /waitlist/entries/:id: admins, when someone asks to be taken off.

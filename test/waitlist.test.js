@@ -2,6 +2,7 @@
 // the public sees only open and the count, admins see and remove entries, and /api/db can't reach it.
 import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
+import { LISTS } from "../server/arena/waitlist.js";
 import { startServer, Client } from "./helpers.js";
 
 describe("founder waitlist", () => {
@@ -47,6 +48,20 @@ describe("founder waitlist", () => {
     assert.equal((await owner.req("DELETE", `/api/v1/waitlist/entries/${l.entries[1].id}`)).status, 404);
   });
 
+  test("the founding Pro list: joining with pro moves an email onto it, and a member join never takes it off", async () => {
+    assert.equal((await guest.req("POST", "/api/v1/waitlist", { email: "odin@example.com", list: "pro" })).json.list, "pro");
+    assert.equal((await guest.req("POST", "/api/v1/waitlist", { email: "odin@example.com" })).json.list, "pro", "stays Pro");
+    const before = (await guest.get("/api/v1/waitlist")).json.count;
+    assert.equal((await guest.req("POST", "/api/v1/waitlist", { email: "freya@example.com" })).json.list, "member");
+    assert.equal((await guest.req("POST", "/api/v1/waitlist", { email: "freya@example.com", list: "pro" })).json.count, before + 1, "moving lists isn't a new entry");
+    assert.equal((await guest.req("POST", "/api/v1/waitlist", { email: "x@example.com", list: "vip" })).status, 400);
+    const l = (await owner.get("/api/v1/waitlist/entries")).json;
+    assert.equal(l.pro, 2);
+    assert.deepEqual(l.entries.filter(e => e.list === "pro").map(e => e.email).sort(), ["freya@example.com", "odin@example.com"]);
+    assert.ok(l.entries.every(e => LISTS.includes(e.list)));
+    assert.equal((await guest.get("/api/v1/waitlist")).json.pro, undefined, "the public sees only the total");
+  });
+
   test("emails can't be read through /api/db", async () => {
     const r = await owner.req("POST", "/api/db", { op: "query", collection: "arena_waitlist" });
     assert.notEqual(r.status, 200);
@@ -55,7 +70,7 @@ describe("founder waitlist", () => {
   test("closing it stops new joins but keeps the list", async () => {
     await owner.req("PUT", "/api/v1/waitlist", { open: false });
     assert.equal((await guest.req("POST", "/api/v1/waitlist", { email: "late@example.com" })).status, 409);
-    assert.deepEqual((await guest.get("/api/v1/waitlist")).json, { open: false, count: 1 });
+    assert.deepEqual((await guest.get("/api/v1/waitlist")).json, { open: false, count: 3 });
   });
 
   test("20 new emails an hour per address; repeats and typos don't count", async () => {
