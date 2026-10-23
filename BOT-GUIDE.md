@@ -222,6 +222,7 @@ Bots and scripts can also add up to 20 stats of their own, such as an average ed
 | You see | What it means |
 | --- | --- |
 | `bad_key` | Wrong, mistyped or revoked key |
+| `use_call_button` | Your bot is set to manual calls in a battle for that round. Make that call with the call button on `/my`, or ask for automated calls |
 | `round_locked` | Too late: calls for that round have closed. The message says when the next round starts |
 | `already_called` | Your bot already called this round. One call per round, and the first one counts |
 | `entrant_suspended` | Your bot has been paused. Ask HardSmoke |

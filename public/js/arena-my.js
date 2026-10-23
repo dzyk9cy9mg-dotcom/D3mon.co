@@ -5,7 +5,7 @@
   "use strict";
   const { api, follow, esc, when, kindName, session, syncClock, serverNow, nextRound, openRound, mmss, statValue, verifTag } = window.Arena;
   const $ = id => document.getElementById(id);
-  const S = { entrants: [], keys: {}, calls: {}, stats: {}, tour: {}, token: null, busy: false };
+  const S = { entrants: [], battles: [], keys: {}, calls: {}, stats: {}, tour: {}, token: null, busy: false };
   const SHOWS = { hidden: "Hidden", private: "Private (only you)", members: "Members only", public: "Public" };
 
   function msg(text, ok) {
@@ -35,6 +35,25 @@
       </div>
       <div class="meta">${mine ? `Your call: <b>${dirText(mine.direction)}</b>, sent ${esc(new Date(mine.receivedAt).toLocaleTimeString())}. It's final: one call per round. Others see that you've called, but not which way, until the calls close.` : "No call yet for this round. One call per round, and it's final."}</div>
     </div>`;
+  }
+
+  // Battles this bot or script is entered in (not over): how it calls in each. The owner picks before the
+  // battle starts, unless HardSmoke set it for everyone. Manual battles get the call button.
+  const myBattles = e => S.battles.filter(b => !b.over && b.state !== "final" && b.entrants.some(x => x.id === e.id))
+    .map(b => ({ b, method: b.entrants.find(x => x.id === e.id).callMethod }));
+  function methodBox(e) {
+    const list = myBattles(e);
+    if (!list.length) return "";
+    const rows = list.map(({ b, method }) => {
+      const canPick = b.callMethod === "owner" && b.status !== "live" && serverNow() < b.startsAt;
+      const note = b.callMethod !== "owner" ? "Set by HardSmoke for this battle" : canPick ? "You can change this until it starts" : "Locked: the battle has started";
+      return `<div class="item"><div class="top"><b>${esc(b.title)}</b><span class="meta">${esc(when(b.startsAt))}</span>
+        <div class="seg2" role="group" aria-label="How ${esc(e.name)} calls in ${esc(b.title)}" style="margin-left:auto">
+          ${[["auto", "Automated"], ["manual", "Call button"]].map(([m, t]) => `<button type="button" class="btn ${m === method ? "" : "ghost"} sm" data-method="${esc(b.id)}|${esc(e.id)}|${m}" aria-pressed="${m === method}" ${canPick ? "" : "disabled"}>${t}</button>`).join("")}
+        </div></div><div class="meta">${method === "auto" ? "Your bot sends its calls with its bot key." : "You make each call with the Up/Down button below while the battle runs."} ${esc(note)}.</div></div>`;
+    }).join("");
+    const manual = list.some(x => x.method === "manual" && (x.b.status === "live" || serverNow() >= x.b.startsAt - 15 * 60000));
+    return `<h3 class="sub">Battle calls</h3><div class="list">${rows}</div>${manual ? callerBox(e) : ""}`;
   }
 
   function keysBox(e) {
@@ -181,7 +200,7 @@
     $("none").hidden = S.entrants.length > 0;
     $("entrants").innerHTML = S.entrants.map(e => `<section class="panel" data-ent="${esc(e.id)}">
       <h2>${esc(e.name)} <span class="st">${esc(kindName(e.kind))}</span>${e.status !== "active" ? ` <span class="st rejected">${esc(e.status)}</span>` : ""}</h2>
-      ${e.kind === "caller" ? callerBox(e) : keysBox(e)}
+      ${e.kind === "caller" ? callerBox(e) : methodBox(e) + keysBox(e)}
       ${tourBox(e)}
       ${profileBox(e)}
       <h3 class="sub">Recent calls</h3>${callsTable(e)}
@@ -201,7 +220,9 @@
   }
 
   async function load() {
-    S.entrants = (await api("GET", "entrants?mine=1")).entrants;
+    const [en, bs] = await Promise.all([api("GET", "entrants?mine=1"), api("GET", "battles").catch(() => ({ battles: [] }))]);
+    S.entrants = en.entrants;
+    S.battles = bs.battles;
     await Promise.all(S.entrants.map(loadEntrant));
     render();
   }
@@ -220,6 +241,16 @@
         msg(r.unchanged ? "That's already your call." : `Called ${dirText(direction)} for ${fmtTime(r.call.round)}.`, true);
         await loadEntrant(S.entrants.find(x => x.id === id)); render();
       } catch (e) { msg(e.message); } finally { S.busy = false; }
+      return;
+    }
+    if (d.method) {
+      const [bid, eid, method] = d.method.split("|");
+      try {
+        const r = await api("PUT", `battles/${bid}/entrants/${eid}/call-method`, { method });
+        S.battles = S.battles.map(b => b.id === bid ? r.battle : b);
+        msg(method === "auto" ? "Saved: your bot calls automatically in that battle." : "Saved: you'll make that battle's calls with the call button.", true);
+        render();
+      } catch (e) { msg(e.message); }
       return;
     }
     if (d.tour) {

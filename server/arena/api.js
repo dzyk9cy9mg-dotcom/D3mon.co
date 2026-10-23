@@ -306,6 +306,7 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "POST /battles") { writer(); return ok({ battle: registry.battleView(registry.createBattle(ctx, await body()), ctx) }, 201); }
     if ((m = route.match(/^GET \/battles\/([A-Za-z0-9]+)$/))) return ok({ battle: registry.battleView(registry.battleFor(ctx, m[1]), ctx) });
     if ((m = route.match(/^PATCH \/battles\/([A-Za-z0-9]+)$/))) { writer(); return ok({ battle: registry.battleView(registry.updateBattle(ctx, m[1], await body()), ctx) }); }
+    if ((m = route.match(/^PUT \/battles\/([A-Za-z0-9]+)\/entrants\/([A-Za-z0-9]+)\/call-method$/))) { writer(); return ok({ battle: registry.battleView(registry.setCallMethod(ctx, m[1], m[2], await body()), ctx) }); }
     if ((m = route.match(/^POST \/battles\/([A-Za-z0-9]+)\/applications$/))) {
       if (ctx.uid) take(limits.apply, ctx.uid);
       return ok({ application: registry.appView(registry.apply(ctx, m[1], await body()), ctx) }, 201);
