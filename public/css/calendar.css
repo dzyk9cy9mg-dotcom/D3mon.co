@@ -1,0 +1,15 @@
+/* /calendar */
+.arena .cal-day{margin:28px 0 12px;font:700 15px/1.2 var(--display,Syncopate,sans-serif);text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2,#B4C1D0)}
+.arena .cal-day:first-child{margin-top:0}
+.cal-ev .top{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.cal-time{font:600 16px var(--mono,"IBM Plex Mono",monospace);min-width:7.5em}
+.cal-time small{font-size:12px;color:var(--ink-3,#8494A8);margin-left:2px}
+.cal-title{font-size:16px}
+.cal-title a{color:inherit}
+.cal-acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.cal-live{color:#36E6C3;border-color:rgba(54,230,195,.5)}
+.cal-ev.k-battle{border-left:3px solid #FF4F7A}
+.cal-ev.k-capstone{border-left:3px solid #E9C27A}
+.cal-ev.k-live{border-left:3px solid #36E6C3}
+.cal-ev.k-lab{border-left:3px solid #4DA3FF}
+@media (max-width:600px){.cal-acts{margin-left:0;width:100%}.cal-time{min-width:0}}

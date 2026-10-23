@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Calendar · D3MON</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/calendar.css">
+<script src="js/sigils.js"></script>
+<script src="js/wall.js"></script>
+</head>
+<body>
+<main class="arena">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">Battle nights, Capstone sessions and live floor sessions, all in one place. Press Remind me and the bell lets you know 15 minutes before it starts, and again when it goes live.</p>
+
+  <section class="panel">
+    <div class="cal-days" id="days"><p class="empty">Loading the calendar…</p></div>
+  </section>
+
+  <section class="panel" id="adminBox" hidden>
+    <h2>Add an event</h2>
+    <p class="tag">Battles and Capstone sessions show up here by themselves. Add anything else: a live floor session, a Lab night, a community hangout.</p>
+    <form class="row" id="evForm" style="margin-top:10px">
+      <div class="field"><label for="evTitle">Title</label><input id="evTitle" required minlength="3" maxlength="80" placeholder="e.g. Sunday live floor"></div>
+      <div class="field"><label for="evKind">Type</label><select id="evKind"></select></div>
+      <div class="field"><label for="evStart">Starts (your time)</label><input id="evStart" type="datetime-local" required></div>
+      <div class="field"><label for="evMin">Length</label><select id="evMin"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option><option value="180">3 hours</option></select></div>
+      <div class="field"><label for="evLink">Link (optional)</label><input id="evLink" maxlength="200" placeholder="live, battle or https://…"></div>
+      <div class="field"><label for="evNote">Note (optional)</label><input id="evNote" maxlength="300"></div>
+      <button class="btn" type="submit">Add to the calendar</button>
+    </form>
+    <h2 style="margin-top:22px">Announce to every member</h2>
+    <form class="row" id="annForm" style="margin-top:10px">
+      <div class="field" style="flex-basis:320px"><label for="annText">Message</label><input id="annText" required minlength="3" maxlength="280" placeholder="e.g. Battle night is Saturday at 6 PM PT"></div>
+      <div class="field"><label for="annLink">Link (optional)</label><input id="annLink" maxlength="200" placeholder="battle"></div>
+      <button class="btn" type="submit">Send to everyone</button>
+    </form>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/sitebar.js"></script>
+</body>
+</html>
