@@ -95,8 +95,39 @@
   // The cockpit loop behind the displays: media/<LOOP>.mp4 (and <LOOP>-720.mp4). Until the owner's loop for the curved
   // cockpit is made, LOOP is null and the still (media/cockpit2.jpg, the intro's last frame) stands in.
   const LOOP = "cockpit2"; // the owner's loop (2026-10-21), its end blended into its start so it repeats smoothly
+  // ---------- Lite mode (owner, 2026-10-22: "it kills my laptop") ----------
+  // The loop, the glass blur over it and the beams keep the graphics chip busy every frame. Lite mode shows the still
+  // instead of the loop, drops the blur and redraws the beams once a second; the screens and data are unchanged.
+  // It turns on by itself when the page can't hold a smooth frame rate, and "Lite mode" under the cockpit
+  // switches it by hand (remembered in localStorage d3b.lite: "1" on, "0" off; unset = automatic).
+  const liteChoice = () => { try { return localStorage.getItem("d3b.lite"); } catch { return null; } };
+  let lite = liteChoice() === "1" || (liteChoice() === null && (navigator.hardwareConcurrency || 8) <= 2);
+  function setLite(on, save) {
+    lite = on;
+    document.body.classList.toggle("bt-lite", on);
+    $("liteBtn").setAttribute("aria-pressed", String(on));
+    $("liteBtn").textContent = on ? "Lite mode on" : "Lite mode";
+    if (save) try { localStorage.setItem("d3b.lite", on ? "1" : "0"); } catch {}
+    video();
+  }
+  // Automatic: once the cockpit is showing, watch the frame rate for 4 s; under 40 frames a second means this
+  // computer is struggling, so switch to Lite (unless the visitor chose).
+  function watchFrames() {
+    if (lite || liteChoice() !== null || reduce || phone.matches) return;
+    let n = 0, t0 = 0, busy = 0;
+    const step = ts => {
+      if (document.hidden || document.body.classList.contains("bt-gated") || film || !$("wall").hidden) { t0 = 0; n = 0; return void requestAnimationFrame(step); }
+      if (!t0) t0 = ts;
+      n++;
+      if (ts - t0 < 4000) return void requestAnimationFrame(step);
+      if (n / ((ts - t0) / 1000) < 40) { setLite(true, false); $("liteNote").hidden = false; setTimeout(() => { $("liteNote").hidden = true; }, 8000); return; }
+      if (++busy < 3) { t0 = 0; n = 0; setTimeout(() => requestAnimationFrame(step), 20000); } // check again a few times
+    };
+    setTimeout(() => requestAnimationFrame(step), 3000);
+  }
+
   function video() {
-    if (phone.matches || reduce || !LOOP) { bg.pause(); if (bg.getAttribute("src")) { bg.removeAttribute("src"); bg.load(); } return; }
+    if (phone.matches || reduce || !LOOP || lite) { bg.pause(); if (bg.getAttribute("src")) { bg.removeAttribute("src"); bg.load(); } return; }
     const want = `media/${small() ? `${LOOP}-720` : LOOP}.mp4`;
     if (!bg.src.endsWith(want)) bg.src = want;
     if (!document.hidden && $("wall").hidden && !document.body.classList.contains("bt-gated")) bg.play().catch(() => {});
@@ -200,6 +231,7 @@
   $("skipGate").addEventListener("click", skipGate);
   $("skipIntro").addEventListener("click", () => handoff(true));
   $("introBtn").addEventListener("click", playIntro);
+  $("liteBtn").addEventListener("click", () => setLite(!lite, true));
   document.addEventListener("keydown", e => { if (e.key === "Escape" && film && !film.handed) handoff(true); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) bg.pause(); else video(); });
 
@@ -294,7 +326,7 @@
     let shown = 0.5, t = 0, last = 0;
     function frame(ts) {
       requestAnimationFrame(frame);
-      if (ts - last < 33 || document.hidden || !$("wall").hidden) return;
+      if (ts - last < (lite ? 1000 : 33) || document.hidden || !$("wall").hidden) return;
       const dt = Math.min(0.1, (ts - last) / 1000); last = ts; t += dt;
       const p = odds(), want = p == null ? 0.5 : p;
       shown += (want - shown) * Math.min(1, dt * 2);
@@ -655,6 +687,7 @@
   // ---------- start ----------
   (async () => {
     place(); phone.addEventListener("change", () => { place(); video(); renderAll(); });
+    setLite(lite, false); watchFrames();
     gate(); $("introBtn").hidden = reduce;
     addEventListener("resize", fit);
     if (!DEMO) await A.syncClock().catch(() => {});
