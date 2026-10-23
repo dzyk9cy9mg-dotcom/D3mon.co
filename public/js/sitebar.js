@@ -2,14 +2,15 @@
 // in place of each page's old one: the D3MON mark, the main parts (Live, Battles, Marketplace, Tournaments,
 // Capstone, My bots), an Admin menu for admins, the account link and Join D3MON; on phones the parts fold into a
 // Menu button. It also gives each page a real title (from its <title>) and a skip link. Pages load it at the end
-// of <body>. HOME is the new front page; when it becomes the main page at launch, change HOME to "./".
+// of <body>. HOME is the front page (the new one, at "/" since 2026-10-22; the original is at /classic).
 (function () {
   "use strict";
-  const HOME = "next";
+  const HOME = "./";
   const MAIN = [["live", "Live"], ["battle", "Battles"], [`${HOME}#market`, "Marketplace"], ["tournaments", "Tournaments"], ["vip", "Capstone"], ["my", "My bots"]];
   const ADMIN = [
     ["Bots and stats", [["applications", "Applications"], ["vip", "VIP access"], ["billing", "Payments"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Displays and hall video"]]],
     ["Battle show", [["battle", "Battle cockpit (HardSmoke's controls)"], ["metrics", "Round metrics"], ["board", "Battle board"]]],
+    ["Site", [["classic", "Classic site (admin control center, chat, streams)"]]],
   ];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const here = location.pathname.split("/").pop() || "./";

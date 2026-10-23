@@ -136,7 +136,7 @@ describe("verified stats and typed-in stats", () => {
 test("the main page's battle header links to the battle call and the board", async () => {
   const srv = await startServer();
   try {
-    const html = (await new Client(srv.base).get("/")).text;
+    const html = (await new Client(srv.base).get("/classic")).text;
     const header = html.slice(html.indexOf('id="battle"'), html.indexOf("</div>", html.indexOf('class="bctl"')));
     for (const href of ['href="apply"', 'href="my"', 'href="board"']) assert.ok(header.includes(href), href);
     for (const p of ["/my", "/board"]) assert.equal((await new Client(srv.base).get(p)).status, 200, p);

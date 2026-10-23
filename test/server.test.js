@@ -36,7 +36,8 @@ describe("D3MON.CO server", () => {
 
   describe("pages", () => {
     test("serves the page, its files and the sign-in page", async () => {
-      const home = await guest.get("/");
+      assert.match((await guest.get("/")).text, /<title>D3MON · /, "the new front page");
+      const home = await guest.get("/classic");
       assert.equal(home.status, 200);
       assert.match(home.text, /<title>D3MON\.CO<\/title>/);
       assert.match(home.text, /<script src="js\/runtime\.js"><\/script>\s*<script src="js\/d3mon\.js"><\/script>/);
@@ -453,7 +454,8 @@ describe("a site mounted under a path (D3MON_BASE_PATH)", () => {
     const redirect = await fetch(`${srv.base}/d3mon`, { redirect: "manual" });
     assert.equal(redirect.headers.get("location"), "/d3mon/");
     const c = new Client(srv.base);
-    assert.match((await c.get("/d3mon/")).text, /<title>D3MON\.CO<\/title>/);
+    assert.equal((await c.get("/d3mon/")).status, 200);
+    assert.match((await c.get("/d3mon/classic")).text, /<title>D3MON\.CO<\/title>/);
     assert.equal((await c.get("/d3mon/js/runtime.js")).status, 200);
     assert.match((await c.get("/d3mon/login")).text, /Create account/);
     assert.equal((await c.get("/d3mon/api/session")).json.user, null);

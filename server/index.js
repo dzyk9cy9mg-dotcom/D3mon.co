@@ -393,7 +393,10 @@ export async function createApp(cfg = loadConfig()) {
 
   function page(req, res, pathname) {
     if (req.method !== "GET" && req.method !== "HEAD") throw new HttpError(405, "invalid_argument", "Method not allowed.");
-    if (pathname === "/") return serveFile(req, res, path.join(cfg.publicDir, "index.html"), PAGE_HEADERS);
+    // The front page (owner, 2026-10-22): "/" is the new front page (next.html, also at /next); the original
+    // page lives on at /classic for its admin control center, chat and streams until they move.
+    if (pathname === "/") return serveFile(req, res, path.join(cfg.publicDir, "next.html"), PAGE_HEADERS);
+    if (pathname === "/classic") return serveFile(req, res, path.join(cfg.publicDir, "index.html"), PAGE_HEADERS);
     if (pathname === "/login" || pathname === "/account") return serveFile(req, res, path.join(cfg.publicDir, "login.html"), PAGE_HEADERS);
     if (["/apply", "/applications", "/metrics", "/my", "/board", "/card", "/catalog", "/monitor", "/displays", "/tournaments", "/world", "/vip", "/profile", "/next", "/live", "/privacy", "/terms", "/pricing", "/billing", "/battle", "/connect"].includes(pathname)) return serveFile(req, res, path.join(cfg.publicDir, `${pathname.slice(1)}.html`), PAGE_HEADERS);
     let rel;

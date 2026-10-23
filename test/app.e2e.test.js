@@ -93,7 +93,7 @@ describe(`the D3MON.CO page in a headless browser, ${where}`, { skip: !jsdom && 
   before(async () => {
     process.on("unhandledRejection", onRejection);
     srv = await startServer({ basePath });
-    const site = srv.base + basePath, pageUrl = `${site}/`;
+    const site = srv.base + basePath, pageUrl = `${site}/classic`; // the original page (the front page moved to next.html, 2026-10-22)
     ownerC = new Client(site);
     memberC = new Client(site);
     await ownerC.register("owner", "owner-pass-1", "Site Owner");

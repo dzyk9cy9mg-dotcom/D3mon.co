@@ -75,7 +75,7 @@ test("the upload zip holds the site and nothing private, and the site runs from 
         });
         child.stderr.on("data", c => (out += c));
       });
-      const home = await fetch(url);
+      const home = await fetch(`${url}classic`);
       assert.equal(home.status, 200);
       assert.match(await home.text(), /<title>D3MON\.CO<\/title>/);
       assert.deepEqual(await (await fetch(`${url}api/session`)).json(), { user: null, sampling: false, signups: true });

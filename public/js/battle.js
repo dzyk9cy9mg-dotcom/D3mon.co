@@ -277,7 +277,7 @@
 
   function mFighters(size, kind, title) {
     const all = fighters(kind), noun = { bot: "bots", caller: "callers", script: "chart scripts" }[kind] || "fighters";
-    if (!S.b) return `<h3>${esc(title)}</h3><p class="bt-empty">The next battle is announced here. <a href="next#battle">See what's coming</a></p>`;
+    if (!S.b) return `<h3>${esc(title)}</h3><p class="bt-empty">The next battle is announced here. <a href="./#battle">See what's coming</a></p>`;
     if (!all.length) return `<h3>${esc(title)}</h3><p class="bt-empty">No ${noun} in this battle yet.${S.b.over ? "" : ` <a href="apply?battle=${encodeURIComponent(S.b.id)}">Apply to battle</a>`}</p>`;
     if (size === "strip") return `<div class="bt-run">${all.map(({ e, call }) => `<span class="k-${esc(e.kind)}"><b>${esc(e.name)}</b> ${callTag(call)}</span>`).join("")}</div>`;
     if (size === "big") {
