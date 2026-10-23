@@ -12,6 +12,8 @@
 .wl-form input{flex:1;min-width:0;min-height:44px;padding:0 12px;background:rgba(255,255,255,.04);border:1px solid var(--s-edge2,rgba(170,200,240,.26));color:inherit;font:16px var(--body,Manrope,sans-serif)}
 .wl-form button{min-height:44px;padding:0 18px;border:0;background:#E9C27A;color:#140c02;font:700 14px var(--body,Manrope,sans-serif);cursor:pointer;clip-path:polygon(0 0,100% 0,100% 64%,calc(100% - 10px) 100%,0 100%)}
 .wl-form button:disabled{opacity:.6}
+.wl-pro{display:flex;gap:10px;align-items:flex-start;margin:10px 0 0;font-size:13px;line-height:1.4;color:var(--ink-2,#B4C1D0);cursor:pointer}
+.wl-pro input{flex:none;width:20px;height:20px;margin:0;accent-color:#E9C27A}
 .wl-err{margin:6px 0 0;min-height:0;font-size:13px;color:#FF8A8A}
 .wl-err:empty,.wl-count:empty{display:none}
 .wl-count{margin:10px 0 0;font:500 13px var(--mono,"IBM Plex Mono",monospace);color:var(--ink-3,#8494A8)}
