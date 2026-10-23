@@ -30,6 +30,7 @@ import { Cockpit } from "./cockpit.js";
 import { HallChat } from "./hallchat.js";
 import { DiscordBridge } from "./discord.js";
 import { Waitlist } from "./waitlist.js";
+import { Calendar } from "./calendar.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
 
@@ -81,6 +82,8 @@ export function createArena({ store, accounts, cfg }) {
   const tournaments = new Tournaments({ ledger, registry, feed, calls, metrics });
   if (cfg.kalshi !== false) tournaments.start(); // no Kalshi, no results to save
   const vip = new Vip({ ledger, registry, calls, feed, accounts });
+  const calendar = new Calendar({ ledger, store, registry, vip, accounts });
+  calendar.start();
   const results = new BattleResults({ registry, calls, metrics });
   const votes = new Votes({ ledger, metrics, prices, registry, vip, feed, accounts, userName });
   const billing = new Billing({ ledger, registry, vip, feed, accounts, key: cfg.stripeKey, webhookSecret: cfg.stripeWebhookSecret, api: cfg.stripeApi, siteUrl: cfg.siteUrl });
@@ -197,6 +200,13 @@ export function createArena({ store, accounts, cfg }) {
 
     if (route === "GET /rounds") return ok(roundsView(url));
     if (route === "GET /market") return ok(prices.market());
+    if (route === "GET /calendar") return ok(calendar.list(ctx, { days: url.searchParams.get("days") }));
+    if (route === "POST /calendar/events") { writer(); return ok({ event: calendar.addEvent(ctx, await body()) }, 201); }
+    if ((m = route.match(/^DELETE \/calendar\/events\/([A-Za-z0-9_-]{1,40})$/))) { writer(); return ok(calendar.cancelEvent(ctx, m[1])); }
+    if (route === "PUT /calendar/remind") { writer(); return ok(calendar.setReminder(ctx, await body())); }
+    if (route === "GET /notifications") return ok(calendar.myNotes(ctx));
+    if (route === "POST /notifications/read") { writer(); return ok(calendar.markRead(ctx)); }
+    if (route === "POST /notifications/announce") { writer(); return ok(calendar.announce(ctx, await body())); }
     if (route === "GET /waitlist") return ok(waitlist.info());
     if (route === "POST /waitlist") return ok(waitlist.join(ctx, await body(), () => take(limits.waitlist, clientIp(req, cfg.trustProxy))));
     if (route === "PUT /waitlist") { writer(); return ok(waitlist.setOpen(ctx, await body())); }
@@ -356,5 +366,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, waitlist, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, close: () => { discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, waitlist, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, calendar, close: () => { calendar.stop(); discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }
