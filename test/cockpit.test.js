@@ -76,6 +76,21 @@ describe("battle cockpit", () => {
     assert.equal((await guest.get("/api/v1/cockpit")).json.featured, 2);
   });
 
+  test("the host's tip link: admins only, tip pages only, and it can be taken down", async () => {
+    assert.equal((await guest.get("/api/v1/cockpit")).json.tip, null);
+    assert.equal((await loki.req("PUT", "/api/v1/cockpit", { tip: "https://streamelements.com/hardsmoke/tip" })).status, 403);
+    for (const bad of ["http://streamelements.com/hardsmoke/tip", "https://evil.example/tip", "https://streamelements.com.evil.example/x", "not a link", 5])
+      assert.equal((await hs.req("PUT", "/api/v1/cockpit", { tip: bad })).status, 400, String(bad));
+    const r = await hs.req("PUT", "/api/v1/cockpit", { tip: "https://streamelements.com/hardsmoke/tip" });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    assert.equal((await guest.get("/api/v1/cockpit")).json.tip, "https://streamelements.com/hardsmoke/tip");
+    await hs.req("PUT", "/api/v1/cockpit", { featured: 1 });
+    assert.equal((await guest.get("/api/v1/cockpit")).json.tip, "https://streamelements.com/hardsmoke/tip", "other changes keep it");
+    assert.equal((await hs.req("PUT", "/api/v1/cockpit", { tip: "https://www.paypal.me/hardsmoke" })).json.tip, "https://www.paypal.me/hardsmoke");
+    await hs.req("PUT", "/api/v1/cockpit", { tip: "" });
+    assert.equal((await guest.get("/api/v1/cockpit")).json.tip, null);
+  });
+
   test("the layout survives a restart (it's in the ledger)", async () => {
     await hs.req("PUT", "/api/v1/cockpit", { screens: { ticker: { show: "lastRound" } } });
     const again = new (srv.app.arena.cockpit.constructor)({ ledger: srv.app.arena.ledger, feed: srv.app.arena.feed, registry: srv.app.arena.registry });

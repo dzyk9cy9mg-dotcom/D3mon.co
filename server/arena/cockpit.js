@@ -4,9 +4,11 @@
 // heading, and for a message or promo screen its text or video. The page also shows the battle running now, the
 // next one, or one battle an admin picked.
 //
-// Ledger line: { t: "cockpit", layout: { battleId, featured, screens: { <slot>: { show, title, text, video } } } }
+// Ledger line: { t: "cockpit", layout: { battleId, featured, tip, screens: { <slot>: { show, title, text, video } } } }
+// tip (owner, 2026-10-23): the host's own tip page (StreamElements, Streamlabs, PayPal, Venmo, Ko-fi…), shown as one quiet
+// link under the cockpit. The money goes straight to the host; D3MON only links to it.
 // The latest line wins; GET /cockpit is public, PUT /cockpit is for admins, feed topic "cockpit".
-import { ApiError, check } from "./validate.js";
+import { ApiError, check, webLink } from "./validate.js";
 import { isAdmin } from "../rules.js";
 import { parseVideoUrl } from "./hall.js";
 
@@ -36,6 +38,7 @@ export const DEFAULT_SCREENS = {
   ticker: { show: "odds" }, main: { show: "bots" }, leftTop: { show: "callers" }, leftBottom: { show: "scripts" },
   rightTop: { show: "stream" }, rightBottom: { show: "crowd" }, lowerLeft: { show: "vote" }, console: { show: "chat" }, lowerRight: { show: "lastRound" },
 };
+export const TIP_HOSTS = ["streamelements.com", "streamlabs.com", "paypal.me", "paypal.com", "venmo.com", "cash.app", "ko-fi.com", "buymeacoffee.com"];
 const SCREEN = {
   show: { type: "enum", values: Object.keys(MODULES), required: true },
   title: { type: "string", max: 40 },
@@ -61,7 +64,7 @@ export class Cockpit {
       const v = screens[s].video && parseVideoUrl(screens[s].video);
       screens[s].promo = v ? { ...v, embed: `https://www.youtube-nocookie.com/embed/${v.id}`, watch: v.kind === "short" ? `https://www.youtube.com/shorts/${v.id}` : `https://www.youtube.com/watch?v=${v.id}` } : null;
     }
-    const out = { battleId: this.layout?.battleId || null, featured: this.layout?.featured ?? 0, battle: this.pick(ctx), screens, slots: SLOTS, modules: MODULES, updatedAt: this.at };
+    const out = { battleId: this.layout?.battleId || null, featured: this.layout?.featured ?? 0, tip: this.layout?.tip || null, battle: this.pick(ctx), screens, slots: SLOTS, modules: MODULES, updatedAt: this.at };
     return out;
   }
 
@@ -82,13 +85,15 @@ export class Cockpit {
     if (!ctx.uid) throw new ApiError(401, "not_granted", "Sign in first.");
     if (!isAdmin(ctx) || !ctx.canWrite) throw new ApiError(403, "not_granted", "Only admins can do that.");
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new ApiError(400, "invalid_argument", "Send a JSON object.");
-    for (const k of Object.keys(body)) if (!["battleId", "screens", "featured"].includes(k)) throw new ApiError(400, "invalid_argument", `Unknown field "${k}".`, k);
-    const layout = { battleId: this.layout?.battleId || null, featured: this.layout?.featured ?? 0, screens: { ...(this.layout?.screens || {}) } };
+    for (const k of Object.keys(body)) if (!["battleId", "screens", "featured", "tip"].includes(k)) throw new ApiError(400, "invalid_argument", `Unknown field "${k}".`, k);
+    const layout = { battleId: this.layout?.battleId || null, featured: this.layout?.featured ?? 0, tip: this.layout?.tip || null, screens: { ...(this.layout?.screens || {}) } };
     // the stream HardSmoke puts on the stream screen for everyone: its place in the battle's list of streams
     if ("featured" in body) {
       if (!Number.isSafeInteger(body.featured) || body.featured < 0 || body.featured > 11) throw new ApiError(400, "invalid_argument", "\"featured\" must be a stream's number, 0 to 11.", "featured");
       layout.featured = body.featured;
     }
+    // the host's tip page: an https link to one of TIP_HOSTS, or null / "" to take it down
+    if ("tip" in body) layout.tip = body.tip === null || body.tip === "" ? null : webLink("tip", body.tip, { hosts: TIP_HOSTS });
     if ("battleId" in body) {
       if (body.battleId === null || body.battleId === "") layout.battleId = null;
       else if (typeof body.battleId !== "string" || !/^[A-Za-z0-9]{1,40}$/.test(body.battleId)) throw new ApiError(400, "invalid_argument", "\"battleId\" isn't a battle.", "battleId");
