@@ -14,7 +14,7 @@
 //   { t: "brothers_settings", on, exclude: [entrantId] }        admins; the latest counts
 //   { t: "brother_video", brother, type, size } | { t: "brother_video", brother, removed: true }
 //
-// Intro videos (owner, 2026-10-23): an admin uploads one video file per brother (MP4 or WebM, checked by its bytes,
+// Intro videos (owner, 2026-10-23): an admin uploads one video file per spot (VIDEO_SLOTS: Kain, both, Abel) (MP4 or WebM, checked by its bytes,
 // up to VIDEO_MAX). It's streamed straight to <data>/brothers/<key>.mp4|webm, never held in memory, and served
 // publicly in byte ranges so phones can play it.
 import crypto from "node:crypto";
@@ -36,6 +36,8 @@ const PERIODS = ["daily", "weekly", "monthly"];
 const RECENT = 12;
 export const VIDEO_MAX = 200 * 1024 * 1024;
 const VIDEO_EXT = { "video/mp4": ".mp4", "video/webm": ".webm" };
+// The video spots on their page, left to right: Kain's intro, one of both brothers (smaller, owner 2026-10-23), Abel's.
+export const VIDEO_SLOTS = ["kain", "both", "abel"];
 const r4 = x => Math.round(x * 10000) / 10000;
 
 export class Brothers {
@@ -206,6 +208,7 @@ export class Brothers {
     }
     return {
       brothers: BROTHERS.map(b => ({ ...b, ai: true, video: this.videoInfo(b.key) })), on: this.cfg.on,
+      videos: Object.fromEntries(VIDEO_SLOTS.map(k => [k, this.videoInfo(k)])),
       now: { round, endsAt: round + ROUND_MS, calls: this.#roundCalls(round, ctx) }, rounds, standings, notice: NOTICE,
     };
   }
@@ -244,7 +247,7 @@ export class Brothers {
 
   // ---------- intro videos
   #key(key) {
-    if (!BROTHERS.some(b => b.key === key)) throw new ApiError(404, "not_found", "No such brother.");
+    if (!VIDEO_SLOTS.includes(key)) throw new ApiError(404, "not_found", "No such video spot. Use kain, both or abel.");
     return key;
   }
   #path(key, type) { return path.join(this.dir, `${key}${VIDEO_EXT[type]}`); }
