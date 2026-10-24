@@ -42,7 +42,9 @@
     const staleKeys = new Set((e.alerts.find(a => a.type === "stale")?.stats || []).map(s => s.key));
     const lock = x.shown ? "" : `<span title="${esc(x.visibility)}">🔒</span> `;
     const body = x.shown ? esc(short(c, x.value)) : x.hasValue ? `${lock}<span class="tag">${esc(x.visibility)}</span>` : `${lock}–`;
-    const sub = x.verification === "self-reported" ? `<span class="age">${x.updates ? `${esc(ago(x.receivedAt))} · ${x.updates}×${x.via === "owner" ? " typed" : ""}` : "never sent"}</span>` : "";
+    const sub = x.verification === "self-reported" ? `<span class="age">${x.updates ? `${esc(ago(x.receivedAt))} · ${x.updates}×${x.via === "owner" ? " typed" : ""}` : "never sent"}</span>`
+      : x.visibility !== "public" && x.visibility !== "members" ? `<span class="age" title="Admins always see verified results here">🔒 ${esc(x.visibility)} to others</span>` : "";
+    if (x.verification !== "self-reported" && x.value == null) return `<td class="mcell" data-hist="${esc(e.id)}|${esc(c.key)}"><span class="tag">no results yet</span>${sub}</td>`;
     return `<td class="mcell ${staleKeys.has(c.key) ? "stale" : ""}" data-hist="${esc(e.id)}|${esc(c.key)}">${body}${sub}</td>`;
   }
 

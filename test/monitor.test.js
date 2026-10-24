@@ -51,13 +51,21 @@ describe("the stats monitor", () => {
     assert.equal((await odin.db("get", { path: `arena_rejects/${hammer}` })).status, 403, "/api/db can't read the rejection log");
   });
 
-  test("values only where the owner shows them; hidden and private show activity alone", async () => {
+  test("verified results are always shown to admins on the monitor, whatever the owner's setting (owner, 2026-10-23)", async () => {
+    const e = (await hs.get("/api/v1/monitor")).json.entrants.find(x => x.id === hammer);
+    const verified = Object.values(e.cells).filter(c => c.verification && c.verification !== "self-reported");
+    assert.ok(verified.length, "there are verified stats");
+    assert.ok(verified.every(c => c.shown && "value" in c), "every verified value is there for admins");
+    assert.ok(verified.some(c => c.visibility === "hidden"), "even ones the owner keeps hidden from the public");
+  });
+
+  test("self-reported values only where the owner shows them; hidden and private show activity alone", async () => {
     const v = (await hs.get("/api/v1/monitor")).json, cells = row(v, hammer).cells;
     assert.deepEqual([cells.win_rate.shown, cells.win_rate.value, cells.win_rate.updates, cells.win_rate.via], [true, 0.62, 1, "bot-key"]);
     assert.deepEqual([cells.total_profit.shown, "value" in cells.total_profit, cells.total_profit.hasValue, cells.total_profit.updates], [false, false, true, 1]);
     assert.ok(cells.total_profit.asOf, "when it was updated is still shown");
     assert.deepEqual([cells.strategy.visibility, "value" in cells.strategy, cells.strategy.hasValue], ["hidden", false, true]);
-    assert.equal("value" in cells.v_win_rate, false, "verified stats follow the same rule");
+    assert.equal("value" in cells.v_win_rate, true, "verified results are always shown to admins here");
     const raw = JSON.stringify(v);
     for (const secret of ["184.25", "Momentum fade"]) assert.ok(!raw.includes(secret), `${secret} never reaches the monitor`);
     assert.ok(v.columns.some(c => c.key === "v_win_rate" && c.source === "verified") && v.columns.some(c => c.key === "win_rate" && c.source === "catalog"));
