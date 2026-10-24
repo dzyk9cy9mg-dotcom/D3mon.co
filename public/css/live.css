@@ -67,6 +67,8 @@
 .lv-sealed{font:500 13px var(--mono);color:var(--ink-3)}
 .lv-paid{font:500 13px var(--mono);color:var(--ink-2)}
 .lv-call time{font:500 13px var(--mono);color:var(--ink-3);white-space:nowrap}
+.lv-why{grid-column:2/-1;margin:0;font:400 14px/1.45 var(--body);color:var(--ink-2,var(--ink));overflow-wrap:anywhere}
+.lv-why-sealed{color:var(--ink-3);font-style:italic}
 .k-caller{--kc:var(--callers)}.k-bot{--kc:var(--bots)}.k-script{--kc:var(--scripts)}
 .lv-empty{list-style:none;padding:16px 0;color:var(--ink-3);font:400 15px/1.6 var(--body)}
 

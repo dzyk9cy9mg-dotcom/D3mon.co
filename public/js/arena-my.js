@@ -21,7 +21,7 @@
     if (!list.length) return `<p class="empty">No calls yet.</p>`;
     return `<div class="tablewrap"><table class="mgrid"><thead><tr><th>Round</th><th>Call</th><th>Sent</th><th>Result</th></tr></thead><tbody>${list.map(c => {
       const res = c.result ? `${dirText(c.result)} · ${c.correct ? "✓ right" : "✗ wrong"} <span class="tag">${esc(c.verification)}</span>` : c.locked ? `<span class="tag">waiting for the result</span>` : `<span class="tag">sealed until ${esc(fmtTime(c.locksAt || c.round))}</span>`;
-      return `<tr><td>${esc(when(c.round))}</td><td>${esc(dirText(c.direction))}</td><td>${esc(new Date(c.receivedAt).toLocaleTimeString())}${c.via === "button" ? "" : ' <span class="tag">bot key</span>'}</td><td>${res}</td></tr>`;
+      return `<tr><td>${esc(when(c.round))}</td><td>${esc(dirText(c.direction))}${c.why ? `<br><small class="why">${esc(c.why)}</small>` : ""}</td><td>${esc(new Date(c.receivedAt).toLocaleTimeString())}${c.via === "button" ? "" : ' <span class="tag">bot key</span>'}</td><td>${res}</td></tr>`;
     }).join("")}</tbody></table></div>`;
   }
 
@@ -29,11 +29,12 @@
     const { round, closesAt, open } = openRound(), mine = callFor(e.id, round);
     return `<div class="callbox">
       <div class="meta">${open ? "Round" : "Next round"} <b>${esc(fmtTime(round))}–${esc(fmtTime(round + 15 * 60000))}</b> · calls close in <b class="lock" data-lock="${closesAt}">${mmss(closesAt - serverNow())}</b></div>
+      ${mine ? "" : `<div class="field"><label for="why-${esc(e.id)}">Why? (optional, shown to everyone when the calls close)</label><input id="why-${esc(e.id)}" maxlength="280" placeholder="Your reasoning in a line"></div>`}
       <div class="bigcall seg2" role="group" aria-label="Your call for this round">
         <button type="button" class="up" data-callbtn="${esc(e.id)}|up|${round}" aria-pressed="${mine?.direction === "up"}" ${mine ? "disabled" : ""}>▲ UP</button>
         <button type="button" class="down" data-callbtn="${esc(e.id)}|down|${round}" aria-pressed="${mine?.direction === "down"}" ${mine ? "disabled" : ""}>▼ DOWN</button>
       </div>
-      <div class="meta">${mine ? `Your call: <b>${dirText(mine.direction)}</b>, sent ${esc(new Date(mine.receivedAt).toLocaleTimeString())}. It's final: one call per round. Others see that you've called, but not which way, until the calls close.` : "No call yet for this round. One call per round, and it's final."}</div>
+      <div class="meta">${mine ? `Your call: <b>${dirText(mine.direction)}</b>, sent ${esc(new Date(mine.receivedAt).toLocaleTimeString())}. ${mine.why ? ` Your why: “${esc(mine.why)}”.` : ""} It's final: one call per round. Others see that you've called, but not which way, until the calls close.` : "No call yet for this round. One call per round, and it's final."}</div>
     </div>`;
   }
 
@@ -237,7 +238,8 @@
       S.busy = true;
       try {
         // The round on screen, so a click at the very end of a window never lands on another round.
-        const r = await api("POST", `entrants/${id}/call`, { direction, round: new Date(+round).toISOString() });
+        const why = (document.getElementById(`why-${id}`)?.value || "").trim();
+        const r = await api("POST", `entrants/${id}/call`, { direction, round: new Date(+round).toISOString(), ...(why ? { why } : {}) });
         msg(r.unchanged ? "That's already your call." : `Called ${dirText(direction)} for ${fmtTime(r.call.round)}.`, true);
         await loadEntrant(S.entrants.find(x => x.id === id)); render();
       } catch (e) { msg(e.message); } finally { S.busy = false; }

@@ -200,7 +200,7 @@
     const price = c.price ? `<span class="lv-paid">@${Math.round(c.price.paid * 100)}¢</span>` : "";
     return `<li class="lv-call k-${esc(c.kind)}" data-id="${esc(c.id)}"><canvas class="lv-sig" width="56" height="56" aria-hidden="true"></canvas>
       <span class="lv-who"><a href="profile?e=${encodeURIComponent(c.slug)}">${esc(c.name)}</a><small>${esc(KIND[c.kind] || c.kind)}</small></span>
-      <span class="lv-dir">${dir}${price}</span><time>${mmss(c.receivedAt - S.round)} in</time></li>`;
+      <span class="lv-dir">${dir}${price}</span><time>${mmss(c.receivedAt - S.round)} in</time>${c.why ? `<p class="lv-why">${esc(c.why)}</p>` : c.hasWhy ? `<p class="lv-why lv-why-sealed">Reasoning shown when the calls close</p>` : ""}</li>`;
   }
   async function loadCalls() {
     const r = S.round, data = await get(`rounds/${r}/calls`).catch(() => null);
@@ -211,8 +211,8 @@
     list.querySelector(".lv-empty")?.remove();
     for (const c of [...data.calls].reverse()) { // oldest first, so the newest ends up on top
       const key = c.id, had = S.calls.get(key);
-      if (had && had === JSON.stringify([c.direction, c.sealed, c.price && c.price.paid])) continue;
-      S.calls.set(key, JSON.stringify([c.direction, c.sealed, c.price && c.price.paid]));
+      if (had && had === JSON.stringify([c.direction, c.sealed, c.price && c.price.paid, c.why])) continue;
+      S.calls.set(key, JSON.stringify([c.direction, c.sealed, c.price && c.price.paid, c.why]));
       const tmp = document.createElement("ol"); tmp.innerHTML = callRow(c); const li = tmp.firstElementChild;
       const old = list.querySelector(`[data-id="${CSS.escape(key)}"]`);
       if (old) old.replaceWith(li); else { list.prepend(li); if (!reduce) li.classList.add("new"); }
