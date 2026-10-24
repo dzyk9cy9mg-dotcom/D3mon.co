@@ -94,7 +94,7 @@ export function createArena({ store, accounts, cfg }) {
   const brothers = new Brothers({ ledger, calls, metrics, prices, registry, votes, feed, dir: cfg.dataDir ? path.join(cfg.dataDir, "brothers") : null });
   if (cfg.brothers !== false) brothers.start();
   // Showdowns: members call each other (or Kain and Abel) out to 1-on-1s (owner, 2026-10-23)
-  const showdowns = new Showdowns({ ledger, metrics, votes, accounts, feed, notify: (uids, n) => calendar.notify(uids, n) });
+  const showdowns = new Showdowns({ ledger, metrics, votes, accounts, feed, notify: (uids, n) => calendar.notify(uids, n), announce: a => hallChat.announce(a), siteUrl: cfg.siteUrl });
   if (cfg.showdowns !== false) showdowns.start();
   const billing = new Billing({ ledger, registry, vip, feed, accounts, key: cfg.stripeKey, webhookSecret: cfg.stripeWebhookSecret, api: cfg.stripeApi, siteUrl: cfg.siteUrl });
   const members = new Members({ ledger, accounts });

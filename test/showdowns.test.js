@@ -179,6 +179,11 @@ describe("Showdowns", () => {
     assert.deepEqual([v.winner, v.myPick.right, v.picks], ["from", true, { from: 1, to: 1 }]);
     assert.match((await boss.get("/api/v1/notifications")).json.notes[0].text, /You called it: Odin won/);
     assert.match((await freya.get("/api/v1/notifications")).json.notes[0].text, /Your pick, Loki, lost/);
+    const chat = (await guest.get("/api/v1/hall/chat")).json.messages.filter(m => m.name === "Showdowns").map(m => m.text);
+    assert.ok(chat.some(t => t.startsWith("⚔️ Odin vs Loki: 3 rounds") && t.includes(`/showdown?id=${s.sid}`)), "the floor hears it start");
+    assert.ok(chat.some(t => t.startsWith("🏆 Showdown: Odin beat Loki, 1–0.")), "and end");
+    await sd().tick(R + 3 * Q + 2 * MIN);
+    assert.equal((await guest.get("/api/v1/hall/chat")).json.messages.filter(m => m.text.startsWith("🏆") && m.text.includes(s.sid)).length, 1, "once");
     async function boss2pick() { const c = new Client(srv.base); await c.register("late", "late-pass-12", "Late"); return c.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "from" }); }
   });
 

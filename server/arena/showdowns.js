@@ -23,6 +23,9 @@
 // when it's accepted until round 1 ends (the players' calls are still sealed then). Everyone sees how the picks split;
 // at the end each picker gets a note saying whether they were right.
 //
+// The floor hears about it (owner, 2026-10-24): a "Showdowns" line in the main chat (and so the linked D3MON Discord)
+// when one is accepted and when it ends, with a link to watch and pick.
+//
 // Players can talk in the match: a short line, or a quick reply that the brother answers. Limits: CHALLENGES_PER_DAY
 // new call outs per member, OPEN_MAX open Showdowns each, one open Showdown per pair, and a member can block
 // someone from calling them out.
@@ -68,8 +71,8 @@ const CHALLENGE = {
 const SAY = { text: { type: "string", max: 140 }, quick: { type: "enum", values: Object.keys(QUICK) } };
 
 export class Showdowns {
-  constructor({ ledger, metrics, votes, accounts, feed, notify = () => {}, now = () => Date.now() }) {
-    Object.assign(this, { ledger, metrics, votes, accounts, feed, notify, now });
+  constructor({ ledger, metrics, votes, accounts, feed, notify = () => {}, announce = () => {}, siteUrl = "", now = () => Date.now() }) {
+    Object.assign(this, { ledger, metrics, votes, accounts, feed, notify, announce, siteUrl, now });
     this.byId = new Map();
     this.blocks = new Map(); // uid -> Set of uids they've blocked
     this.lastSay = new Map();
@@ -98,6 +101,11 @@ export class Showdowns {
     else if (l.t === "showdown_say") s.says.push(l);
     else if (l.t === "showdown_pick") { if (!s.picks.has(l.uid)) s.picks.set(l.uid, l.side); }
     else if (l.t === "showdown_end") s.end = l;
+  }
+  #link(s) { return `${this.siteUrl || "https://d3mon.co"}/showdown?id=${s.sid}`; }
+  #post(s, kind, text) { try { this.announce({ name: "Showdowns", key: `sd${s.sid}${kind}`, text }); } catch (e) { console.error(e); } }
+  #postStart(s) {
+    this.#post(s, "start", `⚔️ ${this.#nameOf(s.from)} vs ${this.#nameOf(s.to)}: ${s.rounds} round${s.rounds > 1 ? "s" : ""}, starting next round. Pick a winner: ${this.#link(s)}`);
   }
   #changed(s) { this.feed.publish("showdowns", "showdown.updated", { sid: s.sid }); }
 
@@ -277,6 +285,7 @@ export class Showdowns {
       // the brothers never back down: accepted at once, from the next round, with an opening line
       this.ledger.append([{ t: "showdown_reply", sid, accept: true, start: currentRound(now) + ROUND_MS }], null, now);
       this.#brotherSay(s, "start", now);
+      this.#postStart(s);
     } else {
       const who = this.#nameOf(ctx.uid);
       this.notify([to], { id: `sd:${sid}:in`, text: `${who} called you out to a ${f.rounds}-round Showdown (${this.#ruleText(s).toLowerCase()})${f.message ? `: “${f.message}”` : "."}`, link: `showdown?id=${sid}` });
@@ -294,6 +303,7 @@ export class Showdowns {
     if (body.accept && [...this.byId.values()].filter(x => x !== s && (x.from === ctx.uid || x.to === ctx.uid) && ["starting", "live", "scoring"].includes(this.state(x, now))).length >= OPEN_MAX)
       throw new ApiError(409, "too_many", `You have ${OPEN_MAX} Showdowns going. Finish one first.`);
     this.ledger.append([{ t: "showdown_reply", sid: s.sid, accept: body.accept, ...(body.accept ? { start: currentRound(now) + ROUND_MS } : {}) }], ctx.uid, now);
+    if (body.accept) this.#postStart(s);
     if (body.block === true) this.block(ctx, { username: this.#user(s.from)?.username, on: true });
     const who = this.#nameOf(ctx.uid);
     this.notify([s.from], { id: `sd:${s.sid}:reply`, text: body.accept ? `${who} accepted your Showdown. It starts with the next round.` : `${who} passed on your Showdown.`, link: `showdown?id=${s.sid}` });
@@ -414,6 +424,7 @@ export class Showdowns {
         const text = w === null ? `Showdown: ${a} and ${b} drew, ${sc.from.right}–${sc.to.right}.`
           : `Showdown: ${w === "from" ? a : b} beat ${w === "from" ? b : a}, ${Math.max(sc.from.right, sc.to.right)}–${Math.min(sc.from.right, sc.to.right)}.`;
         this.notify([s.from, s.to].filter(u => !BROTHER_KEYS.includes(u)), { id: `sd:${s.sid}:end`, text, link: `showdown?id=${s.sid}` });
+        this.#post(s, "end", `🏆 ${text} ${this.#link(s)}`);
         for (const [uid, side] of s.picks) {
           const picked = this.#nameOf(s[side]);
           this.notify([uid], { id: `sd:${s.sid}:pick`, text: w === null ? `Your pick: ${a} and ${b} drew, so nobody called it.` : w === side ? `You called it: ${picked} won the Showdown vs ${this.#nameOf(s[side === "from" ? "to" : "from"])}.` : `Your pick, ${picked}, lost the Showdown vs ${this.#nameOf(s[side === "from" ? "to" : "from"])}.`, link: `showdown?id=${s.sid}` });
