@@ -63,6 +63,14 @@
     <p class="tag">A round counts once it's decided. Your round is every floor trade you made in it, added up. Paper profit is per $1 contract.</p>
   </section>
 
+  <details class="panel bro-adm" id="adm" hidden>
+    <summary><h2>Admin: which bots they borrow from</h2></summary>
+    <p class="tag">Kain and Abel take their calls from bots and scripts that call through their key. Untick one to leave it out, for example if its owner asks. It counts from the next call.</p>
+    <label class="bro-chk"><input type="checkbox" id="admOn"> Kain and Abel are playing</label>
+    <ul class="bro-bots" id="admBots"></ul>
+    <p class="meta" id="admNote" role="status"></p>
+  </details>
+
   <p class="bro-fine" id="notice">Kain and Abel are AI characters. Their calls come from bots on D3MON. Paper only, for fun. Not financial advice. D3MON never trades.</p>
 </main>
 <script src="js/arena.js"></script>
