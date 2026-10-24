@@ -35,20 +35,14 @@ describe("the why on a call", () => {
   });
   after(() => srv.stop());
 
-  test("a bot's why stays private until the close, though its direction is public at once", async () => {
+  test("bots don't carry a why any more (owner, 2026-10-23): one sent is dropped; a battle bot's call is live", async () => {
     at(R(3) + MIN);
     const r = await asBot({ ...CALL, why: "Fed at 2 PM, dollar up, Up looks overpriced" });
-    assert.equal(r.status, 201);
-    assert.equal(r.json.call.why, "Fed at 2 PM, dollar up, Up looks overpriced", "the bot gets its why back");
+    assert.equal(r.status, 201, "a bot that still sends one isn't broken");
+    assert.equal(r.json.call.why, undefined, "but it isn't kept");
     const g = await onBoard(guest, 3, bot);
-    assert.deepEqual([g.direction, g.why, g.hasWhy], ["up", undefined, true], "everyone sees the call and that it has a reason");
-    assert.equal((await onBoard(abel, 3, bot)).why, "Fed at 2 PM, dollar up, Up looks overpriced", "its owner sees it");
-    assert.equal((await onBoard(hs, 3, bot)).why, "Fed at 2 PM, dollar up, Up looks overpriced", "admins see it");
-    const floor = (await guest.get(`/api/v1/rounds/${R(3)}/calls`)).json.calls.find(c => c.entrantId === bot);
-    assert.deepEqual([floor.why, floor.hasWhy], [undefined, true], "the trading floor keeps it private too");
-    at(R(3) + 5 * MIN);
-    const after = await onBoard(guest, 3, bot);
-    assert.deepEqual([after.why, after.hasWhy], ["Fed at 2 PM, dollar up, Up looks overpriced", undefined], "shown to everyone at the close");
+    assert.deepEqual([g.direction, g.why, g.hasWhy], ["up", undefined, undefined], "in a battle everyone sees the call at once");
+    assert.equal((await onBoard(hs, 3, bot)).why, undefined, "not even admins: it was never stored");
   });
 
   test("a caller's why is sealed with the call, and revealed with it", async () => {

@@ -44,8 +44,6 @@ curl -X POST https://YOUR-D3MON-SITE/api/v1/bot/calls \
 
 **If it works**, you'll see `"ok":true`, the `round` your call is for, the time the server received it, and `locksAt`, when that round's calls close. Use `"direction":"down"` for down.
 
-**Say why (optional).** Add `"why"` with your reasoning, up to 280 characters, e.g. `"why":"Odds overpriced Up after the 2 PM Fed drop"`. It's final with the call, stays private (you, your bot and admins) until the round's calls close, and is then shown to everyone next to the call. Like every field, it's refused if it looks like a key or password.
-
 The same call from Python, with no extra packages:
 
 ```python
@@ -66,7 +64,7 @@ print(urllib.request.urlopen(req).read().decode())
 - **Call during the round:** send your call while the round is in progress. Leave out `"round"` and the call goes to the round that's open now. You can also name a round with `"round":"2026-10-15T19:00:00Z"`, which is the round's start time in UTC.
 - **When calls close:** you can call **any time during the round, until it ends**, unless your battle closes calls earlier (HardSmoke can choose, per battle, from "before the round starts" to a number of minutes in). The server's clock decides, not yours. After the close you'll get `round_locked`, with the time the next round starts. **Your call is never moved to another round on its own.**
 - **One call per round, and it's final:** your first call for a round counts. Sending the same call again is harmless (`"unchanged":true`). A different call for the same round gets `already_called`.
-- **Your call is public at once:** everyone can see your bot's call the moment it's made. (Callers' calls, made by people reading the charts, stay sealed until the round's calls close.)
+- **Your call is hidden until the round ends:** people see that your bot called and when, but not Up or Down, so nobody can copy it for free. You and admins always see it. Two exceptions: in a **Battle of the Bots** your calls show live (it's a show), and if an admin features your bot in the **Capstone** room, its paying members see your calls as they come in. D3MON's AI characters Kain and Abel may play a bot's call as their own during the round, but never say which bot it came from.
 - **Results:** when the round's result is in, your call is marked right or wrong.
 - **Watching:** your recent calls are on `/my`. If you're in a battle, they're also on **`/board`**.
 

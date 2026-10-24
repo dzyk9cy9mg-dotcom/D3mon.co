@@ -1,15 +1,16 @@
-// Kain and Abel (owner, 2026-10-24): two AI characters members play against, for fun. Every round, once it ends,
-// each brother takes the call of a different bot that called that round through the bot API (bots and chart
-// scripts with a key), picked at random, and that call is shown as his. Members make their own calls during the
-// round with the floor's Up/Down votes, and see how they do against the brothers. The brothers' calls only exist
-// once the round is over, so nobody can copy them. Which bot each brother took is kept for admins only (owner:
-// "just post what the bot called"); the public fine print says the calls come from bots on D3MON.
+// Kain and Abel (owner, 2026-10-24): two AI characters members play against, for fun. Each brother takes the call
+// of a different bot that called this round through the bot API (bots and chart scripts with a key) and that call is
+// shown as his. Since 2026-10-23 they call live: the first bots to call give the brothers their calls at once (which
+// brother is random), and everyone sees a brother's call straight away. Which bot each brother took is kept for
+// admins only (owner: "just post what the bot called"; "make it so it's not indicated what bot they used"), so the
+// bot owners' own calls, sealed until the round ends, can't be traced. The public fine print says the calls come from
+// bots on D3MON. Members make their own calls with the floor's Up/Down votes and see how they do against them.
 //
 // A brother's call is priced at the bot's own price (Kalshi's, when the bot called), so the paper results are the
-// same ones the bot earned. One bot that called: only Abel plays. None: both sit the round out.
+// same ones the bot earned. One bot that called: only one brother plays. None: both sit the round out.
 //
 // Ledger lines:
-//   { t: "brother_call", brother: "abel" | "kain", round, market, dir, callId, entrantId }
+//   { t: "brother_call", brother: "abel" | "kain", round, market, dir, callId, entrantId, live? }
 //   { t: "brothers_settings", on, exclude: [entrantId] }        admins; the latest counts
 //   { t: "brother_video", brother, type, size } | { t: "brother_video", brother, removed: true }
 //
@@ -44,7 +45,12 @@ export class Brothers {
     this.byRound = new Map(); // round -> { abel: line, kain: line }
     this.cfg = { on: true, exclude: [] };
     for (const l of ledger.lines) this.#index(l);
-    ledger.on("append", lines => { for (const l of lines) this.#index(l); });
+    ledger.on("append", lines => {
+      for (const l of lines) this.#index(l);
+      // a bot's call during the round: a brother may take it (after this append has finished)
+      if (this.live) for (const l of lines) if (l.t === "call" && l.via === "bot-key") queueMicrotask(() => { try { this.takeLive(l); } catch (err) { console.error(err); } });
+    });
+    this.live = false; // switched on by start(); tests call takeLive() themselves
     this.timer = null;
   }
 
@@ -68,16 +74,41 @@ export class Brothers {
     });
   }
 
-  // Makes the brothers' calls for a round that has ended, once. Returns what was written.
-  pick(round) {
-    if (!this.cfg.on || this.byRound.has(round) || this.now() < round + ROUND_MS) return [];
-    const pool = this.candidates(round);
-    for (let i = pool.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-    const lines = BROTHERS.slice(0, pool.length).map((b, i) => ({ t: "brother_call", brother: b.key, round, market: MARKET, dir: pool[i].dir, callId: pool[i].id, entrantId: pool[i].entrantId }));
+  // The brothers who haven't called yet this round, and the bots already taken.
+  #free(round) {
+    const got = this.byRound.get(round) || {};
+    return { brothers: BROTHERS.filter(b => !got[b.key]), used: new Set(Object.values(got).map(l => l.entrantId)) };
+  }
+  #write(lines, round) {
     if (!lines.length) return [];
     const out = this.ledger.append(lines, null, this.now());
     this.feed.publish("brothers", "brothers.called", { round, calls: this.#roundCalls(round, {}) });
     return out;
+  }
+
+  // Live (owner, 2026-10-23: "Kain and Abel can call as soon as they have it"): when a bot or script calls through
+  // its key during the round, a brother who hasn't called yet takes that call at once (chosen at random), and
+  // everyone sees it straight away, never which bot it came from. A different bot is needed for the other brother.
+  takeLive(l) {
+    if (!this.cfg.on || l.t !== "call" || l.via !== "bot-key" || l.market !== MARKET) return [];
+    const now = this.now();
+    if (now < l.round || now >= l.round + ROUND_MS) return [];
+    const e = this.registry.entrantById(l.entrantId);
+    if (!e || e.status !== "active" || this.cfg.exclude.includes(e.id)) return [];
+    const { brothers, used } = this.#free(l.round);
+    if (!brothers.length || used.has(l.entrantId)) return [];
+    const b = brothers[crypto.randomInt(brothers.length)];
+    return this.#write([{ t: "brother_call", brother: b.key, round: l.round, market: MARKET, dir: l.dir, callId: l.id, entrantId: l.entrantId, live: true }], l.round);
+  }
+
+  // After a round ends: any brother still without a call takes a random bot that called and wasn't taken (covers a
+  // restart that missed a call). One bot: only one brother plays. None: both sit the round out.
+  pick(round) {
+    if (!this.cfg.on || this.now() < round + ROUND_MS) return [];
+    const { brothers, used } = this.#free(round);
+    const pool = this.candidates(round).filter(l => !used.has(l.entrantId));
+    for (let i = pool.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    return this.#write(brothers.slice(0, pool.length).map((b, i) => ({ t: "brother_call", brother: b.key, round, market: MARKET, dir: pool[i].dir, callId: pool[i].id, entrantId: pool[i].entrantId })), round);
   }
 
   // Picks for the round that just ended (and the one before, if a restart missed it).
@@ -90,6 +121,7 @@ export class Brothers {
 
   // Wakes 2 s after every round ends: calls for a round close by its end, so the pool is complete.
   start() {
+    this.live = true;
     const tick = () => {
       this.pickDue();
       const now = this.now();
@@ -174,7 +206,7 @@ export class Brothers {
     }
     return {
       brothers: BROTHERS.map(b => ({ ...b, ai: true, video: this.videoInfo(b.key) })), on: this.cfg.on,
-      now: { round, endsAt: round + ROUND_MS, revealAt: round + ROUND_MS }, rounds, standings, notice: NOTICE,
+      now: { round, endsAt: round + ROUND_MS, calls: this.#roundCalls(round, ctx) }, rounds, standings, notice: NOTICE,
     };
   }
 

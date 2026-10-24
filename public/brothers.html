@@ -17,12 +17,12 @@
 <script src="js/wall.js"></script>
 </head>
 <!-- The Brothers' Desk (owner, 2026-10-24): members make their own call each round (the floor's Up/Down vote) and
-     see how they do against Kain and Abel, whose calls are revealed once the round ends. Paper only, for fun.
+     see how they do against Kain and Abel, who call live during the round. Paper only, for fun.
      A thin client over GET /api/v1/brothers, /api/v1/votes and /api/v1/market (js/brothers.js). -->
 <body>
 <main class="arena bro">
   <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
-  <p class="blurb">Make your call on this round. Kain and Abel make theirs too, and you'll see who called it right when the round ends.</p>
+  <p class="blurb">Make your call on this round. Kain and Abel call the moment they have their read, and the round's end shows who called it right.</p>
 
   <section class="bro-intros" id="intros" aria-label="Meet Kain and Abel" hidden>
     <figure class="bro-intro kain" id="introKain"></figure>
@@ -40,8 +40,8 @@
     <p class="meta" id="roundTime"></p>
     <div class="bro-three">
       <div class="bro-slot you" id="youSlot"></div>
-      <div class="bro-slot kain"><p class="bro-who">Kain</p><p class="bro-sealed">Revealed when the round ends</p></div>
-      <div class="bro-slot abel"><p class="bro-who">Abel</p><p class="bro-sealed">Revealed when the round ends</p></div>
+      <div class="bro-slot kain" id="kainSlot"><p class="bro-who">Kain</p><p class="bro-sealed">Waiting for his read</p></div>
+      <div class="bro-slot abel" id="abelSlot"><p class="bro-who">Abel</p><p class="bro-sealed">Waiting for his read</p></div>
     </div>
     <p class="bro-err" id="err" role="alert"></p>
   </section>

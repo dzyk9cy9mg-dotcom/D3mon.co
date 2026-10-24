@@ -15,8 +15,9 @@
 // once at least CROWD_MIN have called, so a lone bot's call can't be read off the totals. Outside battles a bot's
 // calls close when the round ends, so it's revealed at the round's end. Two exceptions (owner, 2026-10-23):
 // a call made in a Battle of the Bots round (battleIds not empty) is shown live, since the battle is a show; and the
-// Capstone room shows its featured entrants' calls the moment they come in (vip.js). A bot's "why" always waits
-// for the round's end, battles included.
+// Capstone room shows its featured entrants' calls the moment they come in (vip.js). Bots and chart scripts don't
+// carry a "why" any more (owner, 2026-10-23: "I don't need the why on bot calls"): one sent with a bot's call is
+// dropped, not stored; only callers give their reasoning.
 // At the close every direction is revealed (round.locked), and once the round has a result each call is
 // scored (round.scored): "verified" when Kalshi settled it, "recorded by host" when HardSmoke did.
 //
@@ -242,7 +243,7 @@ export class Calls {
     if (prev) throw new ApiError(409, "already_called", `Already called ${prev.dir} for the round that started at ${iso(round)}, at ${iso(prev.at)}. One call per round, and it's final.`, "direction");
     const battleIds = battles.map(b => b.id);
     const line = { t: "call", entrantId: e.id, market: MARKET, round, dir, via, battleIds, closesAt };
-    if (why) line.why = why;
+    if (why && e.kind === "caller") line.why = why; // only callers give a reason (owner, 2026-10-23)
     if (keyId) line.keyId = keyId;
     const [saved] = this.ledger.append([line], by, now); // stamped by the same clock that checked the window
     this.#received(saved, e);

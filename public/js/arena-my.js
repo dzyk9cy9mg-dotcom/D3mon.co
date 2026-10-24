@@ -29,7 +29,7 @@
     const { round, closesAt, open } = openRound(), mine = callFor(e.id, round);
     return `<div class="callbox">
       <div class="meta">${open ? "Round" : "Next round"} <b>${esc(fmtTime(round))}–${esc(fmtTime(round + 15 * 60000))}</b> · calls close in <b class="lock" data-lock="${closesAt}">${mmss(closesAt - serverNow())}</b></div>
-      ${mine ? "" : `<div class="field"><label for="why-${esc(e.id)}">Why? (optional, shown to everyone when the calls close)</label><input id="why-${esc(e.id)}" maxlength="280" placeholder="Your reasoning in a line"></div>`}
+      ${mine || e.kind !== "caller" ? "" : `<div class="field"><label for="why-${esc(e.id)}">Why? (optional, shown to everyone when the calls close)</label><input id="why-${esc(e.id)}" maxlength="280" placeholder="Your reasoning in a line"></div>`}
       <div class="bigcall seg2" role="group" aria-label="Your call for this round">
         <button type="button" class="up" data-callbtn="${esc(e.id)}|up|${round}" aria-pressed="${mine?.direction === "up"}" ${mine ? "disabled" : ""}>▲ UP</button>
         <button type="button" class="down" data-callbtn="${esc(e.id)}|down|${round}" aria-pressed="${mine?.direction === "down"}" ${mine ? "disabled" : ""}>▼ DOWN</button>

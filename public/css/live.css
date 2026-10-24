@@ -184,3 +184,6 @@
 .lv-badge-form div{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .lv-badge-form input{flex:1 1 180px;min-height:44px;font:500 16px var(--body)}
 .lv-err.ok{color:var(--ink-2)}
+
+/* bots' and scripts' totals while their calls are hidden (owner, 2026-10-23) */
+.lv-tally{margin:0 0 10px;color:var(--ink-2,#B4C1D0);font:500 14px var(--mono,"IBM Plex Mono",monospace)}.lv-tally:empty{display:none}.lv-tally .up{color:#36E6C3}.lv-tally .dn{color:#FF4F7A}

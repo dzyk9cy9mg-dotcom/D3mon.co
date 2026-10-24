@@ -1,5 +1,5 @@
-// /brothers: the Brothers' Desk. You make your call on this round (the floor's Up/Down vote, session "live"); Kain and
-// Abel's calls appear once the round ends, then the recent rounds and the scoreboard show who called it right.
+// /brothers: the Brothers' Desk. You make your call on this round (the floor's Up/Down vote, session "live"); Kain's and
+// Abel's calls appear live as they make them, then the recent rounds and the scoreboard show who called it right.
 // A thin client over GET /api/v1/brothers, GET/POST /api/v1/votes… and GET /api/v1/market.
 (function () {
   "use strict";
@@ -25,6 +25,17 @@
       : `<div class="bro-btns"><button type="button" class="bro-up" data-act="up">▲ Up <small>${cents(p && p.up)}</small></button>
         <button type="button" class="bro-dn" data-act="down">▼ Down <small>${cents(p && p.down)}</small></button></div>`}
       ${done.length ? `<p class="meta">Cashed out ${done.length}× this round${total ? ` · ${signed(total)}` : ""}</p>` : ""}`;
+  }
+
+  // ---------- Kain's and Abel's calls this round, live as they make them
+  function brotherSlots() {
+    const calls = (S.data.now && S.data.now.calls) || {};
+    for (const [k, name] of [["kain", "Kain"], ["abel", "Abel"]]) {
+      const c = calls[k];
+      $(`${k}Slot`).innerHTML = `<p class="bro-who">${name}</p>` + (c
+        ? `<p class="bro-call ${c.dir}">${arrow(c.dir)}${c.paid != null ? ` <small>@ ${cents(c.paid)}</small>` : ""}</p>${c.from ? `<p class="meta bro-from">from ${esc(c.from.name)} (admins only)</p>` : ""}`
+        : `<p class="bro-sealed">${S.data.on ? "Waiting for his read" : "Sitting this one out"}</p>`);
+    }
   }
 
   // ---------- the intro videos (admins upload a file for each brother)
@@ -112,7 +123,7 @@
       $("notice").textContent = d.notice;
       $("roundTime").textContent = `${time(d.now.round)} to ${time(d.now.endsAt)} · Calls stay open all round`;
       if (!d.on) err("Kain and Abel are taking a break right now. You can still make your call.");
-      youSlot(); intros(); recent(); score(); clock();
+      youSlot(); brotherSlots(); intros(); recent(); score(); clock();
     } catch (e) { err(e.message); }
   }
 
