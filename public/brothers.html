@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Abel &amp; Kain · D3MON</title>
+<meta name="description" content="Make your call on Bitcoin's 15-minute round and see how you do against Abel and Kain, D3MON's AI brothers. Paper only, for fun.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/brothers.css">
+<script src="js/sigils.js"></script>
+<script src="js/wall.js"></script>
+</head>
+<!-- The Brothers' Desk (owner, 2026-10-24): members make their own call each round (the floor's Up/Down vote) and
+     see how they do against Abel and Kain, whose calls are revealed once the round ends. Paper only, for fun.
+     A thin client over GET /api/v1/brothers, /api/v1/votes and /api/v1/market (js/brothers.js). -->
+<body>
+<main class="arena bro">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb">Make your call on this round. Abel and Kain make theirs too, and you'll see who called it right when the round ends.</p>
+
+  <section class="bro-cast" aria-label="The players">
+    <div class="bro-card you"><p class="bro-name">You</p><p class="bro-tag">Your own read.</p></div>
+    <div class="bro-card abel"><p class="bro-name">Abel <span class="bro-ai">AI</span></p><p class="bro-tag" id="abelTag">The researcher. Reads the world.</p></div>
+    <div class="bro-card kain"><p class="bro-name">Kain <span class="bro-ai">AI</span></p><p class="bro-tag" id="kainTag">The chart man. Reads the market.</p></div>
+  </section>
+
+  <section class="panel bro-now" aria-labelledby="nowH">
+    <div class="bro-now-top"><h2 id="nowH">This round</h2><span class="bro-clock" id="clock">–:––</span></div>
+    <p class="meta" id="roundTime"></p>
+    <div class="bro-three">
+      <div class="bro-slot you" id="youSlot"></div>
+      <div class="bro-slot abel"><p class="bro-who">Abel</p><p class="bro-sealed">Revealed when the round ends</p></div>
+      <div class="bro-slot kain"><p class="bro-who">Kain</p><p class="bro-sealed">Revealed when the round ends</p></div>
+    </div>
+    <p class="bro-err" id="err" role="alert"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="recentH">
+    <h2 id="recentH">Recent rounds</h2>
+    <div class="tablewrap"><table class="mgrid bro-table"><thead><tr><th>Round</th><th>Result</th><th>You</th><th>Abel</th><th>Kain</th></tr></thead><tbody id="recent"></tbody></table></div>
+  </section>
+
+  <section class="panel" aria-labelledby="scoreH">
+    <div class="bro-now-top"><h2 id="scoreH">Scoreboard</h2>
+      <div class="bro-periods" role="tablist" id="periods">
+        <button type="button" role="tab" data-p="daily" aria-selected="true" class="on">Today</button>
+        <button type="button" role="tab" data-p="weekly" aria-selected="false">This week</button>
+        <button type="button" role="tab" data-p="monthly" aria-selected="false">This month</button>
+      </div></div>
+    <div class="bro-score" id="score"></div>
+    <p class="tag">A round counts once it's decided. Your round is every floor trade you made in it, added up. Paper profit is per $1 contract.</p>
+  </section>
+
+  <p class="bro-fine" id="notice">Abel and Kain are AI characters. Their calls come from bots on D3MON. Paper only, for fun. Not financial advice. D3MON never trades.</p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/brothers.js"></script>
+<script src="js/sitebar.js"></script>
+</body>
+</html>

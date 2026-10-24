@@ -41,6 +41,12 @@ describe("the brothers", () => {
   });
   after(() => srv.stop());
 
+  test("the Brothers' Desk page is served", async () => {
+    const r = await fetch(`${srv.base}/brothers`);
+    assert.equal(r.status, 200);
+    assert.match(await r.text(), /js\/brothers\.js/);
+  });
+
   test("no bot calls, no brothers' calls; one bot, only Abel plays", async () => {
     brosAt(R(8) + Q + 2000);
     assert.deepEqual(arena().brothers.pick(R(8)), []);
