@@ -152,6 +152,36 @@ describe("Showdowns", () => {
     assert.equal((await view(freya, s0.sid)).detail[0].from.dir, "up", "shown once the round is over");
   });
 
+  test("spectators pick a winner: once, not the players, until round 1 ends; told at the end", async () => {
+    at(cur + 100 * Q);
+    const s = (await odin.post("/api/v1/showdowns", { to: "loki", rounds: 3 })).json.showdown;
+    assert.equal((await boss.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "from" })).status, 409, "not before it's accepted");
+    await loki.post(`/api/v1/showdowns/${s.sid}/answer`, { accept: true });
+    const R = cur + 101 * Q;
+    assert.equal((await guest.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "from" })).status, 401);
+    assert.equal((await odin.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "from" })).status, 403, "the players don't pick");
+    assert.equal((await boss.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "x" })).status, 400);
+    let v = (await boss.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "from" })).json.showdown;
+    assert.deepEqual([v.picks, v.myPick, v.canPick, v.picksCloseAt], [{ from: 1, to: 0 }, { side: "from" }, false, R + Q]);
+    assert.equal((await boss.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "from" })).json.unchanged, true);
+    assert.equal((await boss.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "to" })).status, 409, "final when made");
+    at(R + 14 * MIN);
+    assert.equal((await freya.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "to" })).status, 200, "open until round 1 ends");
+    await odin.post(`/api/v1/showdowns/${s.sid}/call`, { dir: "up" });
+    assert.equal((await view(guest, s.sid)).canPick, false, "guests can't");
+    at(R + Q);
+    assert.equal((await freya.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "to" })).status, 200, "a repeat is still fine");
+    assert.equal((await boss2pick()).status, 409, "closed once round 1 ends");
+    score(R, "up"); score(R + Q, "up"); score(R + 2 * Q, "up");
+    at(R + 3 * Q + MIN);
+    await sd().tick(R + 3 * Q + MIN);
+    v = await view(boss, s.sid);
+    assert.deepEqual([v.winner, v.myPick.right, v.picks], ["from", true, { from: 1, to: 1 }]);
+    assert.match((await boss.get("/api/v1/notifications")).json.notes[0].text, /You called it: Odin won/);
+    assert.match((await freya.get("/api/v1/notifications")).json.notes[0].text, /Your pick, Loki, lost/);
+    async function boss2pick() { const c = new Client(srv.base); await c.register("late", "late-pass-12", "Late"); return c.post(`/api/v1/showdowns/${s.sid}/pick`, { side: "from" }); }
+  });
+
   test("the Live page lists the Showdowns on now", async () => {
     const html = await (await fetch(`${srv.base}/live`)).text();
     assert.match(html, /id="sdList"/);

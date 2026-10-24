@@ -267,6 +267,7 @@ export function createArena({ store, accounts, cfg }) {
     if ((m = route.match(/^GET \/showdowns\/([a-f0-9]{12})$/))) return ok(showdowns.get(ctx, m[1]));
     if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/answer$/))) { writer(); return ok(showdowns.answer(ctx, m[1], await body())); }
     if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/cancel$/))) { writer(); return ok(showdowns.cancel(ctx, m[1])); }
+    if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/pick$/))) { writer(); return ok(showdowns.pick(ctx, m[1], await body())); }
     if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/call$/))) { writer(); return ok(await showdowns.call(ctx, m[1], await body())); }
     if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/say$/))) { writer(); return ok(showdowns.say(ctx, m[1], await body())); }
     if (route === "GET /brothers") return ok(brothers.view(ctx));
