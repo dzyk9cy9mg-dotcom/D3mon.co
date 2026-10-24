@@ -288,3 +288,8 @@ body.bt-lite .s-bar{background:rgba(5,7,11,.94)}
 body.bt-lite .wl-card{background:rgba(10,13,19,.96)}
 #liteBtn[aria-pressed="true"]{border-color:rgba(255,197,106,.6);color:#FFC56A}
 .bt-litenote{margin:8px 0 0;font:500 13px "IBM Plex Mono",monospace;color:#FFC56A}
+
+/* the host's tip link (owner, 2026-10-23: "subtle, so it doesn't seem like we're begging"): part of the fine print, gold only on hover */
+.bt-tip{color:#8a93a1;text-decoration:none;border-bottom:1px solid rgba(233,194,122,.25);transition:color .2s,border-color .2s}
+.bt-tip:hover,.bt-tip:focus-visible{color:#E9C27A;border-bottom-color:#E9C27A}
+.bt-ctl-hint{margin:6px 0 0;font-size:13px;color:var(--ink-3,#8494A8)}

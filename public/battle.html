@@ -74,7 +74,7 @@
     </div>
   </div>
   <p class="bt-litenote" id="liteNote" role="status" hidden>Lite mode is on to keep things smooth on this computer. Press “Lite mode on” to switch it off.</p>
-  <p class="bt-note">Paper calls at live market prices. Not financial advice. D3MON never trades.</p>
+  <p class="bt-note">Paper calls at live market prices. Not financial advice. D3MON never trades.<span id="tipSlot"></span></p>
 </main>
 
 <!-- the Stream Wall: every stream at once, one featured big with its sound -->
@@ -100,6 +100,11 @@
     <fieldset>
       <legend>The stream everyone sees</legend>
       <select id="cFeatured"></select>
+    </fieldset>
+    <fieldset>
+      <legend>Tip link</legend>
+      <input id="cTip" maxlength="300" placeholder="https://streamelements.com/… (leave empty for none)" aria-label="Host's tip page link">
+      <p class="bt-ctl-hint">A small "Tip HardSmoke" link under the cockpit. StreamElements, Streamlabs, PayPal, Venmo, Cash App, Ko-fi or Buy Me a Coffee. Tips go straight to her.</p>
     </fieldset>
     <fieldset>
       <legend>What each screen shows</legend>

@@ -258,6 +258,9 @@
     $("bTitle").textContent = b ? b.title : "Battle of the Bots";
     $("bState").textContent = !b ? " · No battle announced yet" : running(b) ? " · Live now" : now() >= b.endsAt ? " · Over" : ` · Starts ${day(b.startsAt)}`;
     $("liveDot").classList.toggle("on", running(b));
+    // the host's tip page: one quiet link at the end of the fine print, only when HardSmoke has set one
+    const tip = S.cp && S.cp.tip;
+    $("tipSlot").innerHTML = tip ? ` <span aria-hidden="true">·</span> <a class="bt-tip" href="${esc(tip)}" target="_blank" rel="noopener">Tip HardSmoke</a>` : "";
   }
 
   // ---------- the people in the battle, with this round's call and their record ----------
@@ -590,6 +593,7 @@
     const cp = S.cp; $("ctlErr").textContent = ""; $("ctlErr").classList.remove("ok");
     const { battles } = DEMO ? { battles: [S.b] } : await A.api("GET", "battles").catch(() => ({ battles: [] }));
     $("cBattle").innerHTML = `<option value="">Choose by itself: the one running now, else the next</option>` + battles.filter(Boolean).map(b => `<option value="${esc(b.id)}"${cp.battleId === b.id ? " selected" : ""}>${esc(b.title)} · ${esc(day(b.startsAt))}${b.status === "draft" ? " (draft, not shown)" : ""}</option>`).join("");
+    $("cTip").value = cp.tip || "";
     const all = streams();
     $("cFeatured").innerHTML = all.length ? all.map((s, i) => `<option value="${i}"${(cp.featured || 0) === i ? " selected" : ""}>${esc(s.label)}${s.src ? "" : " (opens on its site)"}</option>`).join("") : `<option value="0">No streams yet: add them to the battle on Applications</option>`;
     $("cScreens").innerHTML = cp.slots.map(slot => {
@@ -624,8 +628,8 @@
       const f = k => row.querySelector(`[data-f="${k}"]`).value.trim(), show = f("show");
       screens[row.dataset.row] = { show, ...(f("title") && show !== "off" && show !== "odds" ? { title: f("title") } : {}), ...(show === "message" ? { text: f("text") } : {}), ...(show === "promo" ? { video: f("video") } : {}) };
     }
-    const body = { battleId: $("cBattle").value || null, featured: +$("cFeatured").value || 0, screens };
-    if (DEMO) { Object.assign(S.cp, { featured: body.featured }); for (const [k, v] of Object.entries(screens)) S.cp.screens[k] = { ...v, promo: null }; renderAll(); return closeCtl(); }
+    const body = { battleId: $("cBattle").value || null, featured: +$("cFeatured").value || 0, tip: $("cTip").value.trim() || null, screens };
+    if (DEMO) { Object.assign(S.cp, { featured: body.featured, tip: body.tip }); header(); for (const [k, v] of Object.entries(screens)) S.cp.screens[k] = { ...v, promo: null }; renderAll(); return closeCtl(); }
     try {
       const vs = { mode: $("cChange").checked ? "changeable" : "locked", off: [...document.querySelectorAll("#cVotes [data-cat]")].filter(c => !c.checked).map(c => c.dataset.cat) };
       S.cp = await A.api("PUT", "cockpit", body); S.b = S.cp.battle;
@@ -635,6 +639,7 @@
       $("ctlErr").textContent = x.message;
       const row = x.field && $("cScreens").querySelector(`[data-row="${x.field.split(".")[1]}"]`);
       if (row) row.querySelector(`[data-f="${x.field.split(".")[2] || "show"}"]`)?.focus();
+      else if (x.field === "tip") $("cTip").focus();
     }
   });
   $("ctlReset").addEventListener("click", async () => {
