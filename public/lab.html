@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Lab · D3MON</title>
+<meta name="description" content="The D3MON Lab: where builders and traders learn the reasoning behind every call. Showcase, Help Desk, Library, Experiments and daily lessons.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/lab.css">
+<script src="js/sigils.js"></script>
+<script src="js/wall.js"></script>
+</head>
+<!-- The Lab (owner, 2026-10-22/23): calmer than the rest of the site, made for reading and code. Daily shorts from
+     D3MON's AI teacher at the top, then the four sections. A thin client over /api/v1/lab (js/lab.js). -->
+<body class="lab-body">
+<main class="arena lab">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="blurb lab-lead">The reasoning behind every call. Share what you've built, ask what you're stuck on, and learn how a 15-minute round really moves.</p>
+
+  <section class="lab-daily" id="daily" aria-label="Daily from the AI teacher" hidden>
+    <h2 class="lab-h">Daily</h2>
+    <div class="lab-strip" id="dailyStrip"></div>
+  </section>
+
+  <div class="lab-bar">
+    <div class="lab-tabs" role="tablist" id="tabs"></div>
+    <form class="lab-search" id="searchForm" role="search"><input id="q" type="search" placeholder="Search the Lab" aria-label="Search the Lab" maxlength="80"></form>
+  </div>
+
+  <section class="panel lab-main" id="listView">
+    <div class="lab-head"><p class="tag" id="sectionBlurb"></p><button type="button" class="btn sm" id="newBtn" hidden>New post</button></div>
+    <div class="list" id="posts"><p class="empty">Loading the Lab…</p></div>
+  </section>
+
+  <section class="panel lab-main" id="postView" hidden></section>
+
+  <section class="panel" id="formView" hidden>
+    <h2 id="formTitle">New post</h2>
+    <form id="postForm" class="lab-form">
+      <div class="field"><label for="fSection">Section</label><select id="fSection"></select></div>
+      <div class="field"><label for="fTitle">Title</label><input id="fTitle" required minlength="4" maxlength="120"></div>
+      <div class="field"><label for="fBody">Post</label><textarea id="fBody" required minlength="10" maxlength="8000" rows="10" placeholder="Explain your thinking. Put code between lines of three backticks (```)."></textarea></div>
+      <div class="field"><label for="fLink">Link (optional)</label><input id="fLink" maxlength="300" placeholder="https://…"></div>
+      <div class="field"><label for="fVideo">YouTube video (optional)</label><input id="fVideo" maxlength="300" placeholder="A YouTube video, Short or live link"></div>
+      <p class="tag">Never post API keys, passwords or seed phrases. The Lab is for education. Calls are opinions, not financial advice.</p>
+      <div class="actions"><button class="btn" type="submit" id="fSubmit">Post</button><button class="btn ghost" type="button" id="fCancel">Cancel</button></div>
+    </form>
+  </section>
+
+  <p class="acct-msg" id="msg" role="status" aria-live="polite"></p>
+  <p class="lab-fine">Everything in the Lab is for education. Calls are opinions, not financial advice. D3MON never trades.</p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/lab.js"></script>
+<script src="js/sitebar.js"></script>
+</body>
+</html>

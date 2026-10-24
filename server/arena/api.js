@@ -30,6 +30,7 @@ import { Cockpit } from "./cockpit.js";
 import { HallChat } from "./hallchat.js";
 import { DiscordBridge } from "./discord.js";
 import { Waitlist } from "./waitlist.js";
+import { Lab } from "./lab.js";
 import { Calendar } from "./calendar.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
@@ -49,7 +50,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": case "waitlist": return id === undefined;
+      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": case "waitlist": case "lab": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "voice": return voice.allows(ctx, id);
@@ -100,6 +101,7 @@ export function createArena({ store, accounts, cfg }) {
   const hall = new Hall({ ledger, feed, ...(cfg.ytThumbUrl ? { thumbBase: cfg.ytThumbUrl } : {}) });
   const cockpit = new Cockpit({ ledger, feed, registry });
   const waitlist = new Waitlist({ store, feed });
+  const lab = new Lab({ store, feed, userName });
   const displays = new Displays({ store, registry, stats, catalog, feed });
   displays.seed();
   registry.onBattleChanged = () => { try { roster.sync(); } catch (e) { console.error(e); } };
@@ -108,6 +110,8 @@ export function createArena({ store, accounts, cfg }) {
     botStats: new RateLimiter({ capacity: 10, refillPerSec: 1 / 30 }), // per bot: stats change slowly
     apply: new RateLimiter({ capacity: 20, refillPerSec: 20 / 3600 }),
     writes: new RateLimiter({ capacity: 120, refillPerSec: 2 }),
+    lab: new RateLimiter({ capacity: 6, refillPerSec: 6 / 3600 }), // new Lab posts per member an hour
+    labReply: new RateLimiter({ capacity: 30, refillPerSec: 30 / 3600 }), // replies per member an hour
     waitlist: new RateLimiter({ capacity: 20, refillPerSec: 20 / 3600 }), // new emails per address an hour (phone networks share addresses)
   };
 
@@ -207,6 +211,15 @@ export function createArena({ store, accounts, cfg }) {
     if (route === "GET /notifications") return ok(calendar.myNotes(ctx));
     if (route === "POST /notifications/read") { writer(); return ok(calendar.markRead(ctx)); }
     if (route === "POST /notifications/announce") { writer(); return ok(calendar.announce(ctx, await body())); }
+    if (route === "GET /lab") return ok(lab.list(ctx, { section: url.searchParams.get("section") || "", q: url.searchParams.get("q") || "" }));
+    if (route === "POST /lab") { writer(); return ok({ post: lab.create(ctx, await body(), () => take(limits.lab, ctx.uid || clientIp(req, cfg.trustProxy))) }, 201); }
+    if ((m = route.match(/^GET \/lab\/([a-f0-9]{16})$/))) return ok({ post: lab.view(ctx, m[1]) });
+    if ((m = route.match(/^PATCH \/lab\/([a-f0-9]{16})$/))) { writer(); return ok({ post: lab.edit(ctx, m[1], await body()) }); }
+    if ((m = route.match(/^DELETE \/lab\/([a-f0-9]{16})$/))) { writer(); return ok(lab.remove(ctx, m[1])); }
+    if ((m = route.match(/^PUT \/lab\/([a-f0-9]{16})\/pin$/))) { writer(); return ok({ post: lab.pin(ctx, m[1], await body()) }); }
+    if ((m = route.match(/^PUT \/lab\/([a-f0-9]{16})\/solved$/))) { writer(); return ok({ post: lab.solved(ctx, m[1], await body()) }); }
+    if ((m = route.match(/^POST \/lab\/([a-f0-9]{16})\/replies$/))) { writer(); return ok({ post: lab.reply(ctx, m[1], await body(), () => take(limits.labReply, ctx.uid || clientIp(req, cfg.trustProxy))) }, 201); }
+    if ((m = route.match(/^DELETE \/lab\/([a-f0-9]{16})\/replies\/([a-f0-9]{12})$/))) { writer(); return ok({ post: lab.removeReply(ctx, m[1], m[2]) }); }
     if (route === "GET /waitlist") return ok(waitlist.info());
     if (route === "POST /waitlist") return ok(waitlist.join(ctx, await body(), () => take(limits.waitlist, clientIp(req, cfg.trustProxy))));
     if (route === "PUT /waitlist") { writer(); return ok(waitlist.setOpen(ctx, await body())); }
@@ -366,5 +379,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, waitlist, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, calendar, close: () => { calendar.stop(); discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, waitlist, lab, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, calendar, close: () => { calendar.stop(); discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }
