@@ -32,6 +32,7 @@ import { DiscordBridge } from "./discord.js";
 import { Waitlist } from "./waitlist.js";
 import { Lab } from "./lab.js";
 import { Calendar } from "./calendar.js";
+import { Brothers } from "./brothers.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
 
@@ -50,7 +51,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": case "waitlist": case "lab": return id === undefined;
+      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": case "waitlist": case "lab": case "brothers": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "voice": return voice.allows(ctx, id);
@@ -87,6 +88,9 @@ export function createArena({ store, accounts, cfg }) {
   calendar.start();
   const results = new BattleResults({ registry, calls, metrics });
   const votes = new Votes({ ledger, metrics, prices, registry, vip, feed, accounts, userName });
+  // Abel and Kain: each takes a random bot's call once a round ends, for members to play against (paper, for fun).
+  const brothers = new Brothers({ ledger, calls, metrics, prices, registry, votes, feed });
+  if (cfg.brothers !== false) brothers.start();
   const billing = new Billing({ ledger, registry, vip, feed, accounts, key: cfg.stripeKey, webhookSecret: cfg.stripeWebhookSecret, api: cfg.stripeApi, siteUrl: cfg.siteUrl });
   const members = new Members({ ledger, accounts });
   const portraits = new Portraits({ ledger, registry, accounts, feed, dir: path.join(cfg.dataDir, "portraits") });
@@ -252,6 +256,9 @@ export function createArena({ store, accounts, cfg }) {
     // voice and video rooms: the server only introduces the browsers (server/arena/voice.js)
     if ((m = route.match(/^GET \/voice\/([a-z]{1,20})$/))) return ok(voice.view(ctx, m[1]));
     if ((m = route.match(/^POST \/voice\/([a-z]{1,20})\/(join|beat|leave|kick|signal)$/))) { if (!["beat", "signal"].includes(m[2])) writer(); return ok(voice[m[2]](ctx, m[1], await readJson(req, 64 * 1024))); } // signals have their own limit
+    if (route === "GET /brothers") return ok(brothers.view(ctx));
+    if (route === "GET /brothers/settings") return ok(brothers.settings(ctx));
+    if (route === "PUT /brothers/settings") { writer(); return ok(brothers.setSettings(ctx, await body())); }
     // Member votes (docs/VOTES.md)
     if (route === "GET /votes/round") return ok(votes.roundView(ctx, url.searchParams.get("session") || "live"));
     if (route === "POST /votes") { writer(); return ok(await votes.enter(ctx, await body()), 201); }
@@ -379,5 +386,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, waitlist, lab, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, calendar, close: () => { calendar.stop(); discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, waitlist, lab, brothers, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, calendar, close: () => { calendar.stop(); brothers.stop(); discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }
