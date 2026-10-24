@@ -1,5 +1,5 @@
-// /brothers: the Brothers' Desk. You make your call on this round (the floor's Up/Down vote, session "live"); Abel and
-// Kain's calls appear once the round ends, then the recent rounds and the scoreboard show who called it right.
+// /brothers: the Brothers' Desk. You make your call on this round (the floor's Up/Down vote, session "live"); Kain and
+// Abel's calls appear once the round ends, then the recent rounds and the scoreboard show who called it right.
 // A thin client over GET /api/v1/brothers, GET/POST /api/v1/votes… and GET /api/v1/market.
 (function () {
   "use strict";
@@ -42,14 +42,14 @@
   function recent() {
     const rows = S.data.rounds;
     $("recent").innerHTML = rows.length ? rows.map(r => `<tr><td>${esc(time(r.round))}</td><td>${r.result ? `<span class="bro-d ${r.result}">${arrow(r.result)}</span>` : `<span class="bro-dash">waiting</span>`}</td>
-        <td>${markYou(r.you)}</td><td>${mark(r.calls.abel)}</td><td>${mark(r.calls.kain)}</td></tr>`).join("")
-      : `<tr><td colspan="5" class="empty">No rounds yet. Abel and Kain play every round that bots call.</td></tr>`;
+        <td>${markYou(r.you)}</td><td>${mark(r.calls.kain)}</td><td>${mark(r.calls.abel)}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="empty">No rounds yet. Kain and Abel play every round that bots call.</td></tr>`;
   }
 
   // ---------- scoreboard
   function score() {
     const s = S.data.standings[S.period];
-    const who = [["you", "You"], ["abel", "Abel"], ["kain", "Kain"]].filter(([k]) => s[k]);
+    const who = [["you", "You"], ["kain", "Kain"], ["abel", "Abel"]].filter(([k]) => s[k]);
     const best = Math.max(...who.map(([k]) => s[k].wins));
     $("score").innerHTML = who.map(([k, name]) => { const t = s[k];
       return `<div class="bro-sc ${k}${t.wins === best && best > 0 ? " lead" : ""}"><p class="bro-who">${name}</p>
@@ -72,7 +72,7 @@
       for (const b of d.brothers) if ($(`${b.key}Tag`)) $(`${b.key}Tag`).textContent = b.tagline;
       $("notice").textContent = d.notice;
       $("roundTime").textContent = `${time(d.now.round)} to ${time(d.now.endsAt)} · Calls stay open all round`;
-      if (!d.on) err("Abel and Kain are taking a break right now. You can still make your call.");
+      if (!d.on) err("Kain and Abel are taking a break right now. You can still make your call.");
       youSlot(); recent(); score(); clock();
     } catch (e) { err(e.message); }
   }
