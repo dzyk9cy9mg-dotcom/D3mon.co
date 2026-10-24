@@ -4,9 +4,12 @@
 //
 //   1. The call out: 1, 3 or 5 rounds and an optional line of trash talk. The other player has an hour to accept or
 //      decline (Kain and Abel always accept, at once). The challenger can take it back until then.
-//   2. The match starts with the next round. Each player makes one call per round, Up or Down, in the round's first
-//      CALL_MIN minutes, priced at Kalshi's price when it's made (like the floor's votes). A call stays sealed to
-//      the other side until the calls close, then both are shown and everyone sweats out the rest of the round.
+//   2. The match starts with the next round. Each player makes one call per round, Up or Down, priced at Kalshi's price
+//      when it's made (like the floor's votes). The challenger sets the time rule (owner, 2026-10-23: "call whenever
+//      you want during the round", "allow users to set time rules"): any time in the round (the default) or only in
+//      its first 10, 5 or 2 minutes (CALL_RULES), shown to the other player before they accept. A call stays sealed to
+//      the other side until the calls close (the round's end when it's any time), and every call shows when it was
+//      made (minutes and seconds into the round).
 //   3. Score: most right calls wins (a missed call counts as wrong); a tie goes to the better paper result per $1
 //      contract (a missed call costs 50¢); still level is a draw. Results are the rounds' results (Kalshi's, or
 //      HardSmoke's by hand where Kalshi has none).
@@ -21,7 +24,8 @@
 // someone from calling them out.
 //
 // Ledger lines (append-only, nothing rewritten):
-//   { t: "showdown", sid, from, to, rounds, message }            to = a member's uid, or "kain" / "abel"
+//   { t: "showdown", sid, from, to, rounds, message, callMin }   to = a member's uid, or "kain" / "abel"; callMin 2|5|10|15
+//                                                                (Showdowns from before the rule have none: 5)
 //   { t: "showdown_reply", sid, accept, start? }                  start = the first round, when accepted
 //   { t: "showdown_cancel", sid }
 //   { t: "showdown_call", sid, who, round, dir, paid, source }    who = a uid, or "kain" / "abel"
@@ -39,7 +43,9 @@ import { smack, QUICK } from "./smack.js";
 export const BROTHER_KEYS = ["kain", "abel"];
 const BROTHER_NAMES = { kain: "Kain", abel: "Abel" };
 export const ROUND_CHOICES = [1, 3, 5];
-export const CALL_MIN = 5;                    // calls close this many minutes into each round
+export const CALL_RULES = [15, 10, 5, 2];      // minutes into the round calls stay open; 15 = any time in the round
+const DEFAULT_RULE = 15;
+const OLD_RULE = 5;                             // Showdowns made before the rule existed
 const ACCEPT_MS = 60 * 60 * 1000;             // an hour to answer
 export const CHALLENGES_PER_DAY = 5;
 export const OPEN_MAX = 3;
@@ -51,6 +57,7 @@ const r4 = x => Math.round(x * 10000) / 10000;
 const CHALLENGE = {
   to: { type: "string", required: true, max: 40 },
   rounds: { type: "integer", required: true, min: 1, max: 5 },
+  callMin: { type: "integer", min: 1, max: 15 },
   message: { type: "string", max: 140 },
 };
 const SAY = { text: { type: "string", max: 140 }, quick: { type: "enum", values: Object.keys(QUICK) } };
@@ -70,7 +77,7 @@ export class Showdowns {
   // ---------- the index
   #index(l) {
     if (l.t === "showdown") {
-      this.byId.set(l.sid, { sid: l.sid, from: l.from, to: l.to, rounds: l.rounds, message: l.message || "", at: l.at, reply: null, cancel: null, calls: [], says: [], end: null });
+      this.byId.set(l.sid, { sid: l.sid, from: l.from, to: l.to, rounds: l.rounds, message: l.message || "", callMin: l.callMin || OLD_RULE, at: l.at, reply: null, cancel: null, calls: [], says: [], end: null });
       return;
     }
     if (l.t === "showdown_block") {
@@ -120,6 +127,8 @@ export class Showdowns {
   }
   #open(s, now) { return ["pending", "starting", "live", "scoring"].includes(this.state(s, now)); }
   #result(round) { const r = this.metrics.result(MARKET, round); return r ? r.result : null; }
+  #closes(s, round) { return round + Math.min(s.callMin, 15) * 60000; }
+  #ruleText(s) { return s.callMin >= 15 ? "Call any time in the round" : `Calls close ${s.callMin} minutes into each round`; }
   #callOf(s, who, round) { return s.calls.find(c => c.who === who && c.round === round) || null; }
 
   // The score so far for both sides: right calls and paper per $1, over the rounds with a result.
@@ -147,19 +156,19 @@ export class Showdowns {
   view(s, ctx = {}, now = this.now()) {
     const state = this.state(s, now), me = this.#mine(s, ctx), sc = this.#score(s);
     const rounds = this.#roundsOf(s).map(r => {
-      const closesAt = r + CALL_MIN * 60000, open = now < closesAt, res = this.#result(r);
+      const closesAt = this.#closes(s, r), open = now < closesAt, res = this.#result(r);
       const side = key => {
         const c = this.#callOf(s, s[key], r);
         if (!c) return now >= closesAt ? { missed: true } : null;
-        if (open && me !== key) return { sealed: true, at: c.at };
-        return { dir: c.dir, paid: c.paid, at: c.at, ...(res ? { right: c.dir === res } : {}) };
+        if (open && me !== key) return { sealed: true, at: c.at, intoMs: c.at - r };
+        return { dir: c.dir, paid: c.paid, at: c.at, intoMs: c.at - r, ...(res ? { right: c.dir === res } : {}) };
       };
       return { round: r, closesAt, endsAt: r + ROUND_MS, callsOpen: now >= r && open, result: res, from: side("from"), to: side("to") };
     });
     const done = state === "final";
     return {
       sid: s.sid, state, from: this.#person(s.from), to: this.#person(s.to), rounds: s.rounds, message: s.message,
-      createdAt: s.at, answerBy: s.at + ACCEPT_MS, startsAt: s.reply?.start ?? null, endsAt: this.#endsAt(s), callMin: CALL_MIN,
+      createdAt: s.at, answerBy: s.at + ACCEPT_MS, startsAt: s.reply?.start ?? null, endsAt: this.#endsAt(s), callMin: s.callMin, anyTime: s.callMin >= 15,
       detail: rounds, score: sc, winner: done ? this.#winner(sc) : null,
       chat: s.says.slice(-60).map(x => ({ who: x.who, name: this.#nameOf(x.who), ai: BROTHER_KEYS.includes(x.who), text: x.text, quick: x.quick || null, at: x.at })),
       me, canAnswer: me === "to" && state === "pending", canCancel: me === "from" && state === "pending",
@@ -215,6 +224,8 @@ export class Showdowns {
     this.#member(ctx);
     const f = check(body, CHALLENGE);
     if (!ROUND_CHOICES.includes(f.rounds)) throw new ApiError(400, "invalid_argument", "A Showdown is 1, 3 or 5 rounds.", "rounds");
+    const callMin = f.callMin ?? DEFAULT_RULE;
+    if (!CALL_RULES.includes(callMin)) throw new ApiError(400, "invalid_argument", "The time rule is any time (15), or the first 10, 5 or 2 minutes.", "callMin");
     const to = this.#byUsername(f.to), now = this.now();
     if (to === ctx.uid) throw new ApiError(400, "invalid_argument", "You can't call yourself out.", "to");
     if (!BROTHER_KEYS.includes(to)) {
@@ -229,7 +240,7 @@ export class Showdowns {
     if (all.filter(s => s.from === ctx.uid && s.at > now - 86400000).length >= CHALLENGES_PER_DAY)
       throw new ApiError(429, "resource_exhausted", `That's ${CHALLENGES_PER_DAY} call outs today. Try again tomorrow.`);
     const sid = crypto.randomBytes(6).toString("hex");
-    this.ledger.append([{ t: "showdown", sid, from: ctx.uid, to, rounds: f.rounds, message: f.message || "" }], ctx.uid, now);
+    this.ledger.append([{ t: "showdown", sid, from: ctx.uid, to, rounds: f.rounds, message: f.message || "", callMin }], ctx.uid, now);
     const s = this.byId.get(sid);
     if (BROTHER_KEYS.includes(to)) {
       // the brothers never back down: accepted at once, from the next round, with an opening line
@@ -237,7 +248,7 @@ export class Showdowns {
       this.#brotherSay(s, "start", now);
     } else {
       const who = this.#nameOf(ctx.uid);
-      this.notify([to], { id: `sd:${sid}:in`, text: `${who} called you out to a ${f.rounds}-round Showdown${f.message ? `: “${f.message}”` : "."}`, link: `showdown?id=${sid}` });
+      this.notify([to], { id: `sd:${sid}:in`, text: `${who} called you out to a ${f.rounds}-round Showdown (${this.#ruleText(s).toLowerCase()})${f.message ? `: “${f.message}”` : "."}`, link: `showdown?id=${sid}` });
     }
     this.#changed(s);
     return this.get(ctx, sid);
@@ -288,7 +299,7 @@ export class Showdowns {
     let now = this.now();
     const round = currentRound(now);
     if (this.state(s, now) !== "live" || !this.#roundsOf(s).includes(round)) throw new ApiError(409, "not_live", "This Showdown isn't on right now.");
-    if (now >= round + CALL_MIN * 60000) throw new ApiError(409, "round_locked", `Calls close ${CALL_MIN} minutes into each round. Get the next one.`);
+    if (now >= this.#closes(s, round)) throw new ApiError(409, "round_locked", `Calls close ${s.callMin} minutes into each round in this Showdown. Get the next one.`);
     const had = this.#callOf(s, ctx.uid, round);
     if (had) {
       if (had.dir === dir) return { unchanged: true, ...this.get(ctx, id) };
@@ -296,7 +307,7 @@ export class Showdowns {
     }
     const q = this.votes ? await this.votes.quote(round) : null;
     now = this.now();
-    if (now >= round + CALL_MIN * 60000 || this.#callOf(s, ctx.uid, round)) throw new ApiError(409, "round_locked", "Too late for this round.");
+    if (now >= this.#closes(s, round) || this.#callOf(s, ctx.uid, round)) throw new ApiError(409, "round_locked", "Too late for this round.");
     this.ledger.append([{ t: "showdown_call", sid: s.sid, who: ctx.uid, round, dir, paid: q ? paidFor(dir, q) : null, source: q ? q.source : null }], ctx.uid, now);
     this.#changed(s);
     return this.get(ctx, id);
@@ -332,7 +343,7 @@ export class Showdowns {
       const state = this.state(s, now), bro = BROTHER_KEYS.includes(s.to) ? s.to : null;
       if (bro && state === "live") {
         const round = currentRound(now);
-        if (this.#roundsOf(s).includes(round) && now >= round + BROTHER_CALL_AFTER_MS && now < round + CALL_MIN * 60000 && !this.#callOf(s, bro, round)) {
+        if (this.#roundsOf(s).includes(round) && now >= round + BROTHER_CALL_AFTER_MS && now < this.#closes(s, round) && !this.#callOf(s, bro, round)) {
           const q = this.votes ? await this.votes.quote(round).catch(() => null) : null;
           const fav = q && q.yesAsk != null ? (q.yesAsk >= 0.5 ? "up" : "down") : (this.rand() < 0.5 ? "up" : "down");
           const dir = bro === "kain" ? fav : fav === "up" ? "down" : "up"; // Kain rides the favourite, Abel the underdog
@@ -346,10 +357,10 @@ export class Showdowns {
       // a nudge on the bell when each round opens, for any player who hasn't called yet
       if (state === "live") {
         const round = currentRound(now), i = this.#roundsOf(s).indexOf(round);
-        if (i >= 0 && now < round + CALL_MIN * 60000) for (const side of ["from", "to"]) {
+        if (i >= 0 && now < this.#closes(s, round)) for (const side of ["from", "to"]) {
           const uid = s[side];
           if (BROTHER_KEYS.includes(uid) || this.#callOf(s, uid, round)) continue;
-          this.notify([uid], { id: `sd:${s.sid}:r:${round}`, text: `Round ${i + 1} of ${s.rounds} is open: make your call vs ${this.#nameOf(side === "from" ? s.to : s.from)}. Calls close ${CALL_MIN} minutes in.`, link: `showdown?id=${s.sid}` });
+          this.notify([uid], { id: `sd:${s.sid}:r:${round}`, text: `Round ${i + 1} of ${s.rounds} is open: make your call vs ${this.#nameOf(side === "from" ? s.to : s.from)}. ${this.#ruleText(s)}.`, link: `showdown?id=${s.sid}` });
         }
       }
       if (bro && ["live", "scoring", "final"].includes(state)) {
