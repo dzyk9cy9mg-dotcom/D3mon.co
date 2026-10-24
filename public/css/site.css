@@ -41,7 +41,7 @@ body{font:400 16px/1.6 var(--body);color:var(--ink);-webkit-font-smoothing:antia
 .s-amber{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:0 20px;background:var(--callers);color:#140c02;font:700 14px var(--body);text-decoration:none;white-space:nowrap;clip-path:polygon(0 0,100% 0,100% 64%,calc(100% - 10px) 100%,0 100%);transition:filter .2s,transform .2s}
 .s-amber:hover{filter:brightness(1.08);transform:translateY(-1px)}
 .s-nav>a.s-phone{display:none}
-@media (max-width:1320px){.s-nav>a,.s-admin>summary{padding:0 9px}}
+@media (max-width:1560px){.s-nav>a,.s-admin>summary{padding:0 9px}}
 .s-menu{display:none;min-height:44px;padding:0 16px;border:1px solid var(--s-edge2);border-radius:999px;background:transparent;color:var(--ink);font:500 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 @media (max-width:1240px){
   .s-bar{flex-wrap:wrap;gap:12px}
