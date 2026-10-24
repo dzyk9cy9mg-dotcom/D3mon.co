@@ -43,7 +43,7 @@ body{font:400 16px/1.6 var(--body);color:var(--ink);-webkit-font-smoothing:antia
 .s-nav>a.s-phone{display:none}
 @media (max-width:1320px){.s-nav>a,.s-admin>summary{padding:0 9px}}
 .s-menu{display:none;min-height:44px;padding:0 16px;border:1px solid var(--s-edge2);border-radius:999px;background:transparent;color:var(--ink);font:500 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
-@media (max-width:1140px){
+@media (max-width:1240px){
   .s-bar{flex-wrap:wrap;gap:12px}
   .s-menu{display:inline-flex;align-items:center;margin-left:auto}
   .s-nav{display:none;order:4;flex-basis:100%;flex-direction:column;align-items:stretch;margin:4px 0 6px}

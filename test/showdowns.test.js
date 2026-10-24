@@ -119,6 +119,8 @@ describe("Showdowns", () => {
     let v = await view(freya, bro.sid);
     assert.equal(v.detail[0].to.sealed, true, "his call is sealed from her until calls close");
     assert.ok(v.chat.some(x => x.who === "kain" && v.chat.indexOf(x) > 0), "he says he's locked in");
+    await sd().tick(start + MIN);
+    assert.match((await freya.get("/api/v1/notifications")).json.notes[0].text, /Round 1 of 1 is open: make your call vs Kain/, "a nudge on the bell");
     await freya.post(`/api/v1/showdowns/${bro.sid}/call`, { dir: "down" });
     await freya.post(`/api/v1/showdowns/${bro.sid}/say`, { quick: "lucky" });
     v = await view(freya, bro.sid);
