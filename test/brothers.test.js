@@ -151,7 +151,10 @@ describe("the brothers", () => {
     const put = (who, key, bytes) => fetch(`${srv.base}/api/v1/brothers/video/${key}`, { method: "PUT", headers: { "content-type": "video/mp4", ...(who.cookie ? { cookie: who.cookie } : {}) }, body: bytes });
     assert.equal((await put(guest, "kain", mp4)).status, 401);
     assert.equal((await put(freya, "kain", mp4)).status, 403, "members can't");
-    assert.equal((await put(hs, "seth", mp4)).status, 404, "only Kain and Abel");
+    assert.equal((await put(hs, "seth", mp4)).status, 404, "only the three spots");
+    assert.equal((await put(hs, "both", mp4)).status, 200, "the middle video of both brothers");
+    assert.equal((await guest.get("/api/v1/brothers")).json.videos.both.type, "video/mp4");
+    assert.equal((await hs.req("DELETE", "/api/v1/brothers/video/both")).status, 200);
     assert.equal((await put(hs, "kain", Buffer.alloc(4000, 1))).status, 400, "not a video");
     const r = await put(hs, "kain", mp4);
     assert.equal(r.status, 200);

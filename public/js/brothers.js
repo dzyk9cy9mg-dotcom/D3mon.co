@@ -41,19 +41,20 @@
   // ---------- the intro videos (admins upload a file for each brother)
   const sending = {}; // brother -> "Uploading 40%" while a file goes up
   function intros() {
-    const list = [["kain", "Kain", "introKain"], ["abel", "Abel", "introAbel"]];
-    const vids = Object.fromEntries(S.data.brothers.map(b => [b.key, b.video]));
+    // left to right: Kain, both brothers (the smaller one in the middle), Abel
+    const list = [["kain", "Kain", "introKain"], ["both", "Kain & Abel", "introBoth"], ["abel", "Abel", "introAbel"]];
+    const vids = S.data.videos || Object.fromEntries(S.data.brothers.map(b => [b.key, b.video]));
     $("intros").hidden = !S.admin && !list.some(([k]) => vids[k]);
-    $("intros").classList.toggle("one", !S.admin && list.filter(([k]) => vids[k]).length === 1);
     for (const [k, name, id] of list) {
       const v = vids[k], box = $(id);
       const want = v ? v.url : "", now = box.dataset.src || "";
       if (want === now && box.dataset.admin === String(S.admin) && !sending[k] && box.dataset.sending !== "1") continue;
       box.dataset.src = want; box.dataset.admin = String(S.admin); box.dataset.sending = sending[k] ? "1" : "";
       box.hidden = !v && !S.admin;
+      const what = k === "both" ? "The brothers' video" : `${name}'s intro video`;
       box.innerHTML = `<figcaption class="bro-name">${name} <span class="bro-ai">AI</span></figcaption>
-        ${v ? `<video controls playsinline preload="metadata" src="${esc(v.url)}" aria-label="${name}'s intro video"></video>`
-          : `<div class="bro-novid">${name}'s intro video goes here.</div>`}
+        ${v ? `<video controls playsinline preload="metadata" src="${esc(v.url)}" aria-label="${esc(what)}"></video>`
+          : `<div class="bro-novid">${esc(what)} goes here.</div>`}
         ${S.admin ? `<div class="bro-up-ctl"><label class="btn ghost sm">${v ? "Replace video" : "Upload a video"}<input type="file" accept="video/mp4,video/webm,video/quicktime" data-upload="${k}"></label>
           ${v ? `<button type="button" class="btn ghost sm" data-unvid="${k}">Remove</button>` : ""}
           <p class="meta" id="upNote-${k}">${esc(sending[k] || "MP4 or WebM, up to 200 MB. Admins only.")}</p></div>` : ""}`;
