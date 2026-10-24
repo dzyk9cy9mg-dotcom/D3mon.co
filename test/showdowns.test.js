@@ -152,6 +152,14 @@ describe("Showdowns", () => {
     assert.equal((await view(freya, s0.sid)).detail[0].from.dir, "up", "shown once the round is over");
   });
 
+  test("the Live page lists the Showdowns on now", async () => {
+    const html = await (await fetch(`${srv.base}/live`)).text();
+    assert.match(html, /id="sdList"/);
+    const js = await (await fetch(`${srv.base}/js/live.js`)).text();
+    assert.match(js, /get\("showdowns"\)/);
+    assert.match(js, /"showdowns"\]/, "follows the showdowns feed topic");
+  });
+
   test("limits: 3 open at a time", async () => {
     at(cur + 60 * Q);
     await boss.post("/api/v1/showdowns", { to: "kain", rounds: 5 });
