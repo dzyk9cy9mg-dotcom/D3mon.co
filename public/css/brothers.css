@@ -33,4 +33,16 @@
 .bro-big small{font-size:16px;color:var(--ink-3,#8494A8)}
 .bro-sc .meta{margin:4px 0 0}
 .bro-fine{margin:24px 0 0;color:#6f7988;font:400 13px var(--mono,"IBM Plex Mono",monospace)}
-@media (max-width:640px){.bro-cast,.bro-three,.bro-score{grid-template-columns:1fr}.bro-cast{gap:8px}}
+/* the brothers' intro videos */
+.bro-intros{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0 0}
+.bro-intro{margin:0;padding:14px;border:1px solid var(--s-edge,rgba(170,200,240,.14));border-top:3px solid var(--bc);background:rgba(10,13,19,.6)}
+.bro-intro figcaption{margin:0 0 10px}
+.bro-intro video{display:block;width:100%;max-height:70vh;background:#000;border:1px solid rgba(170,200,240,.1)}
+.bro-novid{display:grid;place-items:center;min-height:180px;border:1px dashed rgba(170,200,240,.2);color:var(--ink-3,#8494A8);font-size:14px;text-align:center;padding:12px}
+.bro-up-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.bro-up-ctl label.btn{display:inline-flex;align-items:center;cursor:pointer}
+.bro-up-ctl label.btn:focus-within{outline:2px solid #E9C27A;outline-offset:2px}
+.bro-intros.one{grid-template-columns:minmax(0,640px)}
+.bro-up-ctl input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.bro-up-ctl .meta{flex-basis:100%;margin:0}
+@media (max-width:640px){.bro-cast,.bro-three,.bro-score,.bro-intros{grid-template-columns:1fr}.bro-cast{gap:8px}}

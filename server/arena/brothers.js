@@ -11,7 +11,14 @@
 // Ledger lines:
 //   { t: "brother_call", brother: "abel" | "kain", round, market, dir, callId, entrantId }
 //   { t: "brothers_settings", on, exclude: [entrantId] }        admins; the latest counts
+//   { t: "brother_video", brother, type, size } | { t: "brother_video", brother, removed: true }
+//
+// Intro videos (owner, 2026-10-23): an admin uploads one video file per brother (MP4 or WebM, checked by its bytes,
+// up to VIDEO_MAX). It's streamed straight to <data>/brothers/<key>.mp4|webm, never held in memory, and served
+// publicly in byte ranges so phones can play it.
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { ApiError } from "./validate.js";
 import { isAdmin } from "../rules.js";
 import { ROUND_MS } from "./registry.js";
@@ -26,11 +33,14 @@ export const BROTHERS = [
 export const NOTICE = "Kain and Abel are AI characters. Their calls come from bots on D3MON. Paper only, for fun. Not financial advice. D3MON never trades.";
 const PERIODS = ["daily", "weekly", "monthly"];
 const RECENT = 12;
+export const VIDEO_MAX = 200 * 1024 * 1024;
+const VIDEO_EXT = { "video/mp4": ".mp4", "video/webm": ".webm" };
 const r4 = x => Math.round(x * 10000) / 10000;
 
 export class Brothers {
-  constructor({ ledger, calls, metrics, prices, registry, votes, feed, now = () => Date.now() }) {
-    Object.assign(this, { ledger, calls, metrics, prices, registry, votes, feed, now });
+  constructor({ ledger, calls, metrics, prices, registry, votes, feed, dir = null, now = () => Date.now() }) {
+    Object.assign(this, { ledger, calls, metrics, prices, registry, votes, feed, dir, now });
+    this.videos = {}; // brother -> { type, size, at }
     this.byRound = new Map(); // round -> { abel: line, kain: line }
     this.cfg = { on: true, exclude: [] };
     for (const l of ledger.lines) this.#index(l);
@@ -42,6 +52,8 @@ export class Brothers {
     if (l.t === "brother_call") {
       if (!this.byRound.has(l.round)) this.byRound.set(l.round, {});
       this.byRound.get(l.round)[l.brother] = l;
+    } else if (l.t === "brother_video") {
+      if (l.removed) delete this.videos[l.brother]; else this.videos[l.brother] = { type: l.type, size: l.size, at: l.at };
     } else if (l.t === "brothers_settings") this.cfg = { on: l.on !== false, exclude: l.exclude || [] };
   }
 
@@ -161,7 +173,7 @@ export class Brothers {
       standings[kind] = s;
     }
     return {
-      brothers: BROTHERS.map(b => ({ ...b, ai: true })), on: this.cfg.on,
+      brothers: BROTHERS.map(b => ({ ...b, ai: true, video: this.videoInfo(b.key) })), on: this.cfg.on,
       now: { round, endsAt: round + ROUND_MS, revealAt: round + ROUND_MS }, rounds, standings, notice: NOTICE,
     };
   }
@@ -196,5 +208,74 @@ export class Brothers {
     }
     this.ledger.append([{ t: "brothers_settings", on: next.on, exclude: next.exclude }], ctx.uid, this.now());
     return this.settings(ctx);
+  }
+
+  // ---------- intro videos
+  #key(key) {
+    if (!BROTHERS.some(b => b.key === key)) throw new ApiError(404, "not_found", "No such brother.");
+    return key;
+  }
+  #path(key, type) { return path.join(this.dir, `${key}${VIDEO_EXT[type]}`); }
+
+  // What the page needs to play a brother's video, or null.
+  videoInfo(key) {
+    const v = this.videos[key];
+    return v ? { url: `api/v1/brothers/video/${key}?v=${v.at}`, type: v.type, size: v.size } : null;
+  }
+
+  // The file to serve for GET /brothers/video/:key, or null.
+  videoFile(key) {
+    const v = this.videos[this.#key(key)];
+    return v && this.dir ? this.#path(key, v.type) : null;
+  }
+
+  // PUT /brothers/video/:key with the file as the body: admins only. The role is checked before a byte is read.
+  async saveVideo(ctx, key, req) {
+    this.#admin(ctx);
+    this.#key(key);
+    if (!this.dir) throw new ApiError(503, "unavailable", "Video uploads aren't set up on this server.");
+    const len = Number(req.headers["content-length"] || 0);
+    if (len > VIDEO_MAX) throw new ApiError(413, "quota_exceeded", `The video is too big. The most is ${VIDEO_MAX / 1024 / 1024} MB.`);
+    fs.mkdirSync(this.dir, { recursive: true });
+    const tmp = path.join(this.dir, `.${key}-${crypto.randomBytes(6).toString("hex")}.part`);
+    let size = 0, head = Buffer.alloc(0);
+    try {
+      await new Promise((resolve, reject) => {
+        const out = fs.createWriteStream(tmp);
+        let failed = false;
+        const fail = err => { if (failed) return; failed = true; req.unpipe?.(out); out.destroy(); req.resume(); reject(err); };
+        req.on("data", c => {
+          size += c.length;
+          if (head.length < 16) head = Buffer.concat([head, c.subarray(0, 16)]);
+          if (size > VIDEO_MAX) fail(new ApiError(413, "quota_exceeded", `The video is too big. The most is ${VIDEO_MAX / 1024 / 1024} MB.`));
+        });
+        req.on("error", fail);
+        out.on("error", fail);
+        out.on("finish", () => { if (!failed) resolve(); });
+        req.pipe(out);
+      });
+      // Real video by its first bytes: MP4/MOV has "ftyp" at byte 4, WebM starts with the EBML mark.
+      const type = head.subarray(4, 8).toString("latin1") === "ftyp" ? "video/mp4"
+        : head.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) ? "video/webm" : null;
+      if (!type || size < 1024) throw new ApiError(400, "invalid_argument", "That isn't an MP4 or WebM video.");
+      for (const t of Object.keys(VIDEO_EXT)) if (t !== type) fs.rmSync(this.#path(key, t), { force: true });
+      fs.renameSync(tmp, this.#path(key, type));
+      this.ledger.append([{ t: "brother_video", brother: key, type, size }], ctx.uid, this.now());
+      this.feed.publish("brothers", "brothers.video", { brother: key });
+      return { brother: key, video: this.videoInfo(key) };
+    } finally {
+      fs.rmSync(tmp, { force: true });
+    }
+  }
+
+  // DELETE /brothers/video/:key: admins take a video down.
+  removeVideo(ctx, key) {
+    this.#admin(ctx);
+    const v = this.videos[this.#key(key)];
+    if (!v) throw new ApiError(404, "not_found", "There's no video to remove.");
+    if (this.dir) fs.rmSync(this.#path(key, v.type), { force: true });
+    this.ledger.append([{ t: "brother_video", brother: key, removed: true }], ctx.uid, this.now());
+    this.feed.publish("brothers", "brothers.video", { brother: key });
+    return { brother: key, video: null };
   }
 }
