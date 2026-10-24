@@ -343,6 +343,15 @@ export class Showdowns {
           }
         }
       }
+      // a nudge on the bell when each round opens, for any player who hasn't called yet
+      if (state === "live") {
+        const round = currentRound(now), i = this.#roundsOf(s).indexOf(round);
+        if (i >= 0 && now < round + CALL_MIN * 60000) for (const side of ["from", "to"]) {
+          const uid = s[side];
+          if (BROTHER_KEYS.includes(uid) || this.#callOf(s, uid, round)) continue;
+          this.notify([uid], { id: `sd:${s.sid}:r:${round}`, text: `Round ${i + 1} of ${s.rounds} is open: make your call vs ${this.#nameOf(side === "from" ? s.to : s.from)}. Calls close ${CALL_MIN} minutes in.`, link: `showdown?id=${s.sid}` });
+        }
+      }
       if (bro && ["live", "scoring", "final"].includes(state)) {
         const rounds = this.#roundsOf(s);
         rounds.forEach((r, i) => {

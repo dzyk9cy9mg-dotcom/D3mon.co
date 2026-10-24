@@ -65,6 +65,7 @@ export function createArena({ store, accounts, cfg }) {
   const userName = uid => accounts.users.get(uid)?.name ?? null;
   const registry = new Registry({ store, feed, userName });
   const ledger = new Ledger({ dir: path.join(cfg.dataDir, "ledger") });
+  ledger.setMaxListeners(50); // every module that indexes the ledger listens for new lines
   ledger.load();
   const metrics = new Metrics({ ledger, registry, feed, userName });
   const keys = new Keys({ store, registry });

@@ -6,7 +6,7 @@
 (function () {
   "use strict";
   const HOME = "./";
-  const MAIN = [["live", "Live"], ["battle", "Battles"], ["calendar", "Calendar"], [`${HOME}#market`, "Marketplace"], ["tournaments", "Tournaments"], ["lab", "Lab"], ["brothers", "Kain & Abel"], ["vip", "Capstone"], ["my", "My bots"]];
+  const MAIN = [["live", "Live"], ["battle", "Battles"], ["calendar", "Calendar"], [`${HOME}#market`, "Marketplace"], ["tournaments", "Tournaments"], ["lab", "Lab"], ["brothers", "Kain & Abel"], ["showdown", "Showdowns"], ["vip", "Capstone"], ["my", "My bots"]];
   const ADMIN = [
     ["Bots and stats", [["applications", "Applications"], ["vip", "VIP access"], ["billing", "Payments"], ["monitor", "Stats monitor"], ["catalog", "Stat list"], ["displays", "Displays and hall video"]]],
     ["Battle show", [["battle", "Battle cockpit (HardSmoke's controls)"], ["metrics", "Round metrics"], ["board", "Battle board"]]],
@@ -63,4 +63,6 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", build); else build();
   // the notification bell (js/bell.js) rides along on every page with the shared bar
   if (!document.querySelector('script[src="js/bell.js"]')) { const s = document.createElement("script"); s.src = "js/bell.js"; s.defer = true; document.head.append(s); }
+  // and the Showdown bar (js/sdbar.js): Up/Down from any page while a Showdown is on
+  if (!document.querySelector('script[src="js/sdbar.js"]')) { const s = document.createElement("script"); s.src = "js/sdbar.js"; s.defer = true; document.head.append(s); }
 })();
