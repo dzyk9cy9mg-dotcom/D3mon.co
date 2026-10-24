@@ -50,3 +50,8 @@ a.lab-row:hover{background:rgba(255,255,255,.03)}
 .lab-form textarea{font:400 15px/1.6 var(--body,Manrope,sans-serif)}
 .lab-fine{margin:24px 0 0;color:#6f7988;font:400 13px var(--mono,"IBM Plex Mono",monospace)}
 @media (max-width:640px){.lab-search{margin-left:0;width:100%}.lab-search input{width:100%}.lab-ptitle{font-size:22px}}
+/* the way in to the Brothers' Desk */
+a.lab-bro{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:22px 0 0;padding:16px 18px;text-decoration:none;color:var(--ink,#EEF3F8);border-left:3px solid #E9C27A}
+a.lab-bro:hover{background:rgba(233,194,122,.06)}
+.lab-bro-k{font:600 12px var(--mono,"IBM Plex Mono",monospace);letter-spacing:.12em;text-transform:uppercase;color:#E9C27A}
+.lab-bro b{font-size:17px}

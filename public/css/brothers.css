@@ -1,0 +1,36 @@
+/* /brothers: the Brothers' Desk. You, Abel and Kain side by side. */
+.bro{max-width:980px}
+.bro-cast,.bro-three,.bro-score{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.bro-cast{margin:22px 0}
+.bro-card,.bro-slot,.bro-sc{padding:16px;border:1px solid var(--s-edge,rgba(170,200,240,.14));background:rgba(10,13,19,.6);border-top:3px solid var(--bc)}
+.you{--bc:#FFB547}.abel{--bc:#4DA3FF}.kain{--bc:#A77BFF}
+.bro-name{margin:0;font:700 18px/1.2 var(--display,Syncopate,sans-serif);text-transform:uppercase;letter-spacing:.05em;color:var(--bc)}
+.bro-ai{display:inline-block;margin-left:6px;padding:1px 6px;border:1px solid currentColor;font:600 11px var(--mono,"IBM Plex Mono",monospace);vertical-align:middle;opacity:.8}
+.bro-tag{margin:6px 0 0;color:var(--ink-2,#B4C1D0);font-size:14px}
+.bro-now-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.bro-now-top h2{margin:0}
+.bro-clock{font:600 28px var(--mono,"IBM Plex Mono",monospace)}
+.bro-three{margin-top:14px}
+.bro-who{margin:0 0 10px;font:700 13px var(--mono,"IBM Plex Mono",monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--bc)}
+.bro-sealed{margin:0 0 10px;color:var(--ink-3,#8494A8)}
+.bro-btns{display:flex;gap:8px}
+.bro-up,.bro-dn{flex:1;min-height:52px;border:1px solid;background:none;font:700 16px var(--body,Manrope,sans-serif);cursor:pointer}
+.bro-up{color:#36E6C3;border-color:rgba(54,230,195,.6)}.bro-dn{color:#FF4F7A;border-color:rgba(255,79,122,.6)}
+.bro-up:hover{background:rgba(54,230,195,.1)}.bro-dn:hover{background:rgba(255,79,122,.1)}
+.bro-up small,.bro-dn small,.bro-call small{font:500 13px var(--mono,"IBM Plex Mono",monospace);opacity:.8}
+.bro-call{margin:0 0 10px;font:700 22px var(--body,Manrope,sans-serif)}
+.bro-call.up,.bro-d.up{color:#36E6C3}.bro-call.down,.bro-d.down{color:#FF4F7A}
+.bro-err{margin:10px 0 0;color:#FF8A8A}.bro-err:empty{display:none}
+.bro-table td{white-space:nowrap}
+.bro-table .ok{color:#36E6C3}.bro-table .no{color:#FF4F7A}
+.bro-dash,.bro-from{color:var(--ink-3,#8494A8)}
+.bro-periods{display:flex;gap:6px}
+.bro-periods button{min-height:40px;padding:0 12px;border:1px solid var(--s-edge,rgba(170,200,240,.14));background:none;color:var(--ink-2,#B4C1D0);font:600 14px var(--body,Manrope,sans-serif);cursor:pointer}
+.bro-periods button.on{color:var(--ink,#EEF3F8);border-color:#E9C27A}
+.bro-score{margin:14px 0 10px}
+.bro-sc.lead{box-shadow:inset 0 0 0 1px var(--bc)}
+.bro-big{margin:0;font:700 34px var(--mono,"IBM Plex Mono",monospace)}
+.bro-big small{font-size:16px;color:var(--ink-3,#8494A8)}
+.bro-sc .meta{margin:4px 0 0}
+.bro-fine{margin:24px 0 0;color:#6f7988;font:400 13px var(--mono,"IBM Plex Mono",monospace)}
+@media (max-width:640px){.bro-cast,.bro-three,.bro-score{grid-template-columns:1fr}.bro-cast{gap:8px}}
