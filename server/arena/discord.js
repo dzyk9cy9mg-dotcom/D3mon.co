@@ -51,7 +51,7 @@ export class DiscordBridge {
         if (c.before?.msgs?.[id] || !m || !m.b || m.deleted || m.dc) continue;
         const link = this.#linkForTab(m.tab || "main");
         if (!link?.webhook || (m.a && this.hallChat.isMuted(m.a))) continue;
-        this.queue.push({ link: link.id, name: m.as?.n || this.userName(m.a) || "Member", text: m.b });
+        this.queue.push({ link: link.id, name: m.name || m.as?.n || this.userName(m.a) || "Member", text: m.b });
       }
       if (this.queue.length) this.#drain();
     });

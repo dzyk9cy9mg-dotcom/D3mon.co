@@ -81,6 +81,15 @@ export class HallChat {
     this.store.commit(this.store.plan("merge", `lounge/${h}`, { hour: h, msgs: { [id]: { name: String(name).slice(0, 40), t, b: text, tab, dc } } }), null);
   }
 
+  // A line from D3MON itself (e.g. a Showdown starting or ending) on the main floor, under `name`. `key` makes it
+  // once only. With the Discord link on, it goes to the main channel too, like any new message.
+  announce({ text, name = "D3MON", key }) {
+    const now = this.now(), h = hourKey(now), id = `sys${String(key || now.toString(36)).replace(/[^a-z0-9]/gi, "").slice(0, 40)}`;
+    if (this.store.get(`lounge/${h}`).data?.msgs?.[id]) return;
+    try { this.store.commit(this.store.plan("merge", `lounge/${h}`, { hour: h, msgs: { [id]: { name: String(name).slice(0, 40), t: now, b: String(text).slice(0, 400), tab: MAIN, sys: true } } }), null); }
+    catch { /* the hour's log is full: skip the announcement */ }
+  }
+
   // POST /hall/chat { text, channel }: posts as the signed-in member, to the main floor unless a channel is named.
   send(ctx, body) {
     if (!ctx.uid) throw new ApiError(401, "not_granted", "Sign in to chat.");
