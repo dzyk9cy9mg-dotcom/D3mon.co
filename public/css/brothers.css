@@ -49,3 +49,14 @@
 .bro-up-ctl .meta{flex-basis:100%;margin:0}
 @media (max-width:640px){.bro-cast,.bro-three,.bro-score{grid-template-columns:1fr}.bro-cast{gap:8px}.bro-intros{flex-direction:column;align-items:stretch}.bro-intro,.bro-intro.both{flex:none;max-width:none}}
 .bro-co{margin-top:12px}
+
+/* admins: which bots Kain and Abel borrow from */
+.bro-adm{margin-top:22px}
+.bro-adm summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center}
+.bro-adm summary::-webkit-details-marker{display:none}
+.bro-adm summary h2{margin:0}
+.bro-adm summary h2::after{content:" ▾";color:var(--ink-3)}
+.bro-adm[open] summary h2::after{content:" ▴"}
+.bro-chk{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.bro-chk input{width:20px;height:20px;accent-color:#FFB547}
+.bro-bots{list-style:none;margin:8px 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px 16px}

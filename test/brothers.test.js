@@ -44,7 +44,10 @@ describe("the brothers", () => {
   test("the Brothers' Desk page is served", async () => {
     const r = await fetch(`${srv.base}/brothers`);
     assert.equal(r.status, 200);
-    assert.match(await r.text(), /js\/brothers\.js/);
+    const html = await r.text();
+    assert.match(html, /js\/brothers\.js/);
+    assert.match(html, /id="adm" hidden/, "the admins' borrow list starts hidden");
+    assert.match(await (await fetch(`${srv.base}/js/brothers.js`)).text(), /"brothers\/settings"/);
   });
 
   test("no bot calls, no brothers' calls; one bot, only Abel plays", async () => {

@@ -143,11 +143,31 @@
     } catch (x) { err(x.message); } finally { S.busy = false; }
   });
 
+  // ---------- admins: which bots Kain and Abel may borrow calls from, and the on/off switch
+  const KINDS = { bot: "Bot", script: "Chart script" };
+  async function loadAdmin() {
+    const d = await api("GET", "brothers/settings");
+    $("adm").hidden = false;
+    $("admOn").checked = d.on;
+    $("admBots").innerHTML = d.bots.length ? d.bots.map(b => `<li><label class="bro-chk"><input type="checkbox" data-bot="${esc(b.id)}" ${b.excluded ? "" : "checked"}> ${esc(b.name)} <span class="tag">${esc(KINDS[b.kind] || b.kind)}</span></label></li>`).join("")
+      : `<li class="tag">No active bots or scripts yet.</li>`;
+    const out = d.bots.filter(b => b.excluded).length;
+    $("admNote").textContent = `${d.bots.length - out} of ${d.bots.length} can be borrowed from.`;
+  }
+  async function saveAdmin() {
+    const exclude = [...$("admBots").querySelectorAll("input[data-bot]")].filter(i => !i.checked).map(i => i.dataset.bot);
+    $("admNote").textContent = "Saving…";
+    try { await api("PUT", "brothers/settings", { on: $("admOn").checked, exclude }); await loadAdmin(); $("admNote").textContent += " Saved."; }
+    catch (x) { $("admNote").textContent = x.message; await loadAdmin().catch(() => {}); }
+  }
+  $("adm").addEventListener("change", e => { if (e.target.matches("input[type=checkbox]")) saveAdmin(); });
+
   (async () => {
     await A.syncClock?.().catch(() => {});
     S.me = await A.session();
     S.admin = !!S.me && (S.me.role === "admin" || S.me.role === "owner");
     await load();
+    if (S.admin) loadAdmin().catch(() => {});
     setInterval(clock, 1000);
     setInterval(() => api("GET", "market").then(m => { S.market = m; if (!(S.round && S.round.open)) youSlot(); }).catch(() => {}), 10000);
     A.follow(["brothers", "votes"], type => { if (type === "brothers.called" || type === "brothers.video") load(); }, () => {});
