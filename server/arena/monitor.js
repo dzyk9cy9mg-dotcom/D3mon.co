@@ -1,9 +1,12 @@
 // The stats monitor (Stats Hub phase 2): HardSmoke's view of every entrant × every stat, with health
 // alerts. Admins only, and never a leaderboard.
 //
-// Owners' privacy still wins here: a value is shown only when its owner made it Public or Members only
-// (what any signed-in member could see on the card anyway). For hidden and private stats the monitor
+// Self-reported stats keep their owner's privacy here: a value is shown only when its owner made it Public or
+// Members only (what any signed-in member could see on the card anyway). For hidden and private ones the monitor
 // shows the activity (when it was updated, how often, how it arrived, any errors), never the value.
+// Verified stats are always shown on the monitor (owner, 2026-10-23: "of course I want to see verified results"):
+// D3MON works them out itself from the calls and results, and the monitor is admins only. Their visibility still
+// decides who sees them everywhere else (cards, profiles).
 //
 // Alerts (thresholds are settings, arena_monitor/settings):
 //   quiet     a bot or script with no stats and no calls for quietHours (or ever)
@@ -83,8 +86,9 @@ export class Monitor {
     const shown = SHOWN.has(d.visibility);
     const out = { visibility: d.visibility, shown };
     if (d.source === "verified") {
+      out.shown = true; // admins see every verified result here; `visibility` still says what the public sees
       Object.assign(out, { verification: value.verification, hasValue: value.value !== null });
-      if (shown) Object.assign(out, { value: value.value, ...(value.n !== undefined ? { n: value.n } : {}), ...(value.counts ? { counts: value.counts } : {}) });
+      Object.assign(out, { value: value.value, ...(value.n !== undefined ? { n: value.n } : {}), ...(value.counts ? { counts: value.counts } : {}) });
       return out;
     }
     const h = this.stats.historyOf(entrantId, d.key), last = h[h.length - 1];
