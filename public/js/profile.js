@@ -290,6 +290,15 @@
         <span>${t.status === "cashed" ? `<span class="pf-k">Cashed out${t.got != null ? ` @${c(t.got)}` : ""}</span>${t.profit != null ? ` <b class="${t.profit >= 0 ? "up" : "dn"}">${t.profit >= 0 ? "+" : "−"}${Math.abs(Math.round(t.profit * 100))}¢</b>` : ""}` : t.status === "settled" ? (t.correct ? '<b class="up">Right</b>' : '<b class="dn">Wrong</b>') : t.status === "settling" ? '<span class="pf-k">Settling</span>' : '<span class="pf-k">Open</span>'}</span></li>`).join("")
       : `<li class="pf-empty">${r ? "No floor calls yet. Make one on the Live page." : "Hidden."}</li>`;
     $("mCallsSec").hidden = !r;
+    // Showdowns: their record, their rivals, and a button to call them out (owner, 2026-10-23)
+    $("mSdBtn").hidden = !!m.mine;
+    $("mSdBtn").textContent = `Call out ${m.name}`;
+    $("mSdBtn").href = `showdown?to=${encodeURIComponent(m.username)}`;
+    api("GET", `showdowns?user=${encodeURIComponent(m.username)}`).then(sd => {
+      const r = sd.record, n = r.wins + r.losses + r.draws;
+      $("mSdRec").textContent = n ? `${r.wins} won · ${r.losses} lost${r.draws ? ` · ${r.draws} drawn` : ""}` : m.mine ? "No Showdowns yet. Call someone out, or take on Kain and Abel." : `${m.name} hasn't played a Showdown yet.`;
+      $("mSdRivals").innerHTML = sd.rivals.slice(0, 5).map(x => `<li>vs ${x.opponent.username ? `<a href="profile?u=${encodeURIComponent(x.opponent.username)}">${esc(x.opponent.name)}</a>` : esc(x.opponent.name)} <b>${x.wins}–${x.losses}${x.draws ? `–${x.draws}` : ""}</b></li>`).join("");
+    }).catch(() => {});
     // their callers, bots and scripts
     $("mEntSec").hidden = !m.entrants.length;
     $("mEnts").innerHTML = m.entrants.map(e => `<li class="k-${esc(e.kind)}"><a href="profile?e=${encodeURIComponent(e.slug)}"><canvas width="80" height="80" aria-hidden="true" data-kind="${esc(e.kind)}"></canvas><span><b>${esc(e.name)}</b><small>${esc(KIND[e.kind] || kindName(e.kind))}</small></span></a></li>`).join("");

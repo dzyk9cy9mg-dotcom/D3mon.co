@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Showdowns · D3MON</title>
+<meta name="description" content="Call anyone out to a 1-on-1 Showdown on Bitcoin's 15-minute rounds, or take on Kain and Abel. Paper only, for fun.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/d3mon.css">
+<link rel="stylesheet" href="css/standalone.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/showdown.css">
+<script src="js/sigils.js"></script>
+<script src="js/wall.js"></script>
+</head>
+<!-- Showdowns (owner, 2026-10-23): call anyone out to a 1-on-1 on the 15-minute rounds, or take on Kain and Abel,
+     who talk smack. Without ?id= the hub (call out, answer, yours, live ones); with ?id= the match itself.
+     A thin client over /api/v1/showdowns (js/showdown.js). -->
+<body>
+<main class="arena sd">
+  <a class="acct-brand" href="./">D<span>3</span>MON.CO</a>
+  <p class="sd-err" id="err" role="alert"></p>
+
+  <!-- the hub -->
+  <div id="hub" hidden>
+    <p class="blurb">Call anyone out to a 1-on-1 on Bitcoin's 15-minute rounds. One call a round, in its first 5 minutes. Most right calls wins. Paper only, for fun.</p>
+
+    <section class="panel sd-form" aria-labelledby="coH">
+      <h2 id="coH">Call someone out</h2>
+      <form id="coForm">
+        <div class="sd-row">
+          <label class="field">Who <input id="coTo" name="to" autocomplete="off" maxlength="40" placeholder="their username" required></label>
+          <fieldset class="sd-rounds"><legend>Rounds</legend>
+            <label><input type="radio" name="rounds" value="1"> 1</label>
+            <label><input type="radio" name="rounds" value="3" checked> 3</label>
+            <label><input type="radio" name="rounds" value="5"> 5</label>
+          </fieldset>
+        </div>
+        <label class="field"><span>Trash talk <span class="tag">(optional)</span></span> <input id="coMsg" name="message" maxlength="140" placeholder="Your read is cooked 🔥"></label>
+        <div class="sd-actions"><button class="s-amber" type="submit">Call out</button>
+          <button type="button" class="btn ghost" data-bro="kain">Call out Kain</button>
+          <button type="button" class="btn ghost" data-bro="abel">Call out Abel</button></div>
+      </form>
+    </section>
+
+    <section class="panel" id="inSec" aria-labelledby="inH" hidden><h2 id="inH">You've been called out</h2><div class="sd-list" id="incoming"></div></section>
+    <section class="panel" id="actSec" aria-labelledby="actH" hidden><h2 id="actH">Your Showdowns</h2><div class="sd-list" id="active"></div></section>
+    <section class="panel" id="outSec" aria-labelledby="outH" hidden><h2 id="outH">Waiting for an answer</h2><div class="sd-list" id="outgoing"></div></section>
+    <section class="panel" aria-labelledby="liveH"><h2 id="liveH">Live now</h2><div class="sd-list" id="live"><p class="empty">No Showdowns on right now. Start one.</p></div></section>
+    <section class="panel" id="recSec" aria-labelledby="recH" hidden><h2 id="recH">Your results</h2><div class="sd-list" id="recent"></div></section>
+  </div>
+
+  <!-- one Showdown -->
+  <div id="match" hidden>
+    <p><a href="showdown" class="sd-back">← All Showdowns</a></p>
+    <section class="sd-head" aria-labelledby="vsH">
+      <p class="sd-state" id="state"></p>
+      <h2 class="sd-vs" id="vsH"></h2>
+      <p class="sd-msg" id="msg" hidden></p>
+    </section>
+    <div class="sd-answer" id="answer" hidden></div>
+    <section class="sd-board" id="board" aria-label="The score"></section>
+    <section class="panel sd-now" id="nowSec" hidden aria-labelledby="nowH">
+      <div class="sd-now-top"><h2 id="nowH">This round</h2><span class="sd-clock" id="clock">–:––</span></div>
+      <p class="meta" id="nowNote"></p>
+      <div class="sd-btns" id="callBtns" hidden>
+        <button type="button" class="sd-up" data-call="up">▲ Up</button>
+        <button type="button" class="sd-dn" data-call="down">▼ Down</button>
+      </div>
+    </section>
+    <div class="sd-grid">
+      <section class="panel" aria-labelledby="rH">
+        <h2 id="rH">Rounds</h2>
+        <div class="tablewrap"><table class="mgrid sd-table"><thead><tr><th>Round</th><th id="thFrom"></th><th id="thTo"></th><th>Result</th></tr></thead><tbody id="rounds"></tbody></table></div>
+      </section>
+      <section class="panel sd-chat" aria-labelledby="cH">
+        <h2 id="cH">Talk</h2>
+        <ol class="sd-lines" id="lines" aria-live="polite"></ol>
+        <div id="talk" hidden>
+          <div class="sd-quick" id="quick"></div>
+          <form class="sd-say" id="sayForm"><input id="sayText" maxlength="140" placeholder="Say something…" aria-label="Say something"><button class="btn ghost sm" type="submit">Send</button></form>
+        </div>
+      </section>
+    </div>
+    <div class="sd-after" id="after" hidden></div>
+  </div>
+
+  <p class="sd-fine" id="notice">Showdowns are paper calls for fun. Not financial advice. D3MON never trades.</p>
+</main>
+<script src="js/arena.js"></script>
+<script src="js/showdown.js"></script>
+<script src="js/sitebar.js"></script>
+</body>
+</html>

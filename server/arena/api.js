@@ -33,6 +33,7 @@ import { Waitlist } from "./waitlist.js";
 import { Lab } from "./lab.js";
 import { Calendar } from "./calendar.js";
 import { Brothers } from "./brothers.js";
+import { Showdowns } from "./showdowns.js";
 import { ROUND_MS, DEFAULT_CALL_WINDOW_MIN } from "./registry.js";
 import path from "node:path";
 
@@ -51,7 +52,7 @@ export function createArena({ store, accounts, cfg }) {
   function allow(ctx, topic) {
     const [kind, id] = topic.split(":");
     switch (kind) {
-      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": case "waitlist": case "lab": case "brothers": return id === undefined;
+      case "battles": case "catalog": case "tournaments": case "vip": case "hall": case "votes": case "cockpit": case "waitlist": case "lab": case "brothers": case "showdowns": return id === undefined;
       case "battle": case "entrant": case "display": return id !== undefined;
       case "me": return id === "applications" && !!ctx.uid;
       case "voice": return voice.allows(ctx, id);
@@ -91,6 +92,9 @@ export function createArena({ store, accounts, cfg }) {
   // Kain and Abel: each takes a random bot's call once a round ends, for members to play against (paper, for fun).
   const brothers = new Brothers({ ledger, calls, metrics, prices, registry, votes, feed, dir: cfg.dataDir ? path.join(cfg.dataDir, "brothers") : null });
   if (cfg.brothers !== false) brothers.start();
+  // Showdowns: members call each other (or Kain and Abel) out to 1-on-1s (owner, 2026-10-23)
+  const showdowns = new Showdowns({ ledger, metrics, votes, accounts, feed, notify: (uids, n) => calendar.notify(uids, n) });
+  if (cfg.showdowns !== false) showdowns.start();
   const billing = new Billing({ ledger, registry, vip, feed, accounts, key: cfg.stripeKey, webhookSecret: cfg.stripeWebhookSecret, api: cfg.stripeApi, siteUrl: cfg.siteUrl });
   const members = new Members({ ledger, accounts });
   const portraits = new Portraits({ ledger, registry, accounts, feed, dir: path.join(cfg.dataDir, "portraits") });
@@ -256,6 +260,14 @@ export function createArena({ store, accounts, cfg }) {
     // voice and video rooms: the server only introduces the browsers (server/arena/voice.js)
     if ((m = route.match(/^GET \/voice\/([a-z]{1,20})$/))) return ok(voice.view(ctx, m[1]));
     if ((m = route.match(/^POST \/voice\/([a-z]{1,20})\/(join|beat|leave|kick|signal)$/))) { if (!["beat", "signal"].includes(m[2])) writer(); return ok(voice[m[2]](ctx, m[1], await readJson(req, 64 * 1024))); } // signals have their own limit
+    if (route === "GET /showdowns") return ok(showdowns.list(ctx, { user: url.searchParams.get("user") || undefined }));
+    if (route === "POST /showdowns") { writer(); return ok(showdowns.challenge(ctx, await body()), 201); }
+    if (route === "PUT /showdowns/block") { writer(); return ok(showdowns.block(ctx, await body())); }
+    if ((m = route.match(/^GET \/showdowns\/([a-f0-9]{12})$/))) return ok(showdowns.get(ctx, m[1]));
+    if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/answer$/))) { writer(); return ok(showdowns.answer(ctx, m[1], await body())); }
+    if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/cancel$/))) { writer(); return ok(showdowns.cancel(ctx, m[1])); }
+    if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/call$/))) { writer(); return ok(await showdowns.call(ctx, m[1], await body())); }
+    if ((m = route.match(/^POST \/showdowns\/([a-f0-9]{12})\/say$/))) { writer(); return ok(showdowns.say(ctx, m[1], await body())); }
     if (route === "GET /brothers") return ok(brothers.view(ctx));
     if (route === "GET /brothers/settings") return ok(brothers.settings(ctx));
     if ((m = route.match(/^(?:GET|HEAD) \/brothers\/video\/([a-z]{2,12})$/))) {
@@ -393,5 +405,5 @@ export function createArena({ store, accounts, cfg }) {
     throw new ApiError(404, "not_found", "No such endpoint.");
   }
 
-  return { handle, feed, waitlist, lab, brothers, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, calendar, close: () => { calendar.stop(); brothers.stop(); discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
+  return { handle, feed, waitlist, lab, brothers, showdowns, registry, ledger, metrics, keys, calls, tournaments, vip, votes, portraits, members, voice, billing, results, hall, cockpit, hallChat, discord, verified, catalog, stats, monitor, displays, roster, kalshi, prices, calendar, close: () => { calendar.stop(); brothers.stop(); showdowns.stop(); discord?.stop(); voice.stop(); calls.stop(); kalshi.stop(); prices.stop(); tournaments.stop(); monitor.stop(); feed.close(); } };
 }

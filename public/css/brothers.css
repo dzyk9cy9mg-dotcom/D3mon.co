@@ -48,3 +48,4 @@
 .bro-up-ctl input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .bro-up-ctl .meta{flex-basis:100%;margin:0}
 @media (max-width:640px){.bro-cast,.bro-three,.bro-score{grid-template-columns:1fr}.bro-cast{gap:8px}.bro-intros{flex-direction:column;align-items:stretch}.bro-intro,.bro-intro.both{flex:none;max-width:none}}
+.bro-co{margin-top:12px}
