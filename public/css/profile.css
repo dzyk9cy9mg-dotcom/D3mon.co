@@ -127,3 +127,6 @@ body[data-kind="member"] .pf-portrait img{object-position:50% 6%}
 /* a member's own profile */
 .pf-av{width:28px;height:28px;border-radius:50%}
 #mOwn .pf-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+
+/* Showdowns on a member profile */
+.pf-rivals{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--ink-2,#B4C1D0)}.pf-rivals b{color:var(--ink,#EEF3F8);font-family:var(--mono,"IBM Plex Mono",monospace);margin-left:4px}.pf-rivals a{color:inherit}
