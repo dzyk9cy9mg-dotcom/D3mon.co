@@ -502,18 +502,20 @@ describe("world: the page and a round's calls", () => {
     assert.match(lib.text.slice(0, 300), /Three\.js Authors/);
   });
 
-  test("a round's calls: bots shown at once, callers sealed until the close", async () => {
+  test("a round's calls: bots and callers sealed until the round ends (owner, 2026-10-23), owners see their own", async () => {
     const r = await guest.get(`/api/v1/rounds/${cur}/calls`);
     assert.equal(r.status, 200);
     const by = Object.fromEntries(r.json.calls.map(c => [c.name, c]));
-    assert.equal(by.Valhalla.direction, "up");
-    assert.equal(by.Valhalla.kind, "bot");
+    assert.deepEqual([by.Valhalla.sealed, by.Valhalla.direction, by.Valhalla.kind], [true, undefined, "bot"], "a paid bot's call can't be copied for free");
+    assert.deepEqual(r.json.crowd, { called: 1, up: null, down: null, min: 3 }, "one bot: only that it called, so the totals can't give it away");
+    assert.equal((await odin.get(`/api/v1/rounds/${cur}/calls`)).json.calls.find(c => c.name === "Valhalla").direction, "up", "its owner sees it");
     assert.equal(by["Freya Calls"].sealed, true);
     assert.equal(by["Freya Calls"].direction, undefined, "a guest can't see a sealed call");
     assert.equal((await freya.get(`/api/v1/rounds/${cur}/calls`)).json.calls.find(c => c.name === "Freya Calls").direction, "down", "the caller sees their own");
     assert.equal(r.json.result, null);
     srv.app.arena.calls.now = () => cur + Q + MIN; // calls closed
     assert.equal((await guest.get(`/api/v1/rounds/${cur}/calls`)).json.calls.find(c => c.name === "Freya Calls").direction, "down");
+    assert.equal((await guest.get(`/api/v1/rounds/${cur}/calls`)).json.calls.find(c => c.name === "Valhalla").direction, "up", "revealed once the round is over");
     assert.equal((await guest.get(`/api/v1/rounds/${cur + 7}/calls`)).status, 400);
   });
 });

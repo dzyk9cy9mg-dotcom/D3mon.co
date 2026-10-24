@@ -57,7 +57,7 @@ describe("the brothers", () => {
     assert.deepEqual(lines.map(l => [l.brother, l.dir]), [["abel", "up"]]);
   });
 
-  test("each brother takes a different bot's call, only after the round ends, and only once", async () => {
+  test("after the round ends, each brother still without a call takes a different bot's, only once", async () => {
     callsAt(R(6) + MIN);
     const sent = [];
     for (const [i, d] of ["up", "down", "down"].entries()) sent.push((await asBot(i, { ...CALL(d), round: new Date(R(6)).toISOString() })).call);
@@ -170,5 +170,50 @@ describe("the brothers", () => {
     assert.equal((await hs.req("DELETE", "/api/v1/brothers/video/kain")).status, 200);
     assert.equal((await guest.get("/api/v1/brothers")).json.brothers.find(b => b.key === "kain").video, null);
     assert.equal((await fetch(`${srv.base}/api/v1/brothers/video/kain`)).status, 404);
+  });
+
+  test("live (owner, 2026-10-23): a brother takes a bot's call the moment it comes in, never saying which bot; bots stay sealed", async () => {
+    const r = R(40), latest = i => arena().calls.latest(bots[i], "KXBTC15M", r);
+    callsAt(r + MIN); brosAt(r + 2 * MIN);
+    assert.equal((await asBot(0, CALL("up"))).ok, true);
+    const first = arena().brothers.takeLive(latest(0));
+    assert.equal(first.length, 1, "the first bot's call goes to one brother at once");
+    assert.deepEqual(arena().brothers.takeLive(latest(0)), [], "the same bot can't give both brothers a call");
+    let v = (await guest.get("/api/v1/brothers")).json.now.calls;
+    const took = first[0].brother, other = took === "kain" ? "abel" : "kain";
+    assert.deepEqual([v[took].dir, v[took].from, v[other]], ["up", undefined, null], "everyone sees it live, without the bot");
+    assert.ok((await hs.get("/api/v1/brothers")).json.now.calls[took].from, "admins see which bot");
+    await asBot(1, CALL("down"));
+    assert.equal(arena().brothers.takeLive(latest(1))[0].brother, other, "the next bot's call goes to the other brother");
+    await asBot(2, CALL("down"));
+    assert.deepEqual(arena().brothers.takeLive(latest(2)), [], "both have called");
+    callsAt(r + 3 * MIN);
+    const floor = (await guest.get(`/api/v1/rounds/${r}/calls`)).json;
+    assert.ok(floor.calls.filter(c => bots.includes(c.entrantId)).every(c => c.sealed && !c.direction), "the bots themselves stay sealed");
+    assert.deepEqual(floor.crowd, { called: 3, up: 1, down: 2, min: 3 }, "three bots: the totals show");
+    brosAt(r + Q + MIN);
+    assert.deepEqual(arena().brothers.pick(r), [], "nothing left to pick after the round");
+    brosAt(r + 2 * MIN); callsAt(r + 2 * MIN);
+    arena().brothers.cfg = { ...arena().brothers.cfg, on: false };
+    assert.deepEqual(arena().brothers.takeLive(latest(2)), [], "switched off: no live calls");
+    arena().brothers.cfg = { ...arena().brothers.cfg, on: true };
+    // on a running server the ledger hands each bot call over by itself
+    const r2 = R(42); callsAt(r2 + MIN); brosAt(r2 + MIN); arena().brothers.live = true;
+    await asBot(0, CALL("down"));
+    await new Promise(res => setImmediate(res));
+    arena().brothers.live = false;
+    assert.equal(Object.values((await guest.get("/api/v1/brothers")).json.now.calls).filter(Boolean)[0]?.dir, "down", "taken automatically");
+  });
+
+  test("the Capstone room shows a featured bot's call the moment it comes in; everyone else waits", async () => {
+    const r = R(41);
+    callsAt(r + MIN); arena().vip.now = () => r + 2 * MIN;
+    await asBot(2, CALL("up"));
+    callsAt(r + 2 * MIN);
+    assert.equal((await hs.req("PUT", "/api/v1/vip/featured", { entrantIds: [bots[2]] })).status, 200);
+    assert.equal((await hs.post("/api/v1/vip/access", { username: "freya", days: 1 })).status < 300, true);
+    const room = (await freya.get("/api/v1/vip/room")).json;
+    assert.deepEqual(room.calls.map(c => [c.entrantId, c.direction, c.early]), [[bots[2], "up", true]]);
+    assert.equal((await guest.get(`/api/v1/rounds/${r}/calls`)).json.calls.find(c => c.entrantId === bots[2]).sealed, true);
   });
 });

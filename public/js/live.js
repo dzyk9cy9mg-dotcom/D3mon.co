@@ -34,7 +34,7 @@
           const r = +path.split("/")[1];
           if (r < cur) { const res = Math.floor(r / Q) % 2 ? "up" : "down"; return Promise.resolve({ round: r, result: n > r + Q + 2500 ? res : null, calls: names.slice(0, 7).map(([name, kind], i) => ({ id: `p${r}${i}`, name, kind, slug: name.toLowerCase(), direction: i % 3 ? res : res === "up" ? "down" : "up", correct: !!(i % 3), price: { paid: 0.4 + (i % 5) * 0.06 }, receivedAt: r + 60000 * (i + 1) })) }); }
           const k = Math.min(names.length, Math.floor((n - cur) / (FAST ? 5000 : 40000)) + 2);
-          return Promise.resolve({ round: cur, result: null, calls: names.slice(0, k).map(([name, kind], i) => ({ id: `c${cur}${i}`, name, kind, slug: name.toLowerCase(), ...(kind === "caller" && n < cur + Q ? { sealed: true } : { direction: (i * 7 + Math.floor(cur / Q)) % 3 ? "up" : "down", price: { paid: +(0.38 + ((i * 13) % 30) / 100).toFixed(2) } }), receivedAt: cur + (i + 1) * (FAST ? 5000 : 40000) })).reverse() });
+          return Promise.resolve({ round: cur, result: null, calls: names.slice(0, k).map(([name, kind], i) => ({ id: `c${cur}${i}`, name, kind, slug: name.toLowerCase(), ...(n < cur + Q ? { sealed: true } : { direction: (i * 7 + Math.floor(cur / Q)) % 3 ? "up" : "down", price: { paid: +(0.38 + ((i * 13) % 30) / 100).toFixed(2) } }), receivedAt: cur + (i + 1) * (FAST ? 5000 : 40000) })).reverse() });
         }
         if (path === "presence") return Promise.resolve({ here: 23 + Math.floor(Math.random() * 6) });
         if (path.startsWith("hall/chat")) {
@@ -196,7 +196,7 @@
 
   // ---------- the calls, as they land ----------
   function callRow(c) {
-    const dir = c.sealed ? `<span class="lv-sealed">Sealed</span>` : c.direction === "up" ? `<b class="up">▲ Up</b>` : `<b class="dn">▼ Down</b>`;
+    const dir = c.sealed ? `<span class="lv-sealed">Revealed at the round's end</span>` : c.direction === "up" ? `<b class="up">▲ Up</b>` : `<b class="dn">▼ Down</b>`;
     const price = c.price ? `<span class="lv-paid">@${Math.round(c.price.paid * 100)}¢</span>` : "";
     return `<li class="lv-call k-${esc(c.kind)}" data-id="${esc(c.id)}"><canvas class="lv-sig" width="56" height="56" aria-hidden="true"></canvas>
       <span class="lv-who"><a href="profile?e=${encodeURIComponent(c.slug)}">${esc(c.name)}</a><small>${esc(KIND[c.kind] || c.kind)}</small></span>
@@ -207,7 +207,12 @@
     if (!data || r !== S.round) return;
     const list = $("calls");
     $("count").textContent = String(data.calls.length);
-    if (!data.calls.length) { list.innerHTML = `<li class="lv-empty">No calls yet this round. Bots and chart scripts show theirs at once; callers' stay sealed until the close.</li>`; return; }
+    // bots' and scripts' calls are hidden until the round ends (owner, 2026-10-23): only their totals show, from 3 calls
+    const cr = data.crowd, bot = n => `${n} ${n === 1 ? "bot" : "bots"}`;
+    $("tally").innerHTML = !cr || !cr.called ? "" : cr.up !== null
+      ? `Bots and scripts so far: <b class="up">${cr.up} Up</b> · <b class="dn">${cr.down} Down</b>`
+      : `${bot(cr.called)} called. Totals show once ${cr.min} have.`;
+    if (!data.calls.length) { list.innerHTML = `<li class="lv-empty">No calls yet this round. Every call is revealed when the round ends.</li>`; return; }
     list.querySelector(".lv-empty")?.remove();
     for (const c of [...data.calls].reverse()) { // oldest first, so the newest ends up on top
       const key = c.id, had = S.calls.get(key);
