@@ -78,8 +78,13 @@ const secretError = field =>
   new ApiError(400, "looks_like_secret", `"${field || "body"}" looks like a key, password or wallet phrase. D3MON.CO never takes trading credentials or exchange keys. Remove it and send only read-only stats.`, field || "body");
 
 // Collapses whitespace, strips control and invisible formatting characters. Newlines survive when allowed.
-export function cleanText(v, { multiline = false } = {}) {
+export function cleanText(v, { multiline = false, code = false } = {}) {
   let s = String(v ?? "").normalize("NFKC").replace(/[\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/g, "");
+  // code: like multiline, but indentation and spacing inside lines are kept (Lab posts with code in them)
+  if (code) {
+    s = s.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").replace(/[ \t]+$/gm, "").replace(/\n{4,}/g, "\n\n\n");
+    return s.replace(/^\n+|\n+$/g, "");
+  }
   if (multiline) {
     s = s.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n");
     return s.split("\n").map(l => l.trim()).join("\n").trim();

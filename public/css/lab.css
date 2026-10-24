@@ -1,0 +1,52 @@
+/* /lab: the D3MON Lab. Calmer than the rest of the site, made for reading and code (owner, 2026-10-21). */
+.lab{max-width:960px}
+.lab-lead{max-width:640px;font-size:17px;line-height:1.6}
+.lab-h{margin:0 0 12px;font:700 15px/1.2 var(--display,Syncopate,sans-serif);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#B4C1D0)}
+/* Daily: the AI teacher's shorts, a row you scroll sideways */
+.lab-daily{margin:28px 0}
+.lab-strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(180px,200px);gap:14px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+.lab-day{display:flex;flex-direction:column;gap:6px;scroll-snap-align:start}
+.lab-day-t{color:var(--ink,#EEF3F8);font:600 14px/1.35 var(--body,Manrope,sans-serif);text-decoration:none}
+.lab-day-t:hover{text-decoration:underline}
+.lab-video{position:relative;display:block;width:100%;aspect-ratio:16/9;padding:0;border:1px solid var(--s-edge,rgba(170,200,240,.14));background:#000;cursor:pointer;overflow:hidden}
+.lab-video.short{aspect-ratio:9/16}
+.lab-video.big{max-width:640px;margin:16px 0}
+.lab-video.big.short{max-width:320px}
+.lab-video img{width:100%;height:100%;object-fit:cover;opacity:.85;transition:opacity .2s}
+.lab-video:hover img{opacity:1}
+.lab-video iframe{width:100%;height:100%;border:0}
+.lab-play{position:absolute;inset:0;margin:auto;width:52px;height:52px;display:grid;place-items:center;border-radius:50%;background:rgba(5,7,11,.7);color:#fff;font-size:18px}
+/* sections and search */
+.lab-bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:24px 0 14px}
+.lab-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.lab-tab{min-height:40px;padding:0 14px;border:1px solid var(--s-edge,rgba(170,200,240,.14));background:none;color:var(--ink-2,#B4C1D0);font:600 14px var(--body,Manrope,sans-serif);cursor:pointer}
+.lab-tab small{color:var(--ink-3,#8494A8);font-weight:500;margin-left:4px}
+.lab-tab.on{border-color:#4DA3FF;color:var(--ink,#EEF3F8);background:rgba(77,163,255,.08)}
+.lab-search{margin-left:auto}
+.lab-search input{min-height:40px;width:220px}
+.lab-head{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:12px}
+.lab-head .tag{margin:0}
+/* the list */
+a.lab-row{display:block;text-decoration:none;color:inherit;border-left:3px solid transparent}
+a.lab-row:hover{background:rgba(255,255,255,.03)}
+.lab-row.s-showcase{border-left-color:#FFB547}.lab-row.s-help{border-left-color:#4DA3FF}.lab-row.s-library{border-left-color:#E9C27A}.lab-row.s-experiments{border-left-color:#A77BFF}.lab-row.s-daily{border-left-color:#36E6C3}
+.lab-row .top{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.lab-t{font-size:16px}
+.lab-pin{color:#E9C27A;border-color:rgba(233,194,122,.5)}
+.lab-solved{color:#36E6C3;border-color:rgba(54,230,195,.5)}
+/* one post: readable measure, code in a calm block */
+.lab-back{color:var(--ink-2,#B4C1D0)}
+.lab-ptitle{margin:10px 0 4px;font:700 26px/1.25 var(--body,Manrope,sans-serif);text-transform:none;letter-spacing:0}
+.lab-body-text{max-width:68ch;font-size:16px;line-height:1.7;color:var(--ink,#EEF3F8)}
+.lab-body-text p{margin:0 0 14px}
+.lab-body-text a{color:#4DA3FF;word-break:break-all}
+.lab-code{white-space:pre;max-width:100%;overflow-x:auto;margin:0 0 14px;padding:14px 16px;background:#070a10;border:1px solid var(--s-edge,rgba(170,200,240,.14));font:400 14px/1.6 var(--mono,"IBM Plex Mono",monospace);color:#d6e2f0}
+.lab-code code{white-space:pre;font:inherit;color:inherit;background:none;padding:0}
+.lab-acts{margin:16px 0}
+.lab-reply .meta{display:flex;align-items:center;gap:10px}
+.lab-reply.gone{opacity:.5}
+.lab-x{margin-left:auto;min-height:32px;padding:0 10px;border:1px solid var(--s-edge,rgba(170,200,240,.14));background:none;color:var(--ink-3,#8494A8);font:500 13px var(--body,Manrope,sans-serif);cursor:pointer}
+.lab-form{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.lab-form textarea{font:400 15px/1.6 var(--body,Manrope,sans-serif)}
+.lab-fine{margin:24px 0 0;color:#6f7988;font:400 13px var(--mono,"IBM Plex Mono",monospace)}
+@media (max-width:640px){.lab-search{margin-left:0;width:100%}.lab-search input{width:100%}.lab-ptitle{font-size:22px}}
