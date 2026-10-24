@@ -73,6 +73,7 @@ describe("Showdowns", () => {
 
   test("score: most right calls wins (a missed call counts as wrong), then it's closed once with a note", async () => {
     const R = cur + Q;
+    await sd().tick(R + Q + MIN); // live: Kain opens the booth
     at(R + Q + MIN); await freya.post(`/api/v1/showdowns/${duel.sid}/call`, { dir: "up" }); await loki.post(`/api/v1/showdowns/${duel.sid}/call`, { dir: "down" });
     at(R + 2 * Q + MIN); await loki.post(`/api/v1/showdowns/${duel.sid}/call`, { dir: "down" }); // Freya misses round 3
     score(R, "up"); score(R + Q, "up");
@@ -84,6 +85,10 @@ describe("Showdowns", () => {
     assert.deepEqual([v.state, v.score.from.right, v.score.to.right, v.winner], ["final", 2, 1, "from"], "Freya 2, Loki 1 (her missed call counts as wrong)");
     assert.equal(v.detail[2].from.missed, true);
     assert.match((await loki.get("/api/v1/notifications")).json.notes[0].text, /Freya beat Loki, 2–1/);
+    const booth = v.chat.filter(x => x.booth);
+    assert.deepEqual(booth.map(x => x.who), ["kain", "kain", "kain", "abel", "abel", "kain", "abel"], "Kain opens; they take turns on the rounds (with the score after rounds 1 and 2); Abel closes");
+    assert.match(booth[1].text, /Freya/, "round 1: Freya right, Loki not");
+    assert.ok(booth.at(-1).text.includes("Freya") && booth.at(-1).text.includes("Loki"), "the final names the winner and the other");
     await sd().tick(R + 3 * Q + 2 * MIN);
     assert.equal(srv.app.arena.ledger.lines.filter(l => l.t === "showdown_end" && l.sid === duel.sid).length, 1, "closed once");
     const rec = (await guest.get("/api/v1/showdowns?user=freya")).json;
@@ -136,6 +141,7 @@ describe("Showdowns", () => {
     v = await view(guest, bro.sid);
     assert.deepEqual([v.state, v.detail[0].to.dir, v.winner], ["final", "up", "to"], "Kain rode up and won");
     assert.ok(v.chat.filter(x => x.who === "kain").length >= 4, "he talked through it: start, call, the round, the end");
+    assert.equal(v.chat.filter(x => x.booth).length, 0, "no booth when a brother is playing");
   });
 
   test("by default calls are open the whole round (owner, 2026-10-23), sealed until the round ends", async () => {

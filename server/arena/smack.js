@@ -160,3 +160,41 @@ export function smack(brother, moment, name, recent = [], pick = n => Math.floor
   const pool = fresh.length ? fresh : lines;
   return pool[pick(pool.length)].replaceAll("{name}", name);
 }
+
+// Commentary on Showdowns between two members (owner, 2026-10-24): Kain and Abel call the match from the booth.
+// {a} and {b} are the players, {w} took the round (or the match) and {l} didn't. Same rules as the smack talk:
+// playful, never cruel, never about who someone is, never trading advice.
+// Moments: start, round (one player right, the other not), both_right, both_wrong, lead ({w} ahead after the round),
+// level (all square), final ({w} won), draw.
+export const CAST = {
+  kain: {
+    start: ["{a} versus {b}. Kain on the call. Let's see who can read a chart.", "Booth's open. {a} and {b}, show me something.", "{a}, {b}: candles don't care about feelings. Let's go."],
+    round: ["{w} takes the round. {l}, that candle had your name on it. The wrong one.", "Clean read by {w}. {l} got caught leaning.", "{w} saw it coming. {l} saw something else."],
+    both_right: ["Both right. Fine. Nobody's impressed yet.", "{a} and {b} both nailed it. Boring, but correct."],
+    both_wrong: ["Both wrong. I've seen better reads from a coin.", "Neither of you. Wow. The chart's laughing."],
+    lead: ["{w} is up. {l}, the clock is not your friend.", "Scoreboard says {w}. Pressure's on {l}."],
+    level: ["All square. Now it gets interesting.", "Level. Nobody blink."],
+    final: ["That's it. {w} wins it. {l}, study the tape and come back.", "{w} takes the Showdown. Respect. {l}, rematch button's right there."],
+    draw: ["A draw. Both of you owe me a better ending.", "Dead even. Run it back."],
+  },
+  abel: {
+    start: ["Good evening. {a} meets {b}. Abel here, with the research.", "{a} and {b}. I've read the conditions. Let's see if they have.", "The booth is open. {a}, {b}, the world is watching. Mostly me."],
+    round: ["{w} takes it. {l} may want to check the news more often.", "A measured read from {w}. {l}, there's always the next round.", "Round to {w}. The evidence was there, {l}."],
+    both_right: ["Both correct. A well-informed pair.", "{a} and {b} both read it right. Admirable."],
+    both_wrong: ["Both wrong. The market humbles everyone eventually.", "Neither. An instructive round for all of us."],
+    lead: ["{w} leads. {l} has time, but not much.", "The record favours {w}, for now."],
+    level: ["Level. The outcome is still open.", "Even again. Patience will decide this."],
+    final: ["Concluded. {w} wins the Showdown. Well played, {l}.", "{w} takes it. {l}, a respectable effort. The research continues."],
+    draw: ["A draw. Fitting, for two evenly matched minds.", "Even to the end. I'd call that a fair result."],
+  },
+};
+
+// A commentary line for this moment, different from the brother's last few in this Showdown where possible.
+export function cast(brother, moment, vars, recent = [], pick = n => Math.floor(Math.random() * n)) {
+  const lines = CAST[brother]?.[moment];
+  if (!lines || !lines.length) return null;
+  const fill = l => l.replace(/\{(a|b|w|l)\}/g, (_, k) => vars[k] ?? "");
+  const all = lines.map(fill), fresh = all.filter(l => !recent.includes(l));
+  const pool = fresh.length ? fresh : all;
+  return pool[pick(pool.length)];
+}

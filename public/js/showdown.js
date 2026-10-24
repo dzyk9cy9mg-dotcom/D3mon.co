@@ -89,7 +89,7 @@
       : `<tr><td colspan="4" class="empty">The rounds appear once it's accepted.</td></tr>`;
     // the talk
     const lines = $("lines"), atEnd = lines.scrollHeight - lines.scrollTop - lines.clientHeight < 40;
-    lines.innerHTML = v.chat.length ? v.chat.map(c => `<li class="${c.ai ? "ai" : ""} ${c.who === v.from.uid ? "f" : "t"}"><b>${esc(c.name)}${c.ai ? ' <span class="sd-ai">AI</span>' : ""}</b> ${esc(c.text)}</li>`).join("") : `<li class="empty">No talk yet.</li>`;
+    lines.innerHTML = v.chat.length ? v.chat.map(c => `<li class="${c.ai ? "ai" : ""} ${c.booth ? "booth" : ""} ${c.who === v.from.uid ? "f" : "t"}"><b>${esc(c.name)}${c.booth ? ' <span class="sd-ai">on the call</span>' : c.ai ? ' <span class="sd-ai">AI</span>' : ""}</b> ${esc(c.text)}</li>`).join("") : `<li class="empty">No talk yet.</li>`;
     if (atEnd) lines.scrollTop = lines.scrollHeight;
     $("talk").hidden = !v.canTalk;
     $("quick").innerHTML = Object.entries(QUICK).map(([k, t]) => `<button type="button" class="btn ghost sm" data-quick="${k}">${esc(t)}</button>`).join("");

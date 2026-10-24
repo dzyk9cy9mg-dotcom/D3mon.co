@@ -23,6 +23,9 @@
 // when it's accepted until round 1 ends (the players' calls are still sealed then). Everyone sees how the picks split;
 // at the end each picker gets a note saying whether they were right.
 //
+// Between two members, Kain and Abel call the match from the booth (owner, 2026-10-24): a line when round 1 starts,
+// one after each round's result (they take turns, Kain first) and one at the end, in the match's talk.
+//
 // The floor hears about it (owner, 2026-10-24): a "Showdowns" line in the main chat (and so the linked D3MON Discord)
 // when one is accepted and when it ends, with a link to watch and pick.
 //
@@ -46,7 +49,7 @@ import { isAdmin } from "../rules.js";
 import { ROUND_MS } from "./registry.js";
 import { MARKET, currentRound } from "./calls.js";
 import { paidFor, paper } from "./prices.js";
-import { smack, QUICK } from "./smack.js";
+import { smack, cast, QUICK } from "./smack.js";
 
 export const BROTHER_KEYS = ["kain", "abel"];
 const BROTHER_NAMES = { kain: "Kain", abel: "Abel" };
@@ -190,7 +193,7 @@ export class Showdowns {
       detail: rounds, score: sc, winner,
       picks, picksCloseAt, myPick: myPick ? { side: myPick, ...(done ? { right: winner === myPick } : {}) } : null,
       canPick: !!ctx.uid && !me && !myPick && this.#picksOpen(s, now),
-      chat: s.says.slice(-60).map(x => ({ who: x.who, name: this.#nameOf(x.who), ai: BROTHER_KEYS.includes(x.who), text: x.text, quick: x.quick || null, at: x.at })),
+      chat: s.says.slice(-60).map(x => ({ who: x.who, name: this.#nameOf(x.who), ai: BROTHER_KEYS.includes(x.who), ...(x.cast ? { booth: true } : {}), text: x.text, quick: x.quick || null, at: x.at })),
       me, canAnswer: me === "to" && state === "pending", canCancel: me === "from" && state === "pending",
       canTalk: !!me && ["starting", "live", "scoring", "final", "pending"].includes(state), notice: NOTICE,
     };
@@ -378,6 +381,38 @@ export class Showdowns {
     if (text) this.ledger.append([{ t: "showdown_say", sid: s.sid, who: bro, text, ...(key ? { key } : {}) }], null, at);
   }
 
+  // The booth: a brother's commentary line on a member Showdown, once per key.
+  #cast(s, brother, moment, at, key, vars = {}) {
+    if (s.says.some(x => x.key === key)) return false;
+    const recent = s.says.filter(x => x.who === brother).slice(-6).map(x => x.text);
+    const text = cast(brother, moment, { a: this.#nameOf(s.from), b: this.#nameOf(s.to), ...vars }, recent, n => Math.floor(this.rand() * n));
+    if (!text) return false;
+    this.ledger.append([{ t: "showdown_say", sid: s.sid, who: brother, text, key, cast: true }], null, at);
+    return true;
+  }
+  #booth(s, state, now) {
+    if (BROTHER_KEYS.includes(s.to) || !["live", "scoring", "final"].includes(state)) return;
+    let changed = false;
+    if (state === "live") changed = this.#cast(s, "kain", "start", now, "cast:start") || changed;
+    const rounds = this.#roundsOf(s), last = rounds.length - 1;
+    rounds.forEach((r, i) => {
+      const res = this.#result(r);
+      if (!res || s.says.some(x => x.key === `cast:round:${r}`)) return;
+      const bro = BROTHER_KEYS[i % 2 === 0 ? 0 : 1]; // Kain, then Abel, in turn
+      const f = this.#callOf(s, s.from, r)?.dir === res, t = this.#callOf(s, s.to, r)?.dir === res;
+      const name = side => this.#nameOf(s[side]);
+      if (f !== t) this.#cast(s, bro, "round", now, `cast:round:${r}`, { w: name(f ? "from" : "to"), l: name(f ? "to" : "from") });
+      else this.#cast(s, bro, f ? "both_right" : "both_wrong", now, `cast:round:${r}`);
+      if (i < last && rounds.slice(0, i + 1).every(x => this.#result(x))) {
+        const sc = this.#score(s), d = sc.from.right - sc.to.right;
+        if (d === 0) this.#cast(s, bro, "level", now, `cast:score:${r}`);
+        else this.#cast(s, bro, "lead", now, `cast:score:${r}`, { w: name(d > 0 ? "from" : "to"), l: name(d > 0 ? "to" : "from") });
+      }
+      changed = true;
+    });
+    if (changed) this.#changed(s);
+  }
+
   // Every few seconds: the brothers make their reads, react to results, and finished Showdowns are closed once.
   async tick(now = this.now()) {
     for (const s of this.byId.values()) {
@@ -416,8 +451,15 @@ export class Showdowns {
           this.#changed(s);
         });
       }
+      this.#booth(s, state, now);
       if (state === "final" && !s.end) {
         const w = this.#winner(this.#score(s));
+        if (!bro) {
+          const by = this.#roundsOf(s).length % 2 ? "abel" : "kain"; // whoever didn't call the last round
+          const name = side => this.#nameOf(s[side]);
+          if (w === null) this.#cast(s, by, "draw", now, "cast:final");
+          else this.#cast(s, by, "final", now, "cast:final", { w: name(w), l: name(w === "from" ? "to" : "from") });
+        }
         this.ledger.append([{ t: "showdown_end", sid: s.sid, winner: w }], null, now);
         if (bro) this.#brotherSay(s, w === null ? "final_draw" : w === "to" ? "final_win" : "final_lose", now, "final");
         const sc = this.#score(s), a = this.#nameOf(s.from), b = this.#nameOf(s.to);

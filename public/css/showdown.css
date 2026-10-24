@@ -73,3 +73,7 @@
 .sd-split.none i{background:transparent}
 .sd-pick .sd-acts{margin-top:12px}
 @media (prefers-reduced-motion:reduce){.sd-split i{transition:none}}
+
+/* Kain and Abel calling a member Showdown from the booth */
+.sd-lines li.booth{font-style:italic;color:var(--ink-2,#c9ced8);border-left:2px solid rgba(255,181,71,.5);padding-left:10px}
+.sd-lines li.booth b{font-style:normal}
