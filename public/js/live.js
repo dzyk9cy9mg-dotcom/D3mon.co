@@ -2,7 +2,7 @@
 // beams colliding (teal Above against rose Below, meeting where the market stands, flaring when the odds swing); the
 // members' own Up/Down votes (docs/VOTES.md) with cash out, the floor's split and badge holders' calls; every call
 // as it lands; the lock moment (the last 10 s count down, then the close); the result flooding the battle in the
-// winner's colour; last round and this hour's tournament; the chat (linked with the D3MON Discord) and the stream.
+// winner's colour; last round and this hour's tournament; the Showdowns on now; the chat (linked with the D3MON Discord) and the stream.
 // ?demo plays it on made-up data (for previews); add &fast for one-minute rounds. Reduce motion keeps it still.
 (function () {
   "use strict";
@@ -48,6 +48,14 @@
           const actions = who.slice(0, k).map((name, i) => ({ id: `v${cur}${i}`, name, action: "enter", dir: i % 3 ? "up" : "down", paid: +(0.4 + (i % 4) * 0.07).toFixed(2), at: cur + (i + 1) * 20000, badge: name === "Maya" || name === "Ghost" ? "auto" : name === "Odin" ? "admin" : null }));
           const ups = actions.filter(a => a.dir === "up").length;
           return Promise.resolve({ round: cur, mode: "locked", split: { up: ups, down: k - ups, openUp: ups, openDown: k - ups, entries: k, voters: k }, actions, mine: [], open: null, canVote: true });
+        }
+        if (path === "showdowns") {
+          const d = (r, a, b, c) => ({ round: r, endsAt: r + Q, from: a, to: b, ...c });
+          return Promise.resolve({ live: [
+            { sid: "d1", state: "live", rounds: 3, from: { name: "Maya" }, to: { name: "Kain", ai: true }, score: { from: { right: 1 }, to: { right: 0 } }, detail: [d(cur - Q, {}, {}), d(cur, { sealed: true }, { sealed: true }), d(cur + Q, null, null)] },
+            { sid: "d2", state: "live", rounds: 1, from: { name: "Rook" }, to: { name: "Ghost" }, score: { from: { right: 0 }, to: { right: 0 } }, detail: [d(cur, { sealed: true }, null)] },
+            { sid: "d3", state: "starting", rounds: 5, startsAt: cur + Q, from: { name: "Dex" }, to: { name: "Abel", ai: true }, score: { from: { right: 0 }, to: { right: 0 } }, detail: [] },
+          ] });
         }
         if (path === "tournaments") return Promise.resolve({ tournaments: [{ kind: "hourly", id: "h" }] });
         if (path.startsWith("tournaments/")) return Promise.resolve({ tournament: { settledRounds: 2, rounds: 4, standings: [["Valhalla", 2, 1], ["Kronos", 2, 1], ["Tidewater", 1, 0.5]].map(([name, correct, acc], i) => ({ rank: i + 1, correct, accuracy: acc, entrant: { name, slug: name.toLowerCase() } })) } });
@@ -236,6 +244,21 @@
     $("hour").innerHTML = t.standings.length ? t.standings.slice(0, 5).map(r => `<li><span class="r">${r.rank}</span><a href="profile?e=${encodeURIComponent(r.entrant.slug)}">${esc(r.entrant.name)}</a><span class="s">${r.correct} right · ${Math.round(r.accuracy * 100)}%</span></li>`).join("")
       : `<li class="lv-empty">No bots in this one yet. <a href="my">Join from My bots</a></li>`;
   }
+  // ---------- Showdowns on now: 1-on-1s between members, or against Kain and Abel (calls stay sealed until they close) ----------
+  function sdName(x) { return esc(x.name) + (x.ai ? ' <span class="ai">AI</span>' : ""); }
+  async function loadShowdowns() {
+    const d = await get("showdowns").catch(() => null);
+    if (!d || !d.live) return;
+    const t = now();
+    $("sdCount").textContent = d.live.length;
+    $("sdList").innerHTML = d.live.length ? d.live.slice(0, 8).map(s => {
+      const i = s.detail.findIndex(r => t >= r.round && t < r.endsAt), n = i < 0 ? 0 : i + 1;
+      const where = s.state === "starting" ? `Starts ${time(s.startsAt)}` : `Round ${n} of ${s.rounds}`;
+      const r = i < 0 ? null : s.detail[i], called = r ? [r.from, r.to].filter(c => c && !c.missed).length : 0;
+      const calls = r && s.state === "live" ? ` · ${called === 2 ? "both called" : called === 1 ? "1 called" : "no calls yet"}` : "";
+      return `<li><a href="showdown?id=${s.sid}"><span class="vs">${sdName(s.from)} <b>${s.score.from.right}–${s.score.to.right}</b> ${sdName(s.to)}</span><span class="s">${where}${calls}</span></a></li>`;
+    }).join("") : `<li class="lv-empty">No Showdowns on right now.</li>`;
+  }
   async function loadHere() { const p = await get("presence").catch(() => null); if (p) $("here").textContent = p.here > 0 ? `${p.here} here now` : ""; }
 
   // ---------- the members' votes (docs/VOTES.md) ----------
@@ -389,19 +412,22 @@
     $("chatForm").hidden = !S.me && !DEMO; $("chatSignin").hidden = !!S.me || DEMO;
     tick(); setInterval(tick, 250);
     // the live feed first: it counts us in "here now", and brings chat and stream changes at once
+    let st = 0; const sdSoon = () => { clearTimeout(st); st = setTimeout(() => loadShowdowns().catch(() => {}), 400); };
     let vt = 0; const votesSoon = () => { clearTimeout(vt); vt = setTimeout(() => loadVotes().catch(() => {}), 250); };
-    if (!DEMO) A.follow(["hall", "votes"], (type, data) => {
+    if (!DEMO) A.follow(["hall", "votes", "showdowns"], (type, data) => {
+      if (type === "showdown.updated") sdSoon();
       if (type === "hall.chat") loadChat().catch(() => {}); if (type === "hall.video") loadVideo().catch(() => {});
       if (type === "votes.badge" && data && !V.seenBadge.has(data.id)) { V.seenBadge.add(data.id); toast(data); }
       if (type === "votes.action" || type === "votes.session") votesSoon();
     }, on => { $("liveDot").classList.toggle("on", on); if (on) setTimeout(() => loadHere().catch(() => {}), 800); });
     else $("liveDot").classList.add("on");
-    await Promise.all([loadPrev(), loadHour(), loadHere(), loadChat(), loadVideo(), loadVotes(), loadRecord(), loadAdmin()].map(p => p.catch(() => {})));
+    await Promise.all([loadPrev(), loadHour(), loadHere(), loadChat(), loadVideo(), loadVotes(), loadRecord(), loadAdmin(), loadShowdowns()].map(p => p.catch(() => {})));
     setInterval(() => loadVotes().catch(() => {}), DEMO ? 4000 : 30000);
     setInterval(() => loadMarket().catch(() => {}), 5000);
     setInterval(() => loadCalls().catch(() => {}), 5000);
     setInterval(() => loadHere().catch(() => {}), 30000);
     setInterval(() => loadHour().catch(() => {}), 60000);
+    setInterval(() => loadShowdowns().catch(() => {}), 30000);
     setInterval(() => loadChat().catch(() => {}), DEMO ? 3000 : 20000);
   })();
 })();
