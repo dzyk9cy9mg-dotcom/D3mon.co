@@ -12,7 +12,11 @@
 // can copy it. Bots' and chart scripts' calls are sealed the same way (owner, 2026-10-23: people pay to subscribe
 // to these bots, so their calls mustn't be copied for free; this reverses 2026-10-17's "shown the moment they're
 // made"). During the round everyone sees only the crowd's totals for bots and scripts (roundCalls().crowd), and only
-// once at least CROWD_MIN have called, so a lone bot's call can't be read off the totals.
+// once at least CROWD_MIN have called, so a lone bot's call can't be read off the totals. Outside battles a bot's
+// calls close when the round ends, so it's revealed at the round's end. Two exceptions (owner, 2026-10-23):
+// a call made in a Battle of the Bots round (battleIds not empty) is shown live, since the battle is a show; and the
+// Capstone room shows its featured entrants' calls the moment they come in (vip.js). A bot's "why" always waits
+// for the round's end, battles included.
 // At the close every direction is revealed (round.locked), and once the round has a result each call is
 // scored (round.scored): "verified" when Kalshi settled it, "recorded by host" when HardSmoke did.
 //
@@ -107,10 +111,12 @@ export class Calls {
   view(l, ctx) {
     const now = this.now(), locksAt = closesAtOf(l), locked = now >= locksAt, e = this.registry.entrantById(l.entrantId);
     const out = { id: l.id, entrantId: l.entrantId, name: e ? e.name : null, market: l.market, round: l.round, receivedAt: l.at, intoRoundMs: l.at - l.round, via: l.via, locksAt, locked };
-    if (locked || this.#canSeeDirection(ctx, l.entrantId)) out.direction = l.dir;
+    const live = !!e && e.kind !== "caller" && (l.battleIds || []).length > 0; // Battle of the Bots: shown live
+    if (locked || live || this.#canSeeDirection(ctx, l.entrantId)) out.direction = l.dir;
     else out.sealed = true;
     if (l.why) {
-      if (locked || this.#canSeeDirection(ctx, l.entrantId)) out.why = l.why;
+      const whyAt = e && e.kind !== "caller" ? Math.max(locksAt, l.round + ROUND_MS) : locksAt; // a bot's reasoning waits for the round's end
+      if (now >= whyAt || this.#canSeeDirection(ctx, l.entrantId)) out.why = l.why;
       else out.hasWhy = true; // that there is a reason is public; the reason itself waits for the close
     }
     const r = locked ? this.metrics.result(l.market, l.round) : null;
