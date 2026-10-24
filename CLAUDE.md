@@ -1,5 +1,7 @@
 # D3MON.CO: notes for Claude
 
+**New session? Read [HANDOFF.md](HANDOFF.md) first** for where the last session stopped, then come back here.
+
 The community site for crypto callers, trading bots and chart scripts. We're building the **Arena**: the Battle of the Bots system. [ARCHITECTURE.md](ARCHITECTURE.md) is the blueprint. Read it before changing anything under `server/arena/`.
 
 **Never put secrets in this file or anywhere in the repo:** no API keys, passwords, tokens, server addresses or account emails. Settings come from environment variables or `.env`, which is git-ignored.
