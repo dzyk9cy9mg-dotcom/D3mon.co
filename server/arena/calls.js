@@ -13,7 +13,12 @@
 // At the close every direction is revealed (round.locked), and once the round has a result each call is
 // scored (round.scored): "verified" when Kalshi settled it, "recorded by host" when HardSmoke did.
 //
-// Ledger line: { t: "call", entrantId, market, round, dir, via: "bot-key" | "button", keyId?,
+// The "why" (owner, 2026-10-24: "the reasoning behind every call"): any call may carry one short reason, up to
+// 280 characters. It stays with the caller, the bot's owner and admins until the calls close, then everyone sees
+// it, for every kind (a bot's direction is public at once, but its reasoning isn't, so nobody can borrow it).
+// Like the call, it's final when made: a retry can't add or change it.
+//
+// Ledger line: { t: "call", entrantId, market, round, dir, why?, via: "bot-key" | "button", keyId?,
 //                battleIds: battles the entrant was in for that round when it called,
 //                closesAt: when calls for that round closed for this entrant (older lines: the round start) }
 import { ApiError, check } from "./validate.js";
@@ -24,6 +29,7 @@ import { paper } from "./prices.js";
 export const MARKET = "KXBTC15M";
 const MAX_AHEAD_MS = 24 * 3600 * 1000; // calls can be made up to a day ahead
 const DIRS = ["up", "down"];
+export const WHY_MAX = 280;
 const iso = ms => new Date(ms).toISOString();
 export const nextRound = now => Math.floor(now / ROUND_MS) * ROUND_MS + ROUND_MS;
 export const currentRound = now => Math.floor(now / ROUND_MS) * ROUND_MS;
@@ -46,10 +52,12 @@ const BOT_CALL = {
   market: { type: "enum", values: [MARKET], required: true },
   round: { type: "string", max: 40 },
   direction: { type: "enum", values: DIRS, required: true },
+  why: { type: "string", max: WHY_MAX },
 };
 const BUTTON_CALL = {
   direction: { type: "enum", values: DIRS, required: true },
   round: { type: "string", max: 40 },
+  why: { type: "string", max: WHY_MAX },
 };
 
 export class Calls {
@@ -99,6 +107,10 @@ export class Calls {
     const sealable = !e || e.kind === "caller"; // an unknown entrant stays sealed, to be safe
     if (locked || !sealable || this.#canSeeDirection(ctx, l.entrantId)) out.direction = l.dir;
     else out.sealed = true;
+    if (l.why) {
+      if (locked || this.#canSeeDirection(ctx, l.entrantId)) out.why = l.why;
+      else out.hasWhy = true; // that there is a reason is public; the reason itself waits for the close
+    }
     const r = locked ? this.metrics.result(l.market, l.round) : null;
     if (r) Object.assign(out, { result: r.result, correct: l.dir === r.result, verification: r.source === "kalshi" ? "verified" : "recorded by host" });
     // Kalshi's price for the side it backed when it called, and the paper result on a $1 contract. Only
@@ -197,7 +209,7 @@ export class Calls {
   }
 
   // #target has checked the clock just before this, and nothing here waits, so no call can slip past it.
-  #place(e, { raw, dir, via, keyId }, by) {
+  #place(e, { raw, dir, why, via, keyId }, by) {
     const now = this.now(), { round, closesAt } = this.#target(e, raw, now);
     const battles = this.registry.battlesFor(e.id, round), methods = battles.map(b => methodFor(b, e));
     // Bots and scripts call the way each battle they're in says: the button only where every one of them uses it.
@@ -210,6 +222,7 @@ export class Calls {
     if (prev) throw new ApiError(409, "already_called", `Already called ${prev.dir} for the round that started at ${iso(round)}, at ${iso(prev.at)}. One call per round, and it's final.`, "direction");
     const battleIds = battles.map(b => b.id);
     const line = { t: "call", entrantId: e.id, market: MARKET, round, dir, via, battleIds, closesAt };
+    if (why) line.why = why;
     if (keyId) line.keyId = keyId;
     const [saved] = this.ledger.append([line], by, now); // stamped by the same clock that checked the window
     this.#received(saved, e);
@@ -219,8 +232,8 @@ export class Calls {
   // POST /api/v1/bot/calls, authenticated with the bot's key (auth = { key, entrant }).
   fromBot(auth, body) {
     const f = check(body, BOT_CALL);
-    const { line, unchanged } = this.#place(auth.entrant, { raw: f.round, dir: f.direction, via: "bot-key", keyId: auth.key.id }, auth.key.ownerId);
-    return { ok: true, unchanged, call: { id: line.id, round: iso(line.round), direction: line.dir, receivedAt: iso(line.at), locksAt: iso(closesAtOf(line)) } };
+    const { line, unchanged } = this.#place(auth.entrant, { raw: f.round, dir: f.direction, why: f.why, via: "bot-key", keyId: auth.key.id }, auth.key.ownerId);
+    return { ok: true, unchanged, call: { id: line.id, round: iso(line.round), direction: line.dir, ...(line.why ? { why: line.why } : {}), receivedAt: iso(line.at), locksAt: iso(closesAtOf(line)) } };
   }
 
   // POST /api/v1/entrants/:id/call: a caller pressing Up or Down, or a bot's owner in a battle set to manual calls. Same lock as the bots.
@@ -231,7 +244,7 @@ export class Calls {
     if (!e || e.ownerId !== ctx.uid) throw new ApiError(404, "not_found", "That isn't one of your entrants.");
     if (e.status !== "active") throw new ApiError(409, "entrant_suspended", `${e.name} is suspended.`);
     const f = check(body, BUTTON_CALL);
-    const { line, unchanged } = this.#place(e, { raw: f.round, dir: f.direction, via: "button" }, ctx.uid);
+    const { line, unchanged } = this.#place(e, { raw: f.round, dir: f.direction, why: f.why, via: "button" }, ctx.uid);
     return { unchanged, call: this.view(line, ctx) };
   }
 

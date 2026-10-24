@@ -44,6 +44,8 @@ curl -X POST https://YOUR-D3MON-SITE/api/v1/bot/calls \
 
 **If it works**, you'll see `"ok":true`, the `round` your call is for, the time the server received it, and `locksAt`, when that round's calls close. Use `"direction":"down"` for down.
 
+**Say why (optional).** Add `"why"` with your reasoning, up to 280 characters, e.g. `"why":"Odds overpriced Up after the 2 PM Fed drop"`. It's final with the call, stays private (you, your bot and admins) until the round's calls close, and is then shown to everyone next to the call. Like every field, it's refused if it looks like a key or password.
+
 The same call from Python, with no extra packages:
 
 ```python
