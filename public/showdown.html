@@ -26,7 +26,7 @@
 
   <!-- the hub -->
   <div id="hub" hidden>
-    <p class="blurb">Call anyone out to a 1-on-1 on Bitcoin's 15-minute rounds. One call a round, in its first 5 minutes. Most right calls wins. Paper only, for fun.</p>
+    <p class="blurb">Call anyone out to a 1-on-1 on Bitcoin's 15-minute rounds. One call a round, and you pick the time rule. Most right calls wins. Paper only, for fun.</p>
 
     <section class="panel sd-form" aria-labelledby="coH">
       <h2 id="coH">Call someone out</h2>
@@ -38,6 +38,12 @@
             <label><input type="radio" name="rounds" value="3" checked> 3</label>
             <label><input type="radio" name="rounds" value="5"> 5</label>
           </fieldset>
+          <label class="field sd-rule">Calls allowed <select id="coRule" name="callMin">
+            <option value="15" selected>Any time in the round</option>
+            <option value="10">First 10 minutes</option>
+            <option value="5">First 5 minutes</option>
+            <option value="2">First 2 minutes</option>
+          </select></label>
         </div>
         <label class="field"><span>Trash talk <span class="tag">(optional)</span></span> <input id="coMsg" name="message" maxlength="140" placeholder="Your read is cooked 🔥"></label>
         <div class="sd-actions"><button class="s-amber" type="submit">Call out</button>

@@ -62,3 +62,5 @@
 .sd-fine{margin:24px 0 0;color:#6f7988;font:400 13px var(--mono,"IBM Plex Mono",monospace)}
 @media (max-width:760px){.sd-grid{grid-template-columns:1fr}.sd-board{grid-template-columns:1fr 1fr}.sd-mid{display:none}}
 @media (prefers-reduced-motion:reduce){.sd *{transition:none!important}}
+.sd-rule{flex:0 1 220px}.sd-rule select{min-height:44px}
+.sd-when{display:block;color:var(--ink-3,#8494A8);font:500 12px var(--mono,"IBM Plex Mono",monospace)}

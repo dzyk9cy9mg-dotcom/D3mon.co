@@ -33,13 +33,15 @@ describe("Showdowns", () => {
     assert.equal((await freya.post("/api/v1/showdowns", { to: "freya", rounds: 3 })).status, 400);
     assert.equal((await freya.post("/api/v1/showdowns", { to: "nobody", rounds: 3 })).status, 404);
     assert.equal((await freya.post("/api/v1/showdowns", { to: "loki", rounds: 2 })).status, 400);
-    const r = await freya.post("/api/v1/showdowns", { to: "loki", rounds: 3, message: "Your read is cooked" });
+    assert.equal((await freya.post("/api/v1/showdowns", { to: "loki", rounds: 3, callMin: 7 })).status, 400, "the time rule is any time, 10, 5 or 2 minutes");
+    const r = await freya.post("/api/v1/showdowns", { to: "loki", rounds: 3, message: "Your read is cooked", callMin: 5 });
     assert.equal(r.status, 201, JSON.stringify(r.json));
     duel = r.json.showdown;
     assert.deepEqual([duel.state, duel.from.username, duel.to.username, duel.message], ["pending", "freya", "loki", "Your read is cooked"]);
     assert.equal((await freya.post("/api/v1/showdowns", { to: "loki", rounds: 1 })).status, 409, "one open Showdown per pair");
     const notes = (await loki.get("/api/v1/notifications")).json.notes;
-    assert.match(notes[0].text, /Freya called you out to a 3-round Showdown/);
+    assert.match(notes[0].text, /Freya called you out to a 3-round Showdown \(calls close 5 minutes into each round\)/);
+    assert.equal(duel.callMin, 5);
     assert.equal(notes[0].link, `showdown?id=${duel.sid}`);
     assert.equal((await loki.get("/api/v1/showdowns")).json.incoming[0].sid, duel.sid);
   });
@@ -66,6 +68,7 @@ describe("Showdowns", () => {
     assert.equal((await loki.post(`/api/v1/showdowns/${duel.sid}/call`, { dir: "up" })).status, 409, "calls close 5 minutes in");
     const v = await view(guest, duel.sid);
     assert.deepEqual([v.detail[0].from.dir, v.detail[0].to.dir], ["up", "down"], "everyone sees both once calls close");
+    assert.equal(v.detail[0].from.intoMs, MIN, "when each call was made shows");
   });
 
   test("score: most right calls wins (a missed call counts as wrong), then it's closed once with a note", async () => {
@@ -133,6 +136,20 @@ describe("Showdowns", () => {
     v = await view(guest, bro.sid);
     assert.deepEqual([v.state, v.detail[0].to.dir, v.winner], ["final", "up", "to"], "Kain rode up and won");
     assert.ok(v.chat.filter(x => x.who === "kain").length >= 4, "he talked through it: start, call, the round, the end");
+  });
+
+  test("by default calls are open the whole round (owner, 2026-10-23), sealed until the round ends", async () => {
+    at(cur + 80 * Q);
+    const s0 = (await odin.post("/api/v1/showdowns", { to: "freya", rounds: 1 })).json.showdown;
+    assert.deepEqual([s0.callMin, s0.anyTime], [15, true]);
+    await freya.post(`/api/v1/showdowns/${s0.sid}/answer`, { accept: true });
+    const R = cur + 81 * Q;
+    at(R + 14 * MIN);
+    assert.equal((await odin.post(`/api/v1/showdowns/${s0.sid}/call`, { dir: "up" })).status, 200, "14 minutes in is fine");
+    const v = await view(freya, s0.sid);
+    assert.deepEqual([v.detail[0].from.sealed, v.detail[0].from.intoMs], [true, 14 * MIN], "sealed, but when it came in shows");
+    at(R + Q);
+    assert.equal((await view(freya, s0.sid)).detail[0].from.dir, "up", "shown once the round is over");
   });
 
   test("limits: 3 open at a time", async () => {

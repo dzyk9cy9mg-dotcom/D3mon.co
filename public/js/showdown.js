@@ -12,6 +12,8 @@
   const cents = x => `${x >= 0 ? "+" : "−"}${Math.abs(Math.round(x * 100))}¢`;
   const err = t => { $("err").textContent = t || ""; };
   const who = p => p.ai ? `${esc(p.name)} <span class="sd-ai">AI</span>` : p.username ? `<a href="profile?u=${encodeURIComponent(p.username)}">${esc(p.name)}</a>` : esc(p.name);
+  const rule = v => v.anyTime ? "call any time in the round" : `calls close ${v.callMin} min into each round`;
+  const into = ms => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")} in`;
   const STATE = { pending: "Waiting for an answer", starting: "Starts next round", live: "Live", scoring: "Waiting for the last result", final: "Final", declined: "Declined", expired: "Expired", cancelled: "Taken back" };
 
   async function act(fn) {
@@ -24,7 +26,7 @@
     const sc = v.score, scored = v.detail.some(r => r.result);
     return `<div class="sd-card s-${esc(v.state)}"><a class="sd-card-main" href="showdown?id=${esc(v.sid)}">
       <span class="sd-card-vs"><b>${esc(v.from.name)}</b> <span class="sd-v">vs</span> <b>${esc(v.to.name)}</b>${v.to.ai ? ' <span class="sd-ai">AI</span>' : ""}</span>
-      <span class="meta">${v.rounds} round${v.rounds > 1 ? "s" : ""} · ${esc(STATE[v.state] || v.state)}${scored ? ` · ${sc.from.right}–${sc.to.right}` : ""}</span>
+      <span class="meta">${v.rounds} round${v.rounds > 1 ? "s" : ""} · ${esc(rule(v))} · ${esc(STATE[v.state] || v.state)}${scored ? ` · ${sc.from.right}–${sc.to.right}` : ""}</span>
       ${v.message ? `<span class="sd-card-msg">“${esc(v.message)}”</span>` : ""}</a>${extra}</div>`;
   }
   async function loadHub() {
@@ -44,14 +46,14 @@
     const v = S.sd, now = A.serverNow(), mine = v.me;
     $("match").hidden = false;
     document.title = `${v.from.name} vs ${v.to.name} · Showdown · D3MON`;
-    $("state").textContent = `${v.rounds}-round Showdown · ${STATE[v.state] || v.state}`;
+    $("state").textContent = `${v.rounds}-round Showdown · ${rule(v)} · ${STATE[v.state] || v.state}`;
     $("state").className = `sd-state s-${v.state}`;
     $("vsH").innerHTML = `${who(v.from)} <span class="sd-v">vs</span> ${who(v.to)}`;
     $("msg").hidden = !v.message; $("msg").textContent = v.message ? `“${v.message}” · ${v.from.name}` : "";
     // answering, or waiting
     const ans = $("answer");
     ans.hidden = !["pending"].includes(v.state);
-    ans.innerHTML = v.canAnswer ? `<p>${esc(v.from.name)} called you out. Answer by ${esc(time(v.answerBy))}.</p><div class="sd-acts"><button class="s-amber" data-ans="${esc(v.sid)}|1">Accept</button><button class="btn ghost" data-ans="${esc(v.sid)}|0">Decline</button><button class="btn ghost" data-ans="${esc(v.sid)}|block">Decline and block</button></div>`
+    ans.innerHTML = v.canAnswer ? `<p>${esc(v.from.name)} called you out: ${v.rounds} round${v.rounds > 1 ? "s" : ""}, ${esc(rule(v))}. Answer by ${esc(time(v.answerBy))}.</p><div class="sd-acts"><button class="s-amber" data-ans="${esc(v.sid)}|1">Accept</button><button class="btn ghost" data-ans="${esc(v.sid)}|0">Decline</button><button class="btn ghost" data-ans="${esc(v.sid)}|block">Decline and block</button></div>`
       : v.canCancel ? `<p>Waiting for ${esc(v.to.name)} to answer (until ${esc(time(v.answerBy))}).</p><button class="btn ghost" data-cancel="${esc(v.sid)}">Take it back</button>`
       : `<p>Waiting for ${esc(v.to.name)} to answer.</p>`;
     // the score
@@ -61,16 +63,16 @@
     // this round
     const r = v.detail.find(x => now >= x.round && now < x.endsAt);
     $("nowSec").hidden = !(v.state === "live" && r) && v.state !== "starting";
-    if (v.state === "starting") { $("nowNote").textContent = `Round 1 starts at ${time(v.startsAt)}. One call a round, in its first ${v.callMin} minutes.`; $("callBtns").hidden = true; }
+    if (v.state === "starting") { $("nowNote").textContent = `Round 1 starts at ${time(v.startsAt)}. One call a round; ${rule(v)}.`; $("callBtns").hidden = true; }
     else if (r) {
       const myCall = mine ? r[mine] : null, open = now < r.closesAt;
       $("callBtns").hidden = !(mine && open && !(myCall && myCall.dir));
-      $("nowNote").textContent = open ? (myCall && myCall.dir ? `You called ${myCall.dir === "up" ? "Up" : "Down"}. Calls close at ${time(r.closesAt)}.` : `Calls close at ${time(r.closesAt)}. One call, final when made.`) : "Calls are closed. Sweat it out.";
+      $("nowNote").textContent = open ? (myCall && myCall.dir ? `You called ${myCall.dir === "up" ? "Up" : "Down"} at ${into(myCall.intoMs)}. ${v.anyTime ? "Their call shows when the round ends." : `Calls close at ${time(r.closesAt)}.`}` : v.anyTime ? `Call any time until ${time(r.endsAt)}. One call, final when made.` : `Calls close at ${time(r.closesAt)}. One call, final when made.`) : `Calls are closed for this round.${v.detail.indexOf(r) < v.detail.length - 1 ? ` Next round opens at ${time(r.endsAt)}.` : " Sweat it out."}`;
     }
     // the rounds
     $("thFrom").textContent = v.from.name; $("thTo").textContent = v.to.name;
-    const cell = c => !c ? `<span class="sd-dash">–</span>` : c.missed ? `<span class="sd-dash">missed</span>` : c.sealed ? `<span class="sd-dash">sealed</span>`
-      : `${c.right === true ? '<b class="ok">✓</b> ' : c.right === false ? '<b class="no">✗</b> ' : ""}<span class="${c.dir === "up" ? "up" : "dn"}">${c.dir === "up" ? "▲ Up" : "▼ Down"}</span>${c.paid != null ? ` <small>@${Math.round(c.paid * 100)}¢</small>` : ""}`;
+    const cell = c => !c ? `<span class="sd-dash">–</span>` : c.missed ? `<span class="sd-dash">missed</span>` : c.sealed ? `<span class="sd-dash">sealed</span> <small class="sd-when">${into(c.intoMs)}</small>`
+      : `${c.right === true ? '<b class="ok">✓</b> ' : c.right === false ? '<b class="no">✗</b> ' : ""}<span class="${c.dir === "up" ? "up" : "dn"}">${c.dir === "up" ? "▲ Up" : "▼ Down"}</span>${c.paid != null ? ` <small>@${Math.round(c.paid * 100)}¢</small>` : ""} <small class="sd-when">${into(c.intoMs)}</small>`;
     $("rounds").innerHTML = v.detail.length ? v.detail.map((x, i) => `<tr><td>${i + 1} · ${esc(time(x.round))}</td><td>${cell(x.from)}</td><td>${cell(x.to)}</td><td>${x.result ? `<span class="${x.result === "up" ? "up" : "dn"}">${x.result === "up" ? "▲ Up" : "▼ Down"}</span>` : `<span class="sd-dash">${now < x.endsAt ? "…" : "waiting"}</span>`}</td></tr>`).join("")
       : `<tr><td colspan="4" class="empty">The rounds appear once it's accepted.</td></tr>`;
     // the talk
@@ -118,8 +120,8 @@
     e.preventDefault();
     if (!S.me) { location.href = "login"; return; }
     act(async () => {
-      const rounds = +new FormData($("coForm")).get("rounds"), message = $("coMsg").value.trim();
-      const r = await api("POST", "showdowns", { to: $("coTo").value.trim(), rounds, ...(message ? { message } : {}) });
+      const rounds = +new FormData($("coForm")).get("rounds"), callMin = +$("coRule").value, message = $("coMsg").value.trim();
+      const r = await api("POST", "showdowns", { to: $("coTo").value.trim(), rounds, callMin, ...(message ? { message } : {}) });
       location.href = `showdown?id=${r.showdown.sid}`;
     });
   });
