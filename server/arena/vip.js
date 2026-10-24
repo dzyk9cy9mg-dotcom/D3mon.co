@@ -81,7 +81,7 @@ export class Vip {
       const l = this.calls.latest(e.id, MARKET, round);
       if (!l) continue;
       const v = this.calls.view(l, ctx);
-      if (v.sealed) { delete v.sealed; v.direction = l.dir; v.early = true; } // sealed for everyone else
+      if (v.sealed && e.kind === "caller") { delete v.sealed; v.direction = l.dir; v.early = true; } // featured callers only; bots stay sealed for their subscribers (owner, 2026-10-23)
       calls.push({ ...v, kind: e.kind, slug: e.slug });
     }
     calls.sort((a, b) => b.receivedAt - a.receivedAt);

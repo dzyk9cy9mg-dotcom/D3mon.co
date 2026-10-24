@@ -9,7 +9,10 @@
 //
 // Callers' calls (chart readers, people) are sealed until the calls close: everyone sees that a call
 // arrived and when, but its direction is shown only to the caller and admins until then, so nobody
-// can copy it. Bots' and chart scripts' calls are shown the moment they're made (owner, 2026-10-17).
+// can copy it. Bots' and chart scripts' calls are sealed the same way (owner, 2026-10-23: people pay to subscribe
+// to these bots, so their calls mustn't be copied for free; this reverses 2026-10-17's "shown the moment they're
+// made"). During the round everyone sees only the crowd's totals for bots and scripts (roundCalls().crowd), and only
+// once at least CROWD_MIN have called, so a lone bot's call can't be read off the totals.
 // At the close every direction is revealed (round.locked), and once the round has a result each call is
 // scored (round.scored): "verified" when Kalshi settled it, "recorded by host" when HardSmoke did.
 //
@@ -28,6 +31,7 @@ import { paper } from "./prices.js";
 
 export const MARKET = "KXBTC15M";
 const MAX_AHEAD_MS = 24 * 3600 * 1000; // calls can be made up to a day ahead
+export const CROWD_MIN = 3;
 const DIRS = ["up", "down"];
 export const WHY_MAX = 280;
 const iso = ms => new Date(ms).toISOString();
@@ -99,13 +103,11 @@ export class Calls {
     return !!(e && ctx.uid && e.ownerId === ctx.uid);
   }
 
-  // One call as this reader may see it. A caller's call is sealed (no direction) until its calls close,
-  // unless it's theirs; a bot's or script's is shown straight away.
+  // One call as this reader may see it: sealed (no direction) until its calls close, unless it's theirs.
   view(l, ctx) {
     const now = this.now(), locksAt = closesAtOf(l), locked = now >= locksAt, e = this.registry.entrantById(l.entrantId);
     const out = { id: l.id, entrantId: l.entrantId, name: e ? e.name : null, market: l.market, round: l.round, receivedAt: l.at, intoRoundMs: l.at - l.round, via: l.via, locksAt, locked };
-    const sealable = !e || e.kind === "caller"; // an unknown entrant stays sealed, to be safe
-    if (locked || !sealable || this.#canSeeDirection(ctx, l.entrantId)) out.direction = l.dir;
+    if (locked || this.#canSeeDirection(ctx, l.entrantId)) out.direction = l.dir;
     else out.sealed = true;
     if (l.why) {
       if (locked || this.#canSeeDirection(ctx, l.entrantId)) out.why = l.why;
@@ -152,7 +154,19 @@ export class Calls {
     }
     calls.sort((a, b) => b.receivedAt - a.receivedAt);
     const s = this.metrics.result(MARKET, r);
-    return { market: MARKET, round: r, endsAt: r + ROUND_MS, result: s && this.now() >= r + ROUND_MS ? s.result : null, calls };
+    return { market: MARKET, round: r, endsAt: r + ROUND_MS, result: s && this.now() >= r + ROUND_MS ? s.result : null, crowd: this.crowd(r), calls };
+  }
+
+  // The bots' and chart scripts' calls this round as totals only: { called, up, down } (up and down are null until
+  // at least CROWD_MIN have called). Callers aren't counted: their calls stay wholly sealed until the close.
+  crowd(round) {
+    const latest = new Map();
+    for (const l of this.byRound.get(`${MARKET}|${round}`) || []) {
+      const e = this.registry.entrantById(l.entrantId);
+      if (e && e.status === "active" && e.kind !== "caller") latest.set(l.entrantId, l.dir);
+    }
+    const dirs = [...latest.values()], show = dirs.length >= CROWD_MIN;
+    return { called: dirs.length, up: show ? dirs.filter(d => d === "up").length : null, down: show ? dirs.filter(d => d === "down").length : null, min: CROWD_MIN };
   }
 
   // The live battle board: every round of the battle with each entrant's call and the result.
