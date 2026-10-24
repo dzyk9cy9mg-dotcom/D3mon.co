@@ -1,4 +1,4 @@
-// Abel and Kain (owner, 2026-10-24): two AI characters members play against, for fun. Every round, once it ends,
+// Kain and Abel (owner, 2026-10-24): two AI characters members play against, for fun. Every round, once it ends,
 // each brother takes the call of a different bot that called that round through the bot API (bots and chart
 // scripts with a key), picked at random, and that call is shown as his. Members make their own calls during the
 // round with the floor's Up/Down votes, and see how they do against the brothers. The brothers' calls only exist
@@ -23,7 +23,7 @@ export const BROTHERS = [
   { key: "abel", name: "Abel", tagline: "The researcher. Reads the world." },
   { key: "kain", name: "Kain", tagline: "The chart man. Reads the market." },
 ];
-export const NOTICE = "Abel and Kain are AI characters. Their calls come from bots on D3MON. Paper only, for fun. Not financial advice. D3MON never trades.";
+export const NOTICE = "Kain and Abel are AI characters. Their calls come from bots on D3MON. Paper only, for fun. Not financial advice. D3MON never trades.";
 const PERIODS = ["daily", "weekly", "monthly"];
 const RECENT = 12;
 const r4 = x => Math.round(x * 10000) / 10000;

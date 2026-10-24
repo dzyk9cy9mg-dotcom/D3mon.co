@@ -1,4 +1,4 @@
-/* /brothers: the Brothers' Desk. You, Abel and Kain side by side. */
+/* /brothers: the Brothers' Desk. You, Kain and Abel side by side. */
 .bro{max-width:980px}
 .bro-cast,.bro-three,.bro-score{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .bro-cast{margin:22px 0}

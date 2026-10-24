@@ -88,7 +88,7 @@ export function createArena({ store, accounts, cfg }) {
   calendar.start();
   const results = new BattleResults({ registry, calls, metrics });
   const votes = new Votes({ ledger, metrics, prices, registry, vip, feed, accounts, userName });
-  // Abel and Kain: each takes a random bot's call once a round ends, for members to play against (paper, for fun).
+  // Kain and Abel: each takes a random bot's call once a round ends, for members to play against (paper, for fun).
   const brothers = new Brothers({ ledger, calls, metrics, prices, registry, votes, feed });
   if (cfg.brothers !== false) brothers.start();
   const billing = new Billing({ ledger, registry, vip, feed, accounts, key: cfg.stripeKey, webhookSecret: cfg.stripeWebhookSecret, api: cfg.stripeApi, siteUrl: cfg.siteUrl });

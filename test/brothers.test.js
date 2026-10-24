@@ -1,4 +1,4 @@
-// Abel and Kain (owner, 2026-10-24): once a round ends, each brother takes a different random bot's call from that
+// Kain and Abel (owner, 2026-10-24): once a round ends, each brother takes a different random bot's call from that
 // round (bot API calls only), shown as his own; which bot is for admins only. Members play against them with the
 // floor's votes and see the standings side by side.
 import { describe, test, before, after } from "node:test";
