@@ -446,6 +446,8 @@ export async function createApp(cfg = loadConfig()) {
   }
 
   const server = http.createServer((req, res) => void handle(req, res));
+  // Room for an admin to upload a brother's intro video on a slow home connection (Node's default is 5 minutes).
+  server.requestTimeout = 30 * 60 * 1000;
 
   function shutdown() {
     store.saveNow();

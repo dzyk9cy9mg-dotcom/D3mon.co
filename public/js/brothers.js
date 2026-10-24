@@ -27,6 +27,45 @@
       ${done.length ? `<p class="meta">Cashed out ${done.length}× this round${total ? ` · ${signed(total)}` : ""}</p>` : ""}`;
   }
 
+  // ---------- the intro videos (admins upload a file for each brother)
+  const sending = {}; // brother -> "Uploading 40%" while a file goes up
+  function intros() {
+    const list = [["kain", "Kain", "introKain"], ["abel", "Abel", "introAbel"]];
+    const vids = Object.fromEntries(S.data.brothers.map(b => [b.key, b.video]));
+    $("intros").hidden = !S.admin && !list.some(([k]) => vids[k]);
+    $("intros").classList.toggle("one", !S.admin && list.filter(([k]) => vids[k]).length === 1);
+    for (const [k, name, id] of list) {
+      const v = vids[k], box = $(id);
+      const want = v ? v.url : "", now = box.dataset.src || "";
+      if (want === now && box.dataset.admin === String(S.admin) && !sending[k] && box.dataset.sending !== "1") continue;
+      box.dataset.src = want; box.dataset.admin = String(S.admin); box.dataset.sending = sending[k] ? "1" : "";
+      box.hidden = !v && !S.admin;
+      box.innerHTML = `<figcaption class="bro-name">${name} <span class="bro-ai">AI</span></figcaption>
+        ${v ? `<video controls playsinline preload="metadata" src="${esc(v.url)}" aria-label="${name}'s intro video"></video>`
+          : `<div class="bro-novid">${name}'s intro video goes here.</div>`}
+        ${S.admin ? `<div class="bro-up-ctl"><label class="btn ghost sm">${v ? "Replace video" : "Upload a video"}<input type="file" accept="video/mp4,video/webm,video/quicktime" data-upload="${k}"></label>
+          ${v ? `<button type="button" class="btn ghost sm" data-unvid="${k}">Remove</button>` : ""}
+          <p class="meta" id="upNote-${k}">${esc(sending[k] || "MP4 or WebM, up to 200 MB. Admins only.")}</p></div>` : ""}`;
+    }
+  }
+  function upload(k, file) {
+    const note = t => { sending[k] = t; const el = $(`upNote-${k}`); if (el) el.textContent = t; };
+    if (file.size > 200 * 1024 * 1024) { err("That video is over 200 MB. Make a smaller copy and try again."); return; }
+    err(""); note("Uploading 0%");
+    const x = new XMLHttpRequest();
+    x.open("PUT", `api/v1/brothers/video/${k}`);
+    x.setRequestHeader("content-type", file.type || "video/mp4");
+    x.upload.onprogress = e => { if (e.lengthComputable) note(`Uploading ${Math.floor(e.loaded / e.total * 100)}%`); };
+    x.onload = () => {
+      delete sending[k];
+      if (x.status >= 200 && x.status < 300) load();
+      else { let m = "The upload didn't work."; try { m = JSON.parse(x.responseText).error.message; } catch (e) {} err(m); load(); }
+    };
+    x.onerror = () => { delete sending[k]; err("The upload stopped. Check your connection and try again."); load(); };
+    x.send(file);
+  }
+  document.addEventListener("change", e => { const k = e.target.dataset && e.target.dataset.upload; if (k && e.target.files[0]) upload(k, e.target.files[0]); });
+
   // ---------- recent rounds
   function mark(c) {
     if (!c) return `<span class="bro-dash">sat out</span>`;
@@ -73,13 +112,15 @@
       $("notice").textContent = d.notice;
       $("roundTime").textContent = `${time(d.now.round)} to ${time(d.now.endsAt)} · Calls stay open all round`;
       if (!d.on) err("Kain and Abel are taking a break right now. You can still make your call.");
-      youSlot(); recent(); score(); clock();
+      youSlot(); intros(); recent(); score(); clock();
     } catch (e) { err(e.message); }
   }
 
   document.addEventListener("click", async e => {
     const p = e.target.closest("[data-p]");
     if (p) { S.period = p.dataset.p; for (const b of $("periods").children) { const on = b === p; b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on)); } score(); return; }
+    const un = e.target.closest("[data-unvid]")?.dataset.unvid;
+    if (un) { if (confirm("Take this video down?")) { try { await api("DELETE", `brothers/video/${un}`); load(); } catch (x) { err(x.message); } } return; }
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (!act || S.busy) return;
     S.busy = true; err("");
@@ -93,9 +134,10 @@
   (async () => {
     await A.syncClock?.().catch(() => {});
     S.me = await A.session();
+    S.admin = !!S.me && (S.me.role === "admin" || S.me.role === "owner");
     await load();
     setInterval(clock, 1000);
     setInterval(() => api("GET", "market").then(m => { S.market = m; if (!(S.round && S.round.open)) youSlot(); }).catch(() => {}), 10000);
-    A.follow(["brothers", "votes"], type => { if (type === "brothers.called") load(); }, () => {});
+    A.follow(["brothers", "votes"], type => { if (type === "brothers.called" || type === "brothers.video") load(); }, () => {});
   })();
 })();

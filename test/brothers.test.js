@@ -145,4 +145,30 @@ describe("the brothers", () => {
     brosAt(Date.now());
     callsAt(Date.now());
   });
+
+  test("intro videos: admins upload a real video file for each brother, everyone can play it, admins take it down", async () => {
+    const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from("ftypisom"), Buffer.alloc(4000, 7)]);
+    const put = (who, key, bytes) => fetch(`${srv.base}/api/v1/brothers/video/${key}`, { method: "PUT", headers: { "content-type": "video/mp4", ...(who.cookie ? { cookie: who.cookie } : {}) }, body: bytes });
+    assert.equal((await put(guest, "kain", mp4)).status, 401);
+    assert.equal((await put(freya, "kain", mp4)).status, 403, "members can't");
+    assert.equal((await put(hs, "seth", mp4)).status, 404, "only Kain and Abel");
+    assert.equal((await put(hs, "kain", Buffer.alloc(4000, 1))).status, 400, "not a video");
+    const r = await put(hs, "kain", mp4);
+    assert.equal(r.status, 200);
+    const v = (await guest.get("/api/v1/brothers")).json.brothers;
+    const kain = v.find(b => b.key === "kain");
+    assert.equal(kain.video.type, "video/mp4");
+    assert.equal(v.find(b => b.key === "abel").video, null);
+    const got = await fetch(`${srv.base}/${kain.video.url}`, { headers: { range: "bytes=0-11" } });
+    assert.equal(got.status, 206, "served in pieces, so phones can play it");
+    assert.equal(Buffer.from(await got.arrayBuffer()).subarray(4, 8).toString(), "ftyp");
+    assert.equal((await fetch(`${srv.base}/api/v1/brothers/video/abel`)).status, 404);
+    const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(3000, 2)]);
+    assert.equal((await put(hs, "kain", webm)).status, 200, "replacing it");
+    assert.equal((await guest.get("/api/v1/brothers")).json.brothers.find(b => b.key === "kain").video.type, "video/webm");
+    assert.equal((await freya.req("DELETE", "/api/v1/brothers/video/kain")).status, 403);
+    assert.equal((await hs.req("DELETE", "/api/v1/brothers/video/kain")).status, 200);
+    assert.equal((await guest.get("/api/v1/brothers")).json.brothers.find(b => b.key === "kain").video, null);
+    assert.equal((await fetch(`${srv.base}/api/v1/brothers/video/kain`)).status, 404);
+  });
 });

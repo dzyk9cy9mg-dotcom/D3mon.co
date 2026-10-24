@@ -1,6 +1,6 @@
 // /api/v1: the Arena's JSON API and live feed (ARCHITECTURE.md §9). It's independent of the page's
 // own /api/db runtime, so any front end, including the planned 3D site, can be built on it.
-import { readJson, sendJson, clientIp, RateLimiter } from "../http.js";
+import { readJson, sendJson, clientIp, RateLimiter, serveFile } from "../http.js";
 import { isAdmin } from "../rules.js";
 import { ApiError } from "./validate.js";
 import { Feed } from "./feed.js";
@@ -89,7 +89,7 @@ export function createArena({ store, accounts, cfg }) {
   const results = new BattleResults({ registry, calls, metrics });
   const votes = new Votes({ ledger, metrics, prices, registry, vip, feed, accounts, userName });
   // Kain and Abel: each takes a random bot's call once a round ends, for members to play against (paper, for fun).
-  const brothers = new Brothers({ ledger, calls, metrics, prices, registry, votes, feed });
+  const brothers = new Brothers({ ledger, calls, metrics, prices, registry, votes, feed, dir: cfg.dataDir ? path.join(cfg.dataDir, "brothers") : null });
   if (cfg.brothers !== false) brothers.start();
   const billing = new Billing({ ledger, registry, vip, feed, accounts, key: cfg.stripeKey, webhookSecret: cfg.stripeWebhookSecret, api: cfg.stripeApi, siteUrl: cfg.siteUrl });
   const members = new Members({ ledger, accounts });
@@ -258,6 +258,13 @@ export function createArena({ store, accounts, cfg }) {
     if ((m = route.match(/^POST \/voice\/([a-z]{1,20})\/(join|beat|leave|kick|signal)$/))) { if (!["beat", "signal"].includes(m[2])) writer(); return ok(voice[m[2]](ctx, m[1], await readJson(req, 64 * 1024))); } // signals have their own limit
     if (route === "GET /brothers") return ok(brothers.view(ctx));
     if (route === "GET /brothers/settings") return ok(brothers.settings(ctx));
+    if ((m = route.match(/^(?:GET|HEAD) \/brothers\/video\/([a-z]{2,12})$/))) {
+      const f = brothers.videoFile(m[1]);
+      if (!f || !serveFile(req, res, f, { "cache-control": "public, max-age=300" })) throw new ApiError(404, "not_found", "No video yet.");
+      return true;
+    }
+    if ((m = route.match(/^PUT \/brothers\/video\/([a-z]{2,12})$/))) { writer(); return ok(await brothers.saveVideo(ctx, m[1], req)); }
+    if ((m = route.match(/^DELETE \/brothers\/video\/([a-z]{2,12})$/))) { writer(); return ok(brothers.removeVideo(ctx, m[1])); }
     if (route === "PUT /brothers/settings") { writer(); return ok(brothers.setSettings(ctx, await body())); }
     // Member votes (docs/VOTES.md)
     if (route === "GET /votes/round") return ok(votes.roundView(ctx, url.searchParams.get("session") || "live"));
