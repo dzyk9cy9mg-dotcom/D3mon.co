@@ -1,5 +1,5 @@
 // /showdown: the Showdowns hub (call out, answer, yours, live ones) and, with ?id=, one Showdown: the score, this
-// round's call, the rounds and the talk (Kain and Abel answer quick replies). A thin client over /api/v1/showdowns.
+// round's call, who the spectators pick, the rounds and the talk (Kain and Abel answer quick replies). A thin client over /api/v1/showdowns.
 (function () {
   "use strict";
   const A = window.Arena, { api, esc } = A;
@@ -60,6 +60,18 @@
     const sc = v.score, lead = v.winner || (sc.from.right > sc.to.right ? "from" : sc.to.right > sc.from.right ? "to" : null);
     $("board").innerHTML = ["from", "to"].map(k => `<div class="sd-side ${lead === k ? "lead" : ""} ${v.winner === k ? "won" : ""}"><p class="sd-name">${who(v[k])}${mine === k ? ' <span class="sd-you">you</span>' : ""}</p>
       <p class="sd-big">${sc[k].right}<small> right</small></p><p class="meta">Paper ${cents(sc[k].paper)}</p>${v.winner === k ? '<p class="sd-crown">Winner</p>' : ""}</div>`).join(`<div class="sd-mid">${v.state === "final" && !v.winner ? "Draw" : "vs"}</div>`);
+    // spectators' picks: who'll win, once and final, until round 1 ends
+    const pk = v.picks || { from: 0, to: 0 }, total = pk.from + pk.to;
+    $("pickSec").hidden = !(["starting", "live", "scoring", "final"].includes(v.state) && (total || v.canPick || v.myPick));
+    const pct = k => total ? Math.round(pk[k] / total * 100) : 50;
+    $("pickF").parentElement.classList.toggle("none", !total); $("pickF").style.width = `${pct("from")}%`; $("pickT").style.width = `${100 - pct("from")}%`;
+    $("pickWhen").textContent = v.picksCloseAt && now < v.picksCloseAt ? `Picks close ${time(v.picksCloseAt)}` : "Picks closed";
+    const split = total ? `${esc(v.from.name)} ${pct("from")}% · ${esc(v.to.name)} ${100 - pct("from")}% (${total} pick${total > 1 ? "s" : ""})` : "No picks yet. Be the first.";
+    const mp = v.myPick, mpName = mp ? esc(v[mp.side].name) : "";
+    $("pickNote").innerHTML = mp ? `${split}<br>You picked <b>${mpName}</b>.${mp.right === true ? " You called it." : mp.right === false ? (v.winner ? " Not this time." : " It was a draw.") : ""}`
+      : !S.me && v.picksCloseAt && now < v.picksCloseAt ? `${split}<br><a href="login">Sign in</a> to pick a winner.` : split;
+    $("pickBtns").hidden = !v.canPick;
+    if (v.canPick) $("pickBtns").innerHTML = ["from", "to"].map(k => `<button type="button" class="btn ghost" data-pick="${k}">${esc(v[k].name)} wins</button>`).join("");
     // this round
     const r = v.detail.find(x => now >= x.round && now < x.endsAt);
     $("nowSec").hidden = !(v.state === "live" && r) && v.state !== "starting";
@@ -104,13 +116,14 @@
 
   // ---------- actions
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-ans],[data-cancel],[data-call],[data-quick],[data-bro],[data-rematch]");
+    const t = e.target.closest("[data-ans],[data-cancel],[data-call],[data-quick],[data-bro],[data-rematch],[data-pick]");
     if (!t) return;
     if (t.dataset.bro) { $("coTo").value = t.dataset.bro; $("coMsg").focus(); return; }
     act(async () => {
       if (t.dataset.ans) { const [id, a] = t.dataset.ans.split("|"); await api("POST", `showdowns/${id}/answer`, { accept: a === "1", ...(a === "block" ? { block: true } : {}) }); }
       else if (t.dataset.cancel) await api("POST", `showdowns/${t.dataset.cancel}/cancel`);
       else if (t.dataset.call) S.sd = (await api("POST", `showdowns/${sid}/call`, { dir: t.dataset.call })).showdown;
+      else if (t.dataset.pick) S.sd = (await api("POST", `showdowns/${sid}/pick`, { side: t.dataset.pick })).showdown;
       else if (t.dataset.quick) S.sd = (await api("POST", `showdowns/${sid}/say`, { quick: t.dataset.quick })).showdown;
       else if (t.dataset.rematch) { const [to, rounds] = t.dataset.rematch.split("|"); const r = await api("POST", "showdowns", { to, rounds: +rounds }); location.href = `showdown?id=${r.showdown.sid}`; return; }
       if (sid) await loadMatch(); else await loadHub();

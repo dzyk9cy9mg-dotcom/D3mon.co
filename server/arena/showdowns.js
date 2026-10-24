@@ -19,6 +19,10 @@
 // favours, Abel the underdog; a coin toss when there's no price), and talk smack through the match. They never use
 // a bot's call here, so no bot owner's call is ever exposed by a Showdown.
 //
+// Spectator picks (owner, 2026-10-24): any signed-in member who isn't playing picks who'll win, once and final, from
+// when it's accepted until round 1 ends (the players' calls are still sealed then). Everyone sees how the picks split;
+// at the end each picker gets a note saying whether they were right.
+//
 // Players can talk in the match: a short line, or a quick reply that the brother answers. Limits: CHALLENGES_PER_DAY
 // new call outs per member, OPEN_MAX open Showdowns each, one open Showdown per pair, and a member can block
 // someone from calling them out.
@@ -30,6 +34,7 @@
 //   { t: "showdown_cancel", sid }
 //   { t: "showdown_call", sid, who, round, dir, paid, source }    who = a uid, or "kain" / "abel"
 //   { t: "showdown_say", sid, who, text, quick?, key? }           key: a brother's line for a moment, said once
+//   { t: "showdown_pick", sid, uid, side }                       a spectator's pick: side = "from" or "to"
 //   { t: "showdown_end", sid, winner }                            winner = "from", "to" or null (a draw)
 //   { t: "showdown_block", uid, target, on }
 import crypto from "node:crypto";
@@ -77,7 +82,7 @@ export class Showdowns {
   // ---------- the index
   #index(l) {
     if (l.t === "showdown") {
-      this.byId.set(l.sid, { sid: l.sid, from: l.from, to: l.to, rounds: l.rounds, message: l.message || "", callMin: l.callMin || OLD_RULE, at: l.at, reply: null, cancel: null, calls: [], says: [], end: null });
+      this.byId.set(l.sid, { sid: l.sid, from: l.from, to: l.to, rounds: l.rounds, message: l.message || "", callMin: l.callMin || OLD_RULE, at: l.at, reply: null, cancel: null, calls: [], says: [], picks: new Map(), end: null });
       return;
     }
     if (l.t === "showdown_block") {
@@ -91,6 +96,7 @@ export class Showdowns {
     else if (l.t === "showdown_cancel") s.cancel = l;
     else if (l.t === "showdown_call") s.calls.push(l);
     else if (l.t === "showdown_say") s.says.push(l);
+    else if (l.t === "showdown_pick") { if (!s.picks.has(l.uid)) s.picks.set(l.uid, l.side); }
     else if (l.t === "showdown_end") s.end = l;
   }
   #changed(s) { this.feed.publish("showdowns", "showdown.updated", { sid: s.sid }); }
@@ -165,15 +171,40 @@ export class Showdowns {
       };
       return { round: r, closesAt, endsAt: r + ROUND_MS, callsOpen: now >= r && open, result: res, from: side("from"), to: side("to") };
     });
-    const done = state === "final";
+    const done = state === "final", winner = done ? this.#winner(sc) : null;
+    const picks = { from: 0, to: 0 };
+    for (const side of s.picks.values()) picks[side]++;
+    const myPick = ctx.uid && s.picks.has(ctx.uid) ? s.picks.get(ctx.uid) : null;
+    const picksCloseAt = s.reply?.start ? s.reply.start + ROUND_MS : null;
     return {
       sid: s.sid, state, from: this.#person(s.from), to: this.#person(s.to), rounds: s.rounds, message: s.message,
       createdAt: s.at, answerBy: s.at + ACCEPT_MS, startsAt: s.reply?.start ?? null, endsAt: this.#endsAt(s), callMin: s.callMin, anyTime: s.callMin >= 15,
-      detail: rounds, score: sc, winner: done ? this.#winner(sc) : null,
+      detail: rounds, score: sc, winner,
+      picks, picksCloseAt, myPick: myPick ? { side: myPick, ...(done ? { right: winner === myPick } : {}) } : null,
+      canPick: !!ctx.uid && !me && !myPick && this.#picksOpen(s, now),
       chat: s.says.slice(-60).map(x => ({ who: x.who, name: this.#nameOf(x.who), ai: BROTHER_KEYS.includes(x.who), text: x.text, quick: x.quick || null, at: x.at })),
       me, canAnswer: me === "to" && state === "pending", canCancel: me === "from" && state === "pending",
       canTalk: !!me && ["starting", "live", "scoring", "final", "pending"].includes(state), notice: NOTICE,
     };
+  }
+
+  #picksOpen(s, now) { return ["starting", "live"].includes(this.state(s, now)) && now < s.reply.start + ROUND_MS; }
+
+  // POST /showdowns/:sid/pick { side }: a spectator picks who'll win. Once, final, until round 1 ends.
+  pick(ctx, id, body = {}) {
+    this.#member(ctx);
+    const s = this.#find(id), now = this.now();
+    if (this.#mine(s, ctx)) throw new ApiError(403, "not_granted", "You're playing in this one. Make your calls instead.");
+    if (!["from", "to"].includes(body.side)) throw new ApiError(400, "invalid_argument", "side is from or to.", "side");
+    const had = s.picks.get(ctx.uid);
+    if (had) {
+      if (had === body.side) return { unchanged: true, ...this.get(ctx, id) };
+      throw new ApiError(409, "already_picked", "Your pick is in, and it's final.");
+    }
+    if (!this.#picksOpen(s, now)) throw new ApiError(409, "picks_closed", "Picks close when round 1 ends.");
+    this.ledger.append([{ t: "showdown_pick", sid: s.sid, uid: ctx.uid, side: body.side }], ctx.uid, now);
+    this.#changed(s);
+    return this.get(ctx, id);
   }
 
   #find(id) {
@@ -383,6 +414,10 @@ export class Showdowns {
         const text = w === null ? `Showdown: ${a} and ${b} drew, ${sc.from.right}–${sc.to.right}.`
           : `Showdown: ${w === "from" ? a : b} beat ${w === "from" ? b : a}, ${Math.max(sc.from.right, sc.to.right)}–${Math.min(sc.from.right, sc.to.right)}.`;
         this.notify([s.from, s.to].filter(u => !BROTHER_KEYS.includes(u)), { id: `sd:${s.sid}:end`, text, link: `showdown?id=${s.sid}` });
+        for (const [uid, side] of s.picks) {
+          const picked = this.#nameOf(s[side]);
+          this.notify([uid], { id: `sd:${s.sid}:pick`, text: w === null ? `Your pick: ${a} and ${b} drew, so nobody called it.` : w === side ? `You called it: ${picked} won the Showdown vs ${this.#nameOf(s[side === "from" ? "to" : "from"])}.` : `Your pick, ${picked}, lost the Showdown vs ${this.#nameOf(s[side === "from" ? "to" : "from"])}.`, link: `showdown?id=${s.sid}` });
+        }
         this.#changed(s);
       }
     }

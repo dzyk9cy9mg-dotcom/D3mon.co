@@ -256,7 +256,8 @@
       const where = s.state === "starting" ? `Starts ${time(s.startsAt)}` : `Round ${n} of ${s.rounds}`;
       const r = i < 0 ? null : s.detail[i], called = r ? [r.from, r.to].filter(c => c && !c.missed).length : 0;
       const calls = r && s.state === "live" ? ` · ${called === 2 ? "both called" : called === 1 ? "1 called" : "no calls yet"}` : "";
-      return `<li><a href="showdown?id=${s.sid}"><span class="vs">${sdName(s.from)} <b>${s.score.from.right}–${s.score.to.right}</b> ${sdName(s.to)}</span><span class="s">${where}${calls}</span></a></li>`;
+      const np = s.picks ? s.picks.from + s.picks.to : 0, picks = np ? ` · ${np} pick${np > 1 ? "s" : ""}` : "";
+      return `<li><a href="showdown?id=${s.sid}"><span class="vs">${sdName(s.from)} <b>${s.score.from.right}–${s.score.to.right}</b> ${sdName(s.to)}</span><span class="s">${where}${calls}${picks}</span></a></li>`;
     }).join("") : `<li class="lv-empty">No Showdowns on right now.</li>`;
   }
   async function loadHere() { const p = await get("presence").catch(() => null); if (p) $("here").textContent = p.here > 0 ? `${p.here} here now` : ""; }

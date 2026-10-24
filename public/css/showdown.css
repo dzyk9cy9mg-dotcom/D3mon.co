@@ -64,3 +64,12 @@
 @media (prefers-reduced-motion:reduce){.sd *{transition:none!important}}
 .sd-rule{flex:0 1 220px}.sd-rule select{min-height:44px}
 .sd-when{display:block;color:var(--ink-3,#8494A8);font:500 12px var(--mono,"IBM Plex Mono",monospace)}
+
+/* spectators' picks */
+.sd-pick{margin-top:16px}
+.sd-split{display:flex;height:8px;margin:12px 0 10px;background:rgba(255,255,255,.06);overflow:hidden}
+.sd-split i{display:block;height:100%;transition:width .5s ease}
+.sd-split .f{background:#FFB547}.sd-split .t{background:#8FA3FF}
+.sd-split.none i{background:transparent}
+.sd-pick .sd-acts{margin-top:12px}
+@media (prefers-reduced-motion:reduce){.sd-split i{transition:none}}
